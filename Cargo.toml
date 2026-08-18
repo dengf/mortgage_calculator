@@ -12,6 +12,7 @@ members = [
     "crates/mortgage-ports",
     "crates/mortgage-ext-redb",
     "crates/mortgage-wasm",
+    "crates/mortgage-ui",
 ]
 resolver = "2"
 
