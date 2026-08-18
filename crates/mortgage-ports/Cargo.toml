@@ -1,0 +1,13 @@
+[package]
+name = "mortgage-ports"
+description = "Storage port definitions for mortgage-calculator: the Scenario type and ScenarioStore trait, with no concrete backend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

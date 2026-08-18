@@ -9,6 +9,8 @@
 members = [
     "crates/mortgage-core",
     "crates/mortgage-calc",
+    "crates/mortgage-ports",
+    "crates/mortgage-ext-redb",
     "crates/mortgage-wasm",
 ]
 resolver = "2"
@@ -22,12 +24,15 @@ license = "MIT"
 [workspace.dependencies]
 mortgage-core = { path = "crates/mortgage-core" }
 mortgage-calc = { path = "crates/mortgage-calc" }
+mortgage-ports = { path = "crates/mortgage-ports" }
+mortgage-ext-redb = { path = "crates/mortgage-ext-redb" }
 
 rust_decimal = { version = "1.42", features = ["serde", "serde-float", "maths"] }
 rust_decimal_macros = "1.40"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
+async-trait = "0.1"
 
 [profile.release]
 opt-level = 3

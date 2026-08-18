@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
+import SavedScenarios from './SavedScenarios';
 
 const formatMoney = (n) =>
   n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -55,6 +56,18 @@ export default function PaymentCalculator({ wasmModule }) {
           </div>
         )}
       </div>
+
+      <SavedScenarios
+        wasmModule={wasmModule}
+        calculatorKind="payment"
+        getCurrentInputs={() => ({ principal, rate, termYears, frequency })}
+        onLoad={(inputs) => {
+          setPrincipal(inputs.principal);
+          setRate(inputs.rate);
+          setTermYears(inputs.termYears);
+          setFrequency(inputs.frequency);
+        }}
+      />
     </section>
   );
 }

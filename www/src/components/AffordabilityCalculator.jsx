@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
+import SavedScenarios from './SavedScenarios';
 
 const formatMoney = (n) =>
   n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -71,6 +72,33 @@ export default function AffordabilityCalculator({ wasmModule }) {
           </div>
         )}
       </div>
+
+      <SavedScenarios
+        wasmModule={wasmModule}
+        calculatorKind="affordability"
+        getCurrentInputs={() => ({
+          income,
+          debts,
+          downPayment,
+          rate,
+          termYears,
+          maxDti,
+          taxRate,
+          insurance,
+          hoa,
+        })}
+        onLoad={(inputs) => {
+          setIncome(inputs.income);
+          setDebts(inputs.debts);
+          setDownPayment(inputs.downPayment);
+          setRate(inputs.rate);
+          setTermYears(inputs.termYears);
+          setMaxDti(inputs.maxDti);
+          setTaxRate(inputs.taxRate);
+          setInsurance(inputs.insurance);
+          setHoa(inputs.hoa);
+        }}
+      />
     </section>
   );
 }

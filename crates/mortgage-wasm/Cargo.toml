@@ -18,8 +18,12 @@ default = ["console_error_panic_hook"]
 [dependencies]
 mortgage-core = { workspace = true }
 mortgage-calc = { workspace = true }
+mortgage-ports = { workspace = true }
+mortgage-ext-redb = { workspace = true }
 
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
 serde = { workspace = true }
 serde-wasm-bindgen = "0.6"
 console_error_panic_hook = { version = "0.1", optional = true }

@@ -8,6 +8,7 @@
 //! - [`amortization`] — full payment-by-payment schedule, extra-payment payoff impact
 //! - [`affordability`] — maximum affordable home price from income/debt inputs
 //! - [`refinance`] — refinance break-even and lifetime savings analysis
+//! - [`comparison`] — side-by-side scenario comparison across rate types and terms
 //!
 //! [`mortgage_wasm`](../mortgage_wasm) is the only crate allowed to depend on
 //! this one from the JS side; everything here stays pure Rust so it is
@@ -15,11 +16,14 @@
 //! layer without touching wasm-bindgen at all.
 
 mod loan;
+mod rate;
 
 pub mod affordability;
 pub mod amortization;
+pub mod comparison;
 pub mod payment;
 pub mod refinance;
 
 pub use loan::{Loan, LoanBuilder};
 pub use mortgage_core::{MortgageError, MortgageResult, PaymentFrequency};
+pub use rate::{common_presets, RatePreset, RateType};

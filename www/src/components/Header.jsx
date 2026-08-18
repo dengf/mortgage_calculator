@@ -5,6 +5,7 @@ const TABS = [
   { id: 'amortization', label: 'Amortization' },
   { id: 'affordability', label: 'Affordability' },
   { id: 'refinance', label: 'Refinance' },
+  { id: 'compare', label: 'Compare' },
 ];
 
 export default function Header({ activeTab, onTabChange }) {

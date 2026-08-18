@@ -110,3 +110,102 @@ pub struct RefinanceResultDto {
     pub lifetime_savings: Option<f64>,
     pub error: Option<String>,
 }
+
+/// A rate, expressed either as a flat fixed percentage or as a floating
+/// base index + spread (e.g. "SOFR + 2.5%"). Used both as an input (a
+/// comparison entry's rate) and an output (a preset's rate) — same shape
+/// either direction, so the frontend can pass a preset straight into a
+/// comparison entry without reshaping it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum RateTypeDto {
+    Fixed { rate_percent: f64 },
+    Floating {
+        base_rate_percent: f64,
+        spread_percent: f64,
+    },
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RatePresetDto {
+    pub label: String,
+    pub rate_type: RateTypeDto,
+    pub term_years: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ComparisonEntryParams {
+    pub label: String,
+    pub rate_type: RateTypeDto,
+    pub term_years: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ComparisonParams {
+    pub principal: f64,
+    pub frequency: Option<String>,
+    pub entries: Vec<ComparisonEntryParams>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ComparisonRowDto {
+    pub label: String,
+    pub effective_rate_percent: f64,
+    pub term_years: f64,
+    pub payment: f64,
+    pub total_periods: u32,
+    pub total_paid: f64,
+    pub total_interest: f64,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ComparisonResult {
+    pub rows: Vec<ComparisonRowDto>,
+    pub error: Option<String>,
+}
+
+/// A saved scenario's inputs are stored as an opaque JSON string (see
+/// [`mortgage_ports::Scenario`]) — this crate doesn't need to know each
+/// calculator's exact input shape, only pass it through.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SaveScenarioParams {
+    /// `"payment" | "amortization" | "affordability" | "refinance" | "comparison"`
+    pub calculator: String,
+    pub name: String,
+    pub inputs_json: String,
+    /// Omit to create a new scenario; pass an existing id to overwrite it.
+    pub id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScenarioDto {
+    pub id: String,
+    pub calculator: String,
+    pub name: String,
+    pub created_at: i64,
+    pub inputs_json: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SaveScenarioResult {
+    pub id: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ScenarioListResult {
+    pub scenarios: Vec<ScenarioDto>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ScenarioResult {
+    pub scenario: Option<ScenarioDto>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct DeleteScenarioResult {
+    pub success: bool,
+    pub error: Option<String>,
+}
