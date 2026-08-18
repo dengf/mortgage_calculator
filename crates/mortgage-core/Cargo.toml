@@ -1,0 +1,12 @@
+[package]
+name = "mortgage-core"
+description = "Foundational types shared across the mortgage-calculator crates"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

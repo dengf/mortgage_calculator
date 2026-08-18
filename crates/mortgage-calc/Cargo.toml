@@ -1,0 +1,15 @@
+[package]
+name = "mortgage-calc"
+description = "Mortgage payment, amortization, affordability and refinance calculations"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+mortgage-core = { workspace = true }
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+rust_decimal_macros = { workspace = true }

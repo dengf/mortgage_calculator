@@ -1,0 +1,12 @@
+/target
+
+# Node / webpack
+www/node_modules/
+www/dist/
+www/pkg/
+
+# wasm-pack
+crates/mortgage-wasm/pkg/
+crates/mortgage-wasm/target/
+
+.DS_Store

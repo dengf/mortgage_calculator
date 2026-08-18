@@ -1,0 +1,36 @@
+# Mortgage Calculator - workspace configuration
+#
+# Architecture mirrors the layered pattern used by the `convex` fixed-income
+# library: a dependency-free domain-types crate at the bottom, pure
+# calculation logic in the middle, and a thin wasm-bindgen crate on top that
+# only translates JS <-> Rust and never contains business logic itself.
+
+[workspace]
+members = [
+    "crates/mortgage-core",
+    "crates/mortgage-calc",
+    "crates/mortgage-wasm",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Feng Deng"]
+license = "MIT"
+
+[workspace.dependencies]
+mortgage-core = { path = "crates/mortgage-core" }
+mortgage-calc = { path = "crates/mortgage-calc" }
+
+rust_decimal = { version = "1.42", features = ["serde", "serde-float", "maths"] }
+rust_decimal_macros = "1.40"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
