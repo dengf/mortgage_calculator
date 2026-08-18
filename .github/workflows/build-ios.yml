@@ -1,0 +1,48 @@
+name: Build iOS (mortgage-ui)
+
+# Builds crates/mortgage-ui for iOS. This produces an UNSIGNED .app bundle
+# only usable in the Simulator — a real device / TestFlight / App Store
+# build needs an Apple Developer Program membership (your Apple ID, a paid
+# enrollment, and either Xcode-managed signing or a distribution
+# certificate + provisioning profile supplied as secrets), none of which
+# can be set up by an agent. See crates/mortgage-ui/DEPLOY.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/mortgage-ui -> target
+
+      - name: Install dioxus-cli
+        run: cargo install dioxus-cli --locked
+
+      - name: Build unsigned .app (simulator only)
+        working-directory: crates/mortgage-ui
+        run: dx bundle --platform ios --package-types ios --release
+
+      - name: Upload .app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: MortgageUi-simulator.app
+          path: crates/mortgage-ui/dist/MortgageUi.app
+
+      # To produce a signed, device/TestFlight-ready .ipa once you have an
+      # Apple Developer account, this job would need:
+      #   - APPLE_TEAM_ID secret ("Signing Name (TEAMID123)")
+      #   - a distribution certificate + provisioning profile imported via
+      #     e.g. an `apple-actions/import-codesign-certs` step
+      # then: dx bundle --platform ios --package-types ipa --release
+      #         --codesign true --apple-team-id "$APPLE_TEAM_ID"
