@@ -1,6 +1,8 @@
 use mortgage_core::{MortgageError, MortgageResult, PaymentFrequency};
 use rust_decimal::Decimal;
 
+use crate::rate::RateType;
+
 /// A fixed-rate amortizing loan: the shared input to every calculation in
 /// this crate, analogous to `FixedRateBond` in the `convex` project.
 #[derive(Debug, Clone, Copy)]
@@ -58,6 +60,14 @@ impl LoanBuilder {
 
     pub fn annual_rate(mut self, annual_rate: Decimal) -> Self {
         self.annual_rate = Some(annual_rate);
+        self
+    }
+
+    /// Sets the rate via a [`RateType`] (fixed, or floating base+spread)
+    /// instead of a bare `Decimal`. Equivalent to
+    /// `.annual_rate(rate_type.effective_rate())`.
+    pub fn rate_type(mut self, rate_type: RateType) -> Self {
+        self.annual_rate = Some(rate_type.effective_rate());
         self
     }
 

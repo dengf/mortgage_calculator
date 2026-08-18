@@ -4,12 +4,14 @@ import PaymentCalculator from './components/PaymentCalculator';
 import AmortizationSchedule from './components/AmortizationSchedule';
 import AffordabilityCalculator from './components/AffordabilityCalculator';
 import RefinanceCalculator from './components/RefinanceCalculator';
+import ComparisonView from './components/ComparisonView';
 
 const PANELS = {
   payment: PaymentCalculator,
   amortization: AmortizationSchedule,
   affordability: AffordabilityCalculator,
   refinance: RefinanceCalculator,
+  compare: ComparisonView,
 };
 
 export default function App({ wasmModule }) {

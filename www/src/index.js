@@ -15,6 +15,7 @@ async function initWasm() {
     if (wasm.default) {
       await wasm.default();
     }
+    await wasm.init_storage();
     wasmModule = wasm;
     console.log('WASM module initialized successfully');
     return wasm;
@@ -146,6 +147,79 @@ function createMockModule() {
         lifetime_savings: remainingInterestCurrent - totalInterestNew - params.closing_costs,
         error: null,
       };
+    },
+    get_common_rate_presets: () => [
+      { label: '30-Year Fixed', rate_type: { kind: 'fixed', rate_percent: 6.5 }, term_years: 30 },
+      { label: '20-Year Fixed', rate_type: { kind: 'fixed', rate_percent: 6.25 }, term_years: 20 },
+      { label: '15-Year Fixed', rate_type: { kind: 'fixed', rate_percent: 6.0 }, term_years: 15 },
+      {
+        label: 'Floating: SOFR + 2.00%',
+        rate_type: { kind: 'floating', base_rate_percent: 4.3, spread_percent: 2.0 },
+        term_years: 30,
+      },
+      {
+        label: 'Floating: SOFR + 2.50%',
+        rate_type: { kind: 'floating', base_rate_percent: 4.3, spread_percent: 2.5 },
+        term_years: 30,
+      },
+      {
+        label: 'Floating: Prime + 0.50%',
+        rate_type: { kind: 'floating', base_rate_percent: 7.5, spread_percent: 0.5 },
+        term_years: 30,
+      },
+    ],
+    calculate_comparison: (params) => {
+      const effectiveRate = (rateType) =>
+        rateType.kind === 'fixed' ? rateType.rate_percent : rateType.base_rate_percent + rateType.spread_percent;
+      const rows = params.entries.map((entry) => {
+        const ratePercent = effectiveRate(entry.rate_type);
+        const payment = monthlyPayment(params.principal, ratePercent, entry.term_years);
+        const totalPeriods = entry.term_years * 12;
+        const totalPaid = payment * totalPeriods;
+        return {
+          label: entry.label,
+          effective_rate_percent: ratePercent,
+          term_years: entry.term_years,
+          payment,
+          total_periods: totalPeriods,
+          total_paid: totalPaid,
+          total_interest: totalPaid - params.principal,
+        };
+      });
+      return { rows, error: null };
+    },
+    // In-memory scenario store: not persisted across reloads, just enough
+    // to exercise the save/load UI before `npm run build:wasm` has run.
+    _mockScenarios: [],
+    _mockScenarioSeq: 0,
+    init_storage: async function () {},
+    save_scenario: async function (params) {
+      const id = params.id ?? `mock-${this._mockScenarioSeq++}`;
+      const scenario = {
+        id,
+        calculator: params.calculator,
+        name: params.name,
+        created_at: Date.now(),
+        inputs_json: params.inputs_json,
+      };
+      this._mockScenarios = this._mockScenarios.filter((s) => s.id !== id);
+      this._mockScenarios.push(scenario);
+      return { id, error: null };
+    },
+    list_scenarios: async function (calculator) {
+      const scenarios = this._mockScenarios
+        .filter((s) => !calculator || s.calculator === calculator)
+        .sort((a, b) => b.created_at - a.created_at);
+      return { scenarios, error: null };
+    },
+    load_scenario: async function (id) {
+      const scenario = this._mockScenarios.find((s) => s.id === id);
+      if (!scenario) return { scenario: null, error: `scenario not found: ${id}` };
+      return { scenario, error: null };
+    },
+    delete_scenario: async function (id) {
+      this._mockScenarios = this._mockScenarios.filter((s) => s.id !== id);
+      return { success: true, error: null };
     },
   };
 }

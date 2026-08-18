@@ -240,3 +240,164 @@ body {
   font-size: 1.2rem;
   color: #7ee787;
 }
+
+.link-button.danger {
+  color: #ff8a8a;
+}
+
+/* Saved scenarios */
+
+.saved-scenarios {
+  background: #161e2b;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.saved-scenarios-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.saved-scenarios-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.save-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-form input {
+  background: #0f1720;
+  border: 1px solid #2a3546;
+  border-radius: 8px;
+  color: #e6edf3;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.saved-scenarios-empty {
+  color: #5c6b7d;
+  font-size: 0.85rem;
+  margin: 12px 0 0;
+}
+
+.saved-scenarios-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saved-scenarios-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0f1720;
+}
+
+.saved-scenarios-list .scenario-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.saved-scenarios-list .scenario-date {
+  color: #5c6b7d;
+  font-size: 0.78rem;
+}
+
+/* Scenario comparison */
+
+.comparison-presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #161e2b;
+  padding: 12px 20px;
+  border-radius: 12px;
+}
+
+.comparison-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comparison-entry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #161e2b;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.comparison-entry-label {
+  background: #0f1720;
+  border: 1px solid #2a3546;
+  border-radius: 8px;
+  color: #e6edf3;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 160px;
+  flex: 1;
+}
+
+.comparison-entry-kind {
+  display: flex;
+  gap: 4px;
+  background: #0f1720;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.kind-toggle {
+  border: none;
+  background: transparent;
+  color: #9fb0c3;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.kind-toggle.active {
+  background: #7ee787;
+  color: #0f1720;
+}
+
+.comparison-entry-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #9fb0c3;
+}
+
+.comparison-entry-field input {
+  width: 70px;
+  background: #0f1720;
+  border: 1px solid #2a3546;
+  border-radius: 6px;
+  color: #e6edf3;
+  padding: 5px 8px;
+  font-size: 0.85rem;
+}
+
+.comparison-entry-field .unit {
+  color: #5c6b7d;
+}
