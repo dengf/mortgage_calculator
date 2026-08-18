@@ -1,0 +1,40 @@
+[package]
+name = "mortgage-ui"
+description = "Dioxus UI for mortgage-calculator: one Rust codebase targeting desktop, iOS, Android, and web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+mortgage-calc = { workspace = true }
+mortgage-ports = { workspace = true }
+mortgage-ext-redb = { workspace = true }
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# `minimal` bundles the renderer-agnostic pieces every platform needs
+# (rsx!/#[component]/use_signal/use_memo, i.e. the `macro`, `html`,
+# `signals`, `hooks`, `launch` features) without pulling in any actual
+# renderer. Only the renderer itself (`web` vs `desktop` vs `mobile`, below)
+# is meant to vary per platform.
+dioxus = { version = "0.7", default-features = false, features = ["minimal"] }
+dioxus-logger = "0.6"
+
+# `dx serve --web` / `--desktop` / `--ios` / `--android` each pass
+# `--no-default-features --features <name>` for the matching feature below,
+# swapping which dioxus renderer gets compiled in. `desktop` and `mobile`
+# both map to the same underlying `dioxus-desktop` (wry/tao) renderer crate
+# — this is deliberately not one shared feature, since dx may look for a
+# feature named after the exact platform. Without this split, the
+# `desktop`/`mobile` renderer's native-TLS dependency (openssl-sys) got
+# pulled in even for wasm32 builds, since it was hardcoded unconditionally.
+[features]
+default = []
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"

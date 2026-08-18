@@ -1,8 +1,7 @@
 # Mortgage Calculator
 
 A mortgage payment, amortization, affordability, and refinance calculator,
-built as a **Rust backend compiled to WebAssembly** with a React frontend —
-the same architecture as the [`convex`](../convex) fixed-income library:
+built as a **Rust backend compiled to WebAssembly** with a React frontend:
 pure calculation logic in one layer, a thin `wasm-bindgen` crate translating
 JS &lt;-&gt; Rust in another, and a webpack app that dynamically loads the
 compiled `.wasm` module in the browser.

@@ -5,7 +5,7 @@ use crate::rate::RateType;
 
 /// A fixed-rate amortizing loan: the shared input to every calculation in
 /// this crate, analogous to `FixedRateBond` in the `convex` project.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Loan {
     principal: Decimal,
     annual_rate: Decimal,
