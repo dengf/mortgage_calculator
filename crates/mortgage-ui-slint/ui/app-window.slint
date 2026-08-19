@@ -1,0 +1,719 @@
+import { LineEdit, CheckBox, ListView, ScrollView } from "std-widgets.slint";
+
+struct ScenarioRow {
+    id: string,
+    name: string,
+}
+
+struct AmortScheduleRow {
+    label: string,
+    paid: string,
+    principal: string,
+    interest: string,
+    balance: string,
+}
+
+component AppButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: false;
+    in property <bool> danger: false;
+    in property <bool> small: false;
+    callback clicked();
+
+    height: small ? 30px : 38px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: primary ? #4f8cff : danger ? #e05252 : #2a3547;
+    background: touch.pressed
+        ? (primary ? #3a6fd8 : danger ? #b83f3f : #26314a)
+        : touch.has-hover
+            ? (primary ? #5a95ff : danger ? #e56b6b : #202a3c)
+            : (primary ? #4f8cff : danger ? #d94a4a : #171f2c);
+
+    HorizontalLayout {
+        alignment: center;
+        padding-left: 14px;
+        padding-right: 14px;
+        Text {
+            text: root.text;
+            color: (primary || danger) ? white : #d7dee8;
+            font-size: small ? 12px : 14px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component Card inherits Rectangle {
+    background: #161f2e;
+    border-radius: 14px;
+    border-width: 1px;
+    border-color: #232e42;
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+        @children
+    }
+}
+
+component Field inherits VerticalLayout {
+    in property <string> label;
+    spacing: 4px;
+    Text { text: root.label; color: #92a0b3; font-size: 12px; }
+    @children
+}
+
+component ResultRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value;
+    in property <bool> emphasize: false;
+    Text { text: root.label; color: #92a0b3; font-size: 13px; vertical-alignment: center; }
+    Rectangle { horizontal-stretch: 1; }
+    Text {
+        text: root.value;
+        color: emphasize ? #7ee787 : white;
+        font-size: emphasize ? 18px : 13px;
+        font-weight: emphasize ? 700 : 500;
+        vertical-alignment: center;
+    }
+}
+
+component ErrorText inherits Text {
+    color: #ff8a8a;
+    font-size: 13px;
+    wrap: word-wrap;
+}
+
+component TabBarButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked();
+
+    horizontal-stretch: 1;
+    border-radius: 8px;
+    background: active ? #4f8cff : (touch.has-hover ? #202a3c : transparent);
+
+    HorizontalLayout {
+        alignment: center;
+        padding-top: 9px;
+        padding-bottom: 9px;
+        Text {
+            text: root.text;
+            color: active ? white : #92a0b3;
+            font-size: 12px;
+            font-weight: active ? 700 : 500;
+            horizontal-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component SavedScenariosPanel inherits VerticalLayout {
+    in property <[ScenarioRow]> scenarios: [];
+    in property <string> error-text: "";
+    callback save(string);
+    callback load(string);
+    callback delete(string);
+
+    property <string> name-input: "";
+
+    spacing: 10px;
+
+    Text { text: "Saved scenarios"; font-weight: 700; font-size: 14px; }
+
+    HorizontalLayout {
+        spacing: 8px;
+        LineEdit {
+            placeholder-text: "Scenario name";
+            text <=> root.name-input;
+        }
+        AppButton {
+            text: "Save";
+            primary: true;
+            small: true;
+            clicked => {
+                if (name-input != "") {
+                    root.save(name-input);
+                    name-input = "";
+                }
+            }
+        }
+    }
+
+    if error-text != "": ErrorText { text: error-text; }
+
+    if scenarios.length == 0: Text {
+        text: "No saved scenarios yet.";
+        color: #5c6b80;
+        font-size: 12px;
+    }
+
+    for row in scenarios: Rectangle {
+        background: #10161f;
+        border-radius: 8px;
+        height: 40px;
+
+        HorizontalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            spacing: 8px;
+            Text {
+                text: row.name;
+                color: #d7dee8;
+                font-size: 13px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+                overflow: elide;
+            }
+            AppButton { text: "Load"; small: true; clicked => { root.load(row.id); } }
+            AppButton { text: "Delete"; small: true; danger: true; clicked => { root.delete(row.id); } }
+        }
+    }
+}
+
+component ScheduleTable inherits VerticalLayout {
+    in property <[AmortScheduleRow]> rows: [];
+    in property <bool> show-full: false;
+    callback toggle();
+
+    spacing: 10px;
+
+    HorizontalLayout {
+        Text {
+            text: show-full ? "Full schedule" : "Yearly summary";
+            font-weight: 700;
+            font-size: 14px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        AppButton {
+            text: show-full ? "Show yearly summary" : "Show every payment";
+            small: true;
+            clicked => { root.toggle(); }
+        }
+    }
+
+    HorizontalLayout {
+        padding-right: 14px;
+        Text { text: show-full ? "Period" : "Year"; color: #92a0b3; font-size: 11px; width: 46px; }
+        Text { text: "Paid"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: "Principal"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: "Interest"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: "Balance"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+    }
+
+    ListView {
+        height: 280px;
+        for row in rows: Rectangle {
+            height: 28px;
+            HorizontalLayout {
+                padding-right: 14px;
+                Text { text: row.label; color: #d7dee8; font-size: 11px; width: 46px; vertical-alignment: center; }
+                Text { text: row.paid; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+                Text { text: row.principal; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+                Text { text: row.interest; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+                Text { text: row.balance; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "Mortgage Calculator";
+    preferred-width: 520px;
+    preferred-height: 840px;
+    background: #0b1119;
+
+    in-out property <int> current-tab: 0;
+
+    // --- Payment ---
+    in-out property <string> principal: "400000";
+    in-out property <string> rate-percent: "6.5";
+    in-out property <string> term-years: "30";
+    in-out property <string> payment-result: "";
+    in-out property <string> total-paid-result: "";
+    in-out property <string> total-interest-result: "";
+    in-out property <bool> has-error: false;
+    in-out property <[ScenarioRow]> payment-scenarios: [];
+    in-out property <string> payment-scenario-error: "";
+    callback recompute();
+    callback payment-save-scenario(string);
+    callback payment-load-scenario(string);
+    callback payment-delete-scenario(string);
+
+    // --- Amortization ---
+    in-out property <string> amort-principal: "400000";
+    in-out property <string> amort-rate-percent: "6.5";
+    in-out property <string> amort-term-years: "30";
+    in-out property <string> amort-extra-payment: "0";
+    in-out property <string> amort-payment-result: "";
+    in-out property <string> amort-total-paid-result: "";
+    in-out property <string> amort-total-interest-result: "";
+    in-out property <bool> amort-has-error: false;
+    in-out property <bool> amort-show-impact: false;
+    in-out property <string> amort-periods-saved: "";
+    in-out property <string> amort-interest-saved: "";
+    in-out property <string> amort-new-payoff: "";
+    in-out property <[AmortScheduleRow]> amort-schedule-rows: [];
+    in-out property <bool> amort-show-full: false;
+    in-out property <[ScenarioRow]> amort-scenarios: [];
+    in-out property <string> amort-scenario-error: "";
+    callback amort-recompute();
+    callback amort-toggle-full();
+    callback amort-save-scenario(string);
+    callback amort-load-scenario(string);
+    callback amort-delete-scenario(string);
+
+    // --- Affordability ---
+    in-out property <string> aff-income: "10000";
+    in-out property <string> aff-debts: "500";
+    in-out property <string> aff-down-payment: "60000";
+    in-out property <string> aff-rate-percent: "6.5";
+    in-out property <string> aff-term-years: "30";
+    in-out property <string> aff-max-dti-percent: "36";
+    in-out property <string> aff-tax-rate-percent: "1.2";
+    in-out property <string> aff-insurance: "1500";
+    in-out property <string> aff-hoa: "0";
+    in-out property <string> aff-max-home-price: "";
+    in-out property <string> aff-max-loan-amount: "";
+    in-out property <string> aff-max-pi: "";
+    in-out property <string> aff-front-dti: "";
+    in-out property <string> aff-back-dti: "";
+    in-out property <bool> aff-has-error: false;
+    in-out property <[ScenarioRow]> aff-scenarios: [];
+    in-out property <string> aff-scenario-error: "";
+    callback aff-recompute();
+    callback aff-save-scenario(string);
+    callback aff-load-scenario(string);
+    callback aff-delete-scenario(string);
+
+    // --- Refinance ---
+    in-out property <string> refi-current-balance: "300000";
+    in-out property <string> refi-current-rate-percent: "7.5";
+    in-out property <string> refi-remaining-periods: "300";
+    in-out property <string> refi-new-rate-percent: "6.0";
+    in-out property <string> refi-new-term-years: "30";
+    in-out property <string> refi-closing-costs: "6000";
+    in-out property <string> refi-current-payment: "";
+    in-out property <string> refi-new-payment: "";
+    in-out property <string> refi-payment-savings: "";
+    in-out property <string> refi-break-even: "";
+    in-out property <string> refi-lifetime-savings: "";
+    in-out property <bool> refi-has-error: false;
+    in-out property <[ScenarioRow]> refi-scenarios: [];
+    in-out property <string> refi-scenario-error: "";
+    callback refi-recompute();
+    callback refi-save-scenario(string);
+    callback refi-load-scenario(string);
+    callback refi-delete-scenario(string);
+
+    // --- Compare (two fixed scenario slots) ---
+    in-out property <string> cmp-principal: "400000";
+    in-out property <string> cmp-a-label: "30-Year Fixed";
+    in-out property <bool> cmp-a-floating: false;
+    in-out property <string> cmp-a-rate-percent: "6.5";
+    in-out property <string> cmp-a-base-rate-percent: "4.3";
+    in-out property <string> cmp-a-spread-percent: "2.0";
+    in-out property <string> cmp-a-term-years: "30";
+    in-out property <string> cmp-a-result: "";
+    in-out property <string> cmp-b-label: "15-Year Fixed";
+    in-out property <bool> cmp-b-floating: false;
+    in-out property <string> cmp-b-rate-percent: "6.0";
+    in-out property <string> cmp-b-base-rate-percent: "4.3";
+    in-out property <string> cmp-b-spread-percent: "2.5";
+    in-out property <string> cmp-b-term-years: "15";
+    in-out property <string> cmp-b-result: "";
+    in-out property <bool> cmp-has-error: false;
+    in-out property <[ScenarioRow]> cmp-scenarios: [];
+    in-out property <string> cmp-scenario-error: "";
+    callback cmp-recompute();
+    callback cmp-save-scenario(string);
+    callback cmp-load-scenario(string);
+    callback cmp-delete-scenario(string);
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 16px;
+
+        Text {
+            text: "Mortgage Calculator";
+            font-size: 22px;
+            font-weight: 800;
+            color: white;
+        }
+
+        Rectangle {
+            background: #10161f;
+            border-radius: 10px;
+            height: 44px;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+                TabBarButton { text: "Payment"; active: current-tab == 0; clicked => { root.current-tab = 0; } }
+                TabBarButton { text: "Amortization"; active: current-tab == 1; clicked => { root.current-tab = 1; } }
+                TabBarButton { text: "Affordability"; active: current-tab == 2; clicked => { root.current-tab = 2; } }
+                TabBarButton { text: "Refinance"; active: current-tab == 3; clicked => { root.current-tab = 3; } }
+                TabBarButton { text: "Compare"; active: current-tab == 4; clicked => { root.current-tab = 4; } }
+            }
+        }
+
+        ScrollView {
+            vertical-stretch: 1;
+            VerticalLayout {
+                spacing: 16px;
+
+        if current-tab == 0: VerticalLayout {
+            spacing: 16px;
+            Card {
+                Field {
+                    label: "Home loan amount";
+                    LineEdit {
+                        text <=> root.principal;
+                        edited => { root.recompute(); }
+                    }
+                }
+                Field {
+                    label: "Interest rate (%)";
+                    LineEdit {
+                        text <=> root.rate-percent;
+                        edited => { root.recompute(); }
+                    }
+                }
+                Field {
+                    label: "Loan term (years)";
+                    LineEdit {
+                        text <=> root.term-years;
+                        edited => { root.recompute(); }
+                    }
+                }
+            }
+
+            if !root.has-error: Card {
+                ResultRow { label: "Payment"; value: root.payment-result; emphasize: true; }
+                ResultRow { label: "Total paid"; value: root.total-paid-result; }
+                ResultRow { label: "Total interest"; value: root.total-interest-result; }
+            }
+            if root.has-error: Card {
+                ErrorText { text: "Enter valid loan details."; }
+            }
+
+            Card {
+                SavedScenariosPanel {
+                    scenarios: root.payment-scenarios;
+                    error-text: root.payment-scenario-error;
+                    save(name) => { root.payment-save-scenario(name); }
+                    load(id) => { root.payment-load-scenario(id); }
+                    delete(id) => { root.payment-delete-scenario(id); }
+                }
+            }
+        }
+
+        if current-tab == 1: VerticalLayout {
+            spacing: 16px;
+            Card {
+                Field {
+                    label: "Home loan amount";
+                    LineEdit {
+                        text <=> root.amort-principal;
+                        edited => { root.amort-recompute(); }
+                    }
+                }
+                Field {
+                    label: "Interest rate (%)";
+                    LineEdit {
+                        text <=> root.amort-rate-percent;
+                        edited => { root.amort-recompute(); }
+                    }
+                }
+                Field {
+                    label: "Loan term (years)";
+                    LineEdit {
+                        text <=> root.amort-term-years;
+                        edited => { root.amort-recompute(); }
+                    }
+                }
+                Field {
+                    label: "Extra payment per month";
+                    LineEdit {
+                        text <=> root.amort-extra-payment;
+                        edited => { root.amort-recompute(); }
+                    }
+                }
+            }
+
+            if !root.amort-has-error: Card {
+                ResultRow { label: "Payment"; value: root.amort-payment-result; emphasize: true; }
+                ResultRow { label: "Total paid"; value: root.amort-total-paid-result; }
+                ResultRow { label: "Total interest"; value: root.amort-total-interest-result; }
+                if root.amort-show-impact: Text {
+                    text: "Extra payments save " + root.amort-periods-saved + " payments and " + root.amort-interest-saved + " in interest (payoff in " + root.amort-new-payoff + " payments)";
+                    color: #7ee787;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+            if root.amort-has-error: Card {
+                ErrorText { text: "Enter valid loan details."; }
+            }
+
+            if !root.amort-has-error: Card {
+                ScheduleTable {
+                    rows: root.amort-schedule-rows;
+                    show-full: root.amort-show-full;
+                    toggle => { root.amort-toggle-full(); }
+                }
+            }
+
+            Card {
+                SavedScenariosPanel {
+                    scenarios: root.amort-scenarios;
+                    error-text: root.amort-scenario-error;
+                    save(name) => { root.amort-save-scenario(name); }
+                    load(id) => { root.amort-load-scenario(id); }
+                    delete(id) => { root.amort-delete-scenario(id); }
+                }
+            }
+        }
+
+        if current-tab == 2: VerticalLayout {
+            spacing: 16px;
+            Card {
+                Field {
+                    label: "Gross monthly income";
+                    LineEdit { text <=> root.aff-income; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Other monthly debts";
+                    LineEdit { text <=> root.aff-debts; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Down payment";
+                    LineEdit { text <=> root.aff-down-payment; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Interest rate (%)";
+                    LineEdit { text <=> root.aff-rate-percent; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Loan term (years)";
+                    LineEdit { text <=> root.aff-term-years; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Max debt-to-income (%)";
+                    LineEdit { text <=> root.aff-max-dti-percent; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Property tax rate (%/yr)";
+                    LineEdit { text <=> root.aff-tax-rate-percent; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Annual insurance";
+                    LineEdit { text <=> root.aff-insurance; edited => { root.aff-recompute(); } }
+                }
+                Field {
+                    label: "Monthly HOA";
+                    LineEdit { text <=> root.aff-hoa; edited => { root.aff-recompute(); } }
+                }
+            }
+
+            if !root.aff-has-error: Card {
+                ResultRow { label: "Max home price"; value: root.aff-max-home-price; emphasize: true; }
+                ResultRow { label: "Max loan amount"; value: root.aff-max-loan-amount; }
+                ResultRow { label: "Principal & interest"; value: root.aff-max-pi; }
+                ResultRow { label: "Front-end DTI"; value: root.aff-front-dti + "%"; }
+                ResultRow { label: "Back-end DTI"; value: root.aff-back-dti + "%"; }
+            }
+            if root.aff-has-error: Card {
+                ErrorText { text: "Enter valid affordability details."; }
+            }
+
+            Card {
+                SavedScenariosPanel {
+                    scenarios: root.aff-scenarios;
+                    error-text: root.aff-scenario-error;
+                    save(name) => { root.aff-save-scenario(name); }
+                    load(id) => { root.aff-load-scenario(id); }
+                    delete(id) => { root.aff-delete-scenario(id); }
+                }
+            }
+        }
+
+        if current-tab == 3: VerticalLayout {
+            spacing: 16px;
+            Card {
+                Field {
+                    label: "Current balance";
+                    LineEdit { text <=> root.refi-current-balance; edited => { root.refi-recompute(); } }
+                }
+                Field {
+                    label: "Current rate (%)";
+                    LineEdit { text <=> root.refi-current-rate-percent; edited => { root.refi-recompute(); } }
+                }
+                Field {
+                    label: "Payments remaining";
+                    LineEdit { text <=> root.refi-remaining-periods; edited => { root.refi-recompute(); } }
+                }
+                Field {
+                    label: "New rate (%)";
+                    LineEdit { text <=> root.refi-new-rate-percent; edited => { root.refi-recompute(); } }
+                }
+                Field {
+                    label: "New term (years)";
+                    LineEdit { text <=> root.refi-new-term-years; edited => { root.refi-recompute(); } }
+                }
+                Field {
+                    label: "Closing costs";
+                    LineEdit { text <=> root.refi-closing-costs; edited => { root.refi-recompute(); } }
+                }
+            }
+
+            if !root.refi-has-error: Card {
+                ResultRow { label: "Current payment"; value: root.refi-current-payment; }
+                ResultRow { label: "New payment"; value: root.refi-new-payment; }
+                ResultRow { label: "Monthly savings"; value: root.refi-payment-savings; emphasize: true; }
+                ResultRow { label: "Break-even"; value: root.refi-break-even; }
+                ResultRow { label: "Lifetime savings"; value: root.refi-lifetime-savings; }
+            }
+            if root.refi-has-error: Card {
+                ErrorText { text: "Enter valid refinance details."; }
+            }
+
+            Card {
+                SavedScenariosPanel {
+                    scenarios: root.refi-scenarios;
+                    error-text: root.refi-scenario-error;
+                    save(name) => { root.refi-save-scenario(name); }
+                    load(id) => { root.refi-load-scenario(id); }
+                    delete(id) => { root.refi-delete-scenario(id); }
+                }
+            }
+        }
+
+        if current-tab == 4: VerticalLayout {
+            spacing: 16px;
+            Card {
+                Field {
+                    label: "Home loan amount";
+                    LineEdit {
+                        text <=> root.cmp-principal;
+                        edited => { root.cmp-recompute(); }
+                    }
+                }
+            }
+
+            Card {
+                Text { text: "Scenario A"; font-weight: 700; font-size: 14px; }
+                LineEdit {
+                    text <=> root.cmp-a-label;
+                }
+                CheckBox {
+                    text: "Floating rate";
+                    checked <=> root.cmp-a-floating;
+                    toggled => { root.cmp-recompute(); }
+                }
+                if !root.cmp-a-floating: Field {
+                    label: "Rate (%)";
+                    LineEdit {
+                        text <=> root.cmp-a-rate-percent;
+                        edited => { root.cmp-recompute(); }
+                    }
+                }
+                if root.cmp-a-floating: HorizontalLayout {
+                    spacing: 10px;
+                    Field {
+                        label: "Base (%)";
+                        LineEdit {
+                            text <=> root.cmp-a-base-rate-percent;
+                            edited => { root.cmp-recompute(); }
+                        }
+                    }
+                    Field {
+                        label: "Spread (%)";
+                        LineEdit {
+                            text <=> root.cmp-a-spread-percent;
+                            edited => { root.cmp-recompute(); }
+                        }
+                    }
+                }
+                Field {
+                    label: "Term (years)";
+                    LineEdit {
+                        text <=> root.cmp-a-term-years;
+                        edited => { root.cmp-recompute(); }
+                    }
+                }
+                Text { text: root.cmp-a-result; font-weight: 700; font-size: 13px; color: #7ee787; wrap: word-wrap; }
+            }
+
+            Card {
+                Text { text: "Scenario B"; font-weight: 700; font-size: 14px; }
+                LineEdit {
+                    text <=> root.cmp-b-label;
+                }
+                CheckBox {
+                    text: "Floating rate";
+                    checked <=> root.cmp-b-floating;
+                    toggled => { root.cmp-recompute(); }
+                }
+                if !root.cmp-b-floating: Field {
+                    label: "Rate (%)";
+                    LineEdit {
+                        text <=> root.cmp-b-rate-percent;
+                        edited => { root.cmp-recompute(); }
+                    }
+                }
+                if root.cmp-b-floating: HorizontalLayout {
+                    spacing: 10px;
+                    Field {
+                        label: "Base (%)";
+                        LineEdit {
+                            text <=> root.cmp-b-base-rate-percent;
+                            edited => { root.cmp-recompute(); }
+                        }
+                    }
+                    Field {
+                        label: "Spread (%)";
+                        LineEdit {
+                            text <=> root.cmp-b-spread-percent;
+                            edited => { root.cmp-recompute(); }
+                        }
+                    }
+                }
+                Field {
+                    label: "Term (years)";
+                    LineEdit {
+                        text <=> root.cmp-b-term-years;
+                        edited => { root.cmp-recompute(); }
+                    }
+                }
+                Text { text: root.cmp-b-result; font-weight: 700; font-size: 13px; color: #7ee787; wrap: word-wrap; }
+            }
+
+            if root.cmp-has-error: Card {
+                ErrorText { text: "Enter valid comparison details."; }
+            }
+
+            Card {
+                SavedScenariosPanel {
+                    scenarios: root.cmp-scenarios;
+                    error-text: root.cmp-scenario-error;
+                    save(name) => { root.cmp-save-scenario(name); }
+                    load(id) => { root.cmp-load-scenario(id); }
+                    delete(id) => { root.cmp-delete-scenario(id); }
+                }
+            }
+        }
+
+            }
+        }
+    }
+}

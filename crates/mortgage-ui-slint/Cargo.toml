@@ -1,0 +1,37 @@
+[package]
+name = "mortgage-ui-slint"
+description = "Slint UI for mortgage-calculator: one Rust codebase targeting desktop, iOS, Android, and web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "mortgage_ui_slint"
+path = "src/lib.rs"
+# cdylib for wasm-pack (web target); rlib so the native `[[bin]]` below can
+# link against this same crate for desktop/iOS/Android.
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "mortgage-ui-slint"
+path = "src/main.rs"
+
+[dependencies]
+mortgage-calc = { workspace = true }
+mortgage-ports = { workspace = true }
+mortgage-ext-redb = { workspace = true }
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+slint = "1.16"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+
+[build-dependencies]
+slint-build = "1.16"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

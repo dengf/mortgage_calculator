@@ -1,16 +1,14 @@
-//! Opens the same [`mortgage_ext_redb::RedbScenarioStore`] used by the wasm
-//! frontend, but via its native (plain file) constructor on desktop/iOS/
-//! Android, and its wasm (IndexedDB-backed) constructor on the web target.
-//! One concrete type either way — only *how it's opened* differs by
-//! platform — so the rest of the app (see [`crate::components::SavedScenarios`])
-//! never needs to know which target it's running on.
+//! Opens the same [`mortgage_ext_redb::RedbScenarioStore`] used by the
+//! original React frontend, but via its native (plain file) constructor on
+//! desktop/iOS/Android, and its wasm (IndexedDB-backed) constructor on the
+//! web target. One concrete type either way.
 
 use std::rc::Rc;
 
 use mortgage_ext_redb::RedbScenarioStore;
 
 pub async fn open_store() -> Rc<RedbScenarioStore> {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     {
         let dir = data_dir();
         std::fs::create_dir_all(&dir).expect("failed to create app data directory");
@@ -19,7 +17,7 @@ pub async fn open_store() -> Rc<RedbScenarioStore> {
                 .expect("failed to open local scenario database"),
         )
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     {
         Rc::new(
             RedbScenarioStore::open_wasm()
@@ -29,7 +27,7 @@ pub async fn open_store() -> Rc<RedbScenarioStore> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 fn data_dir() -> std::path::PathBuf {
     // iOS/macOS sandbox HOME already scopes this per-app; this is a
     // reasonable v1 for Apple platforms specifically (Android would need
@@ -43,11 +41,11 @@ fn data_dir() -> std::path::PathBuf {
 }
 
 pub fn now_millis() -> i64 {
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     {
         js_sys::Date::now() as i64
     }
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     {
         use std::time::{SystemTime, UNIX_EPOCH};
         SystemTime::now()

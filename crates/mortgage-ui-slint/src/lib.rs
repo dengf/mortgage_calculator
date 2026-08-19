@@ -1,0 +1,765 @@
+use std::cell::RefCell;
+use std::error::Error;
+use std::rc::Rc;
+use std::str::FromStr;
+
+use mortgage_calc::affordability::AffordabilityInput;
+use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput};
+use mortgage_calc::refinance::RefinanceInput;
+use mortgage_calc::{Loan, PaymentFrequency, RateType};
+use mortgage_ext_redb::RedbScenarioStore;
+use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use slint::{ModelRc, VecModel, Weak};
+
+#[cfg(target_family = "wasm")]
+use wasm_bindgen::prelude::*;
+
+mod storage;
+
+slint::include_modules!();
+
+type StoreCell = Rc<RefCell<Option<Rc<RedbScenarioStore>>>>;
+
+#[derive(Serialize, Deserialize)]
+struct PaymentInputs {
+    principal: String,
+    rate_percent: String,
+    term_years: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct AmortInputs {
+    principal: String,
+    rate_percent: String,
+    term_years: String,
+    extra_payment: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct AffInputs {
+    income: String,
+    debts: String,
+    down_payment: String,
+    rate_percent: String,
+    term_years: String,
+    max_dti_percent: String,
+    tax_rate_percent: String,
+    insurance: String,
+    hoa: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct RefiInputs {
+    current_balance: String,
+    current_rate_percent: String,
+    remaining_periods: String,
+    new_rate_percent: String,
+    new_term_years: String,
+    closing_costs: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CompareInputs {
+    principal: String,
+    a_label: String,
+    a_floating: bool,
+    a_rate_percent: String,
+    a_base_rate_percent: String,
+    a_spread_percent: String,
+    a_term_years: String,
+    b_label: String,
+    b_floating: bool,
+    b_rate_percent: String,
+    b_base_rate_percent: String,
+    b_spread_percent: String,
+    b_term_years: String,
+}
+
+fn rows_from_scenarios(list: Vec<Scenario>) -> ModelRc<ScenarioRow> {
+    let rows: Vec<ScenarioRow> = list
+        .into_iter()
+        .map(|s| ScenarioRow {
+            id: s.id.into(),
+            name: s.name.into(),
+        })
+        .collect();
+    ModelRc::new(VecModel::from(rows))
+}
+
+async fn refresh_scenarios(ui: &AppWindow, store: &RedbScenarioStore, kind: CalculatorKind) {
+    let list = store.list(Some(kind)).await.unwrap_or_default();
+    let rows = rows_from_scenarios(list);
+    match kind {
+        CalculatorKind::Payment => ui.set_payment_scenarios(rows),
+        CalculatorKind::Amortization => ui.set_amort_scenarios(rows),
+        CalculatorKind::Affordability => ui.set_aff_scenarios(rows),
+        CalculatorKind::Refinance => ui.set_refi_scenarios(rows),
+        CalculatorKind::Comparison => ui.set_cmp_scenarios(rows),
+    }
+}
+
+async fn refresh_all_scenarios(ui: &AppWindow, store: &RedbScenarioStore) {
+    refresh_scenarios(ui, store, CalculatorKind::Payment).await;
+    refresh_scenarios(ui, store, CalculatorKind::Amortization).await;
+    refresh_scenarios(ui, store, CalculatorKind::Affordability).await;
+    refresh_scenarios(ui, store, CalculatorKind::Refinance).await;
+    refresh_scenarios(ui, store, CalculatorKind::Comparison).await;
+}
+
+fn do_save(
+    ui: Weak<AppWindow>,
+    store_cell: StoreCell,
+    kind: CalculatorKind,
+    name: String,
+    inputs_json: String,
+    set_error: fn(&AppWindow, slint::SharedString),
+) {
+    let store = store_cell.borrow().clone();
+    let Some(store) = store else {
+        if let Some(ui) = ui.upgrade() {
+            set_error(&ui, "Storage not ready yet.".into());
+        }
+        return;
+    };
+    slint::spawn_local(async move {
+        let scenario = Scenario {
+            id: storage::new_scenario_id(),
+            calculator: kind,
+            name,
+            created_at: storage::now_millis(),
+            inputs_json,
+        };
+        let result = store.save(scenario).await;
+        if let Some(ui) = ui.upgrade() {
+            match result {
+                Ok(()) => {
+                    set_error(&ui, "".into());
+                    refresh_scenarios(&ui, &store, kind).await;
+                }
+                Err(e) => set_error(&ui, e.to_string().into()),
+            }
+        }
+    })
+    .ok();
+}
+
+fn do_load(
+    ui: Weak<AppWindow>,
+    store_cell: StoreCell,
+    id: String,
+    apply: impl FnOnce(&AppWindow, &str) + 'static,
+) {
+    let store = store_cell.borrow().clone();
+    let Some(store) = store else { return };
+    slint::spawn_local(async move {
+        if let Ok(scenario) = store.load(&id).await {
+            if let Some(ui) = ui.upgrade() {
+                apply(&ui, &scenario.inputs_json);
+            }
+        }
+    })
+    .ok();
+}
+
+fn do_delete(ui: Weak<AppWindow>, store_cell: StoreCell, kind: CalculatorKind, id: String) {
+    let store = store_cell.borrow().clone();
+    let Some(store) = store else { return };
+    slint::spawn_local(async move {
+        let _ = store.delete(&id).await;
+        if let Some(ui) = ui.upgrade() {
+            refresh_scenarios(&ui, &store, kind).await;
+        }
+    })
+    .ok();
+}
+
+fn build_loan(principal: &str, rate_percent: &str, term_years: &str) -> Option<Loan> {
+    let principal_d = Decimal::from_str(principal).ok()?;
+    let rate_d = Decimal::from_str(rate_percent).ok()?;
+    let term_d = Decimal::from_str(term_years).ok()?;
+
+    Loan::builder()
+        .principal(principal_d)
+        .annual_rate(rate_d / Decimal::from(100))
+        .term_years(term_d)
+        .frequency(PaymentFrequency::Monthly)
+        .build()
+        .ok()
+}
+
+fn recompute_payment(ui: &AppWindow) {
+    let loan = build_loan(
+        ui.get_principal().as_str(),
+        ui.get_rate_percent().as_str(),
+        ui.get_term_years().as_str(),
+    );
+
+    match loan {
+        Some(loan) => {
+            let summary = mortgage_calc::payment::summarize(&loan);
+            ui.set_has_error(false);
+            ui.set_payment_result(format!("${}", summary.payment).into());
+            ui.set_total_paid_result(format!("${}", summary.total_paid).into());
+            ui.set_total_interest_result(format!("${}", summary.total_interest).into());
+        }
+        None => ui.set_has_error(true),
+    }
+}
+
+fn recompute_amortization(ui: &AppWindow) {
+    let loan = build_loan(
+        ui.get_amort_principal().as_str(),
+        ui.get_amort_rate_percent().as_str(),
+        ui.get_amort_term_years().as_str(),
+    );
+
+    let Some(loan) = loan else {
+        ui.set_amort_has_error(true);
+        return;
+    };
+
+    let summary = mortgage_calc::payment::summarize(&loan);
+    ui.set_amort_has_error(false);
+    ui.set_amort_payment_result(format!("${}", summary.payment).into());
+    ui.set_amort_total_paid_result(format!("${}", summary.total_paid).into());
+    ui.set_amort_total_interest_result(format!("${}", summary.total_interest).into());
+
+    let extra = Decimal::from_str(ui.get_amort_extra_payment().as_str())
+        .unwrap_or(Decimal::ZERO)
+        .max(Decimal::ZERO);
+
+    if extra > Decimal::ZERO {
+        if let Ok(impact) = mortgage_calc::amortization::extra_payment_impact(&loan, extra) {
+            ui.set_amort_show_impact(true);
+            ui.set_amort_periods_saved(impact.periods_saved.to_string().into());
+            ui.set_amort_interest_saved(format!("${}", impact.interest_saved).into());
+            ui.set_amort_new_payoff(impact.payoff_periods.to_string().into());
+        } else {
+            ui.set_amort_show_impact(false);
+        }
+    } else {
+        ui.set_amort_show_impact(false);
+    }
+
+    match mortgage_calc::amortization::schedule(&loan, extra) {
+        Ok(rows) => {
+            ui.set_amort_schedule_rows(build_schedule_rows(&rows, ui.get_amort_show_full()));
+        }
+        Err(_) => {
+            ui.set_amort_schedule_rows(ModelRc::new(VecModel::from(Vec::<AmortScheduleRow>::new())));
+        }
+    }
+}
+
+fn build_schedule_rows(
+    rows: &[mortgage_calc::amortization::AmortizationRow],
+    show_full: bool,
+) -> ModelRc<AmortScheduleRow> {
+    if show_full {
+        let out: Vec<AmortScheduleRow> = rows
+            .iter()
+            .map(|r| AmortScheduleRow {
+                label: r.period.to_string().into(),
+                paid: format!("${}", r.payment).into(),
+                principal: format!("${}", r.principal_portion).into(),
+                interest: format!("${}", r.interest_portion).into(),
+                balance: format!("${}", r.remaining_balance).into(),
+            })
+            .collect();
+        return ModelRc::new(VecModel::from(out));
+    }
+
+    let mut out = Vec::new();
+    for (i, chunk) in rows.chunks(12).enumerate() {
+        let paid: Decimal = chunk.iter().map(|r| r.payment).sum();
+        let principal: Decimal = chunk.iter().map(|r| r.principal_portion).sum();
+        let interest: Decimal = chunk.iter().map(|r| r.interest_portion).sum();
+        let balance = chunk.last().expect("chunks(12) never yields an empty chunk").remaining_balance;
+        out.push(AmortScheduleRow {
+            label: (i + 1).to_string().into(),
+            paid: format!("${}", paid).into(),
+            principal: format!("${}", principal).into(),
+            interest: format!("${}", interest).into(),
+            balance: format!("${}", balance).into(),
+        });
+    }
+    ModelRc::new(VecModel::from(out))
+}
+
+fn recompute_affordability(ui: &AppWindow) {
+    let result = (|| {
+        let input = AffordabilityInput {
+            gross_monthly_income: Decimal::from_str(ui.get_aff_income().as_str()).ok()?,
+            monthly_debts: Decimal::from_str(ui.get_aff_debts().as_str()).ok()?,
+            down_payment: Decimal::from_str(ui.get_aff_down_payment().as_str()).ok()?,
+            annual_rate: Decimal::from_str(ui.get_aff_rate_percent().as_str()).ok()? / Decimal::from(100),
+            term_years: Decimal::from_str(ui.get_aff_term_years().as_str()).ok()?,
+            max_dti: Decimal::from_str(ui.get_aff_max_dti_percent().as_str()).ok()? / Decimal::from(100),
+            annual_property_tax_rate: Decimal::from_str(ui.get_aff_tax_rate_percent().as_str()).ok()?
+                / Decimal::from(100),
+            annual_insurance: Decimal::from_str(ui.get_aff_insurance().as_str()).ok()?,
+            monthly_hoa: Decimal::from_str(ui.get_aff_hoa().as_str()).ok()?,
+        };
+        mortgage_calc::affordability::max_affordable(&input).ok()
+    })();
+
+    match result {
+        Some(result) => {
+            ui.set_aff_has_error(false);
+            ui.set_aff_max_home_price(format!("${}", result.max_home_price).into());
+            ui.set_aff_max_loan_amount(format!("${}", result.max_loan_amount).into());
+            ui.set_aff_max_pi(format!("${}", result.max_principal_and_interest).into());
+            ui.set_aff_front_dti(format!("{:.1}", result.front_end_dti * Decimal::from(100)).into());
+            ui.set_aff_back_dti(format!("{:.1}", result.back_end_dti * Decimal::from(100)).into());
+        }
+        None => ui.set_aff_has_error(true),
+    }
+}
+
+fn recompute_refinance(ui: &AppWindow) {
+    let result = (|| {
+        let input = RefinanceInput {
+            current_balance: Decimal::from_str(ui.get_refi_current_balance().as_str()).ok()?,
+            current_annual_rate: Decimal::from_str(ui.get_refi_current_rate_percent().as_str()).ok()?
+                / Decimal::from(100),
+            remaining_periods: ui.get_refi_remaining_periods().as_str().parse::<u32>().ok()?,
+            new_annual_rate: Decimal::from_str(ui.get_refi_new_rate_percent().as_str()).ok()?
+                / Decimal::from(100),
+            new_term_years: Decimal::from_str(ui.get_refi_new_term_years().as_str()).ok()?,
+            closing_costs: Decimal::from_str(ui.get_refi_closing_costs().as_str()).ok()?,
+            frequency: PaymentFrequency::Monthly,
+        };
+        mortgage_calc::refinance::analyze_refinance(&input).ok()
+    })();
+
+    match result {
+        Some(result) => {
+            ui.set_refi_has_error(false);
+            ui.set_refi_current_payment(format!("${}", result.current_payment).into());
+            ui.set_refi_new_payment(format!("${}", result.new_payment).into());
+            ui.set_refi_payment_savings(format!("${}", result.payment_savings).into());
+            ui.set_refi_break_even(
+                match result.break_even_periods {
+                    Some(periods) => format!("{periods} months"),
+                    None => "Never".to_string(),
+                }
+                .into(),
+            );
+            ui.set_refi_lifetime_savings(format!("${}", result.lifetime_savings).into());
+        }
+        None => ui.set_refi_has_error(true),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compare_slot(
+    principal: Decimal,
+    floating: bool,
+    rate_percent: &str,
+    base_rate_percent: &str,
+    spread_percent: &str,
+    term_years: &str,
+) -> Option<String> {
+    let rate_type = if floating {
+        RateType::Floating {
+            base_rate: Decimal::from_str(base_rate_percent).ok()? / Decimal::from(100),
+            spread: Decimal::from_str(spread_percent).ok()? / Decimal::from(100),
+        }
+    } else {
+        RateType::Fixed {
+            rate: Decimal::from_str(rate_percent).ok()? / Decimal::from(100),
+        }
+    };
+
+    let input = ComparisonInput {
+        principal,
+        frequency: PaymentFrequency::Monthly,
+    };
+    let entry = ComparisonEntry {
+        label: String::new(),
+        rate_type,
+        term_years: Decimal::from_str(term_years).ok()?,
+    };
+
+    let rows = mortgage_calc::comparison::compare(&input, std::slice::from_ref(&entry)).ok()?;
+    let row = rows.into_iter().next()?;
+
+    Some(format!(
+        "{:.3}% \u{2022} {} yr \u{2022} ${}/mo \u{2022} ${} total \u{2022} ${} interest",
+        row.effective_rate * Decimal::from(100),
+        row.term_years,
+        row.payment,
+        row.total_paid,
+        row.total_interest
+    ))
+}
+
+fn recompute_compare(ui: &AppWindow) {
+    let Some(principal) = Decimal::from_str(ui.get_cmp_principal().as_str()).ok() else {
+        ui.set_cmp_has_error(true);
+        return;
+    };
+
+    let a = compare_slot(
+        principal,
+        ui.get_cmp_a_floating(),
+        ui.get_cmp_a_rate_percent().as_str(),
+        ui.get_cmp_a_base_rate_percent().as_str(),
+        ui.get_cmp_a_spread_percent().as_str(),
+        ui.get_cmp_a_term_years().as_str(),
+    );
+    let b = compare_slot(
+        principal,
+        ui.get_cmp_b_floating(),
+        ui.get_cmp_b_rate_percent().as_str(),
+        ui.get_cmp_b_base_rate_percent().as_str(),
+        ui.get_cmp_b_spread_percent().as_str(),
+        ui.get_cmp_b_term_years().as_str(),
+    );
+
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            ui.set_cmp_has_error(false);
+            ui.set_cmp_a_result(a.into());
+            ui.set_cmp_b_result(b.into());
+        }
+        _ => ui.set_cmp_has_error(true),
+    }
+}
+
+/// Shared entry point: builds the window, wires callbacks, and runs the
+/// event loop. Called from `main.rs` on native targets and from
+/// [`run_wasm`] on wasm32.
+pub fn run_app() -> Result<(), Box<dyn Error>> {
+    let ui = AppWindow::new()?;
+
+    recompute_payment(&ui);
+    recompute_amortization(&ui);
+    recompute_affordability(&ui);
+    recompute_refinance(&ui);
+    recompute_compare(&ui);
+
+    let ui_handle = ui.as_weak();
+    ui.on_recompute(move || {
+        let ui = ui_handle.unwrap();
+        recompute_payment(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_recompute(move || {
+        let ui = ui_handle.unwrap();
+        recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_toggle_full(move || {
+        let ui = ui_handle.unwrap();
+        ui.set_amort_show_full(!ui.get_amort_show_full());
+        recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_aff_recompute(move || {
+        let ui = ui_handle.unwrap();
+        recompute_affordability(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_refi_recompute(move || {
+        let ui = ui_handle.unwrap();
+        recompute_refinance(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_cmp_recompute(move || {
+        let ui = ui_handle.unwrap();
+        recompute_compare(&ui);
+    });
+
+    let store_cell: StoreCell = Rc::new(RefCell::new(None));
+
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        slint::spawn_local(async move {
+            let store = storage::open_store().await;
+            if let Some(ui) = ui_handle.upgrade() {
+                refresh_all_scenarios(&ui, &store).await;
+            }
+            *store_cell.borrow_mut() = Some(store);
+        })
+        .expect("failed to spawn scenario store init");
+    }
+
+    // --- Payment scenarios ---
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_payment_save_scenario(move |name| {
+            let Some(ui) = ui_handle.upgrade() else { return };
+            let inputs = PaymentInputs {
+                principal: ui.get_principal().to_string(),
+                rate_percent: ui.get_rate_percent().to_string(),
+                term_years: ui.get_term_years().to_string(),
+            };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            do_save(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Payment,
+                name.to_string(),
+                inputs_json,
+                |ui, err| ui.set_payment_scenario_error(err),
+            );
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_payment_load_scenario(move |id| {
+            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
+                if let Ok(inputs) = serde_json::from_str::<PaymentInputs>(json) {
+                    ui.set_principal(inputs.principal.into());
+                    ui.set_rate_percent(inputs.rate_percent.into());
+                    ui.set_term_years(inputs.term_years.into());
+                    recompute_payment(ui);
+                }
+            });
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_payment_delete_scenario(move |id| {
+            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Payment, id.to_string());
+        });
+    }
+
+    // --- Amortization scenarios ---
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_amort_save_scenario(move |name| {
+            let Some(ui) = ui_handle.upgrade() else { return };
+            let inputs = AmortInputs {
+                principal: ui.get_amort_principal().to_string(),
+                rate_percent: ui.get_amort_rate_percent().to_string(),
+                term_years: ui.get_amort_term_years().to_string(),
+                extra_payment: ui.get_amort_extra_payment().to_string(),
+            };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            do_save(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Amortization,
+                name.to_string(),
+                inputs_json,
+                |ui, err| ui.set_amort_scenario_error(err),
+            );
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_amort_load_scenario(move |id| {
+            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
+                if let Ok(inputs) = serde_json::from_str::<AmortInputs>(json) {
+                    ui.set_amort_principal(inputs.principal.into());
+                    ui.set_amort_rate_percent(inputs.rate_percent.into());
+                    ui.set_amort_term_years(inputs.term_years.into());
+                    ui.set_amort_extra_payment(inputs.extra_payment.into());
+                    recompute_amortization(ui);
+                }
+            });
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_amort_delete_scenario(move |id| {
+            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Amortization, id.to_string());
+        });
+    }
+
+    // --- Affordability scenarios ---
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_aff_save_scenario(move |name| {
+            let Some(ui) = ui_handle.upgrade() else { return };
+            let inputs = AffInputs {
+                income: ui.get_aff_income().to_string(),
+                debts: ui.get_aff_debts().to_string(),
+                down_payment: ui.get_aff_down_payment().to_string(),
+                rate_percent: ui.get_aff_rate_percent().to_string(),
+                term_years: ui.get_aff_term_years().to_string(),
+                max_dti_percent: ui.get_aff_max_dti_percent().to_string(),
+                tax_rate_percent: ui.get_aff_tax_rate_percent().to_string(),
+                insurance: ui.get_aff_insurance().to_string(),
+                hoa: ui.get_aff_hoa().to_string(),
+            };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            do_save(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Affordability,
+                name.to_string(),
+                inputs_json,
+                |ui, err| ui.set_aff_scenario_error(err),
+            );
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_aff_load_scenario(move |id| {
+            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
+                if let Ok(inputs) = serde_json::from_str::<AffInputs>(json) {
+                    ui.set_aff_income(inputs.income.into());
+                    ui.set_aff_debts(inputs.debts.into());
+                    ui.set_aff_down_payment(inputs.down_payment.into());
+                    ui.set_aff_rate_percent(inputs.rate_percent.into());
+                    ui.set_aff_term_years(inputs.term_years.into());
+                    ui.set_aff_max_dti_percent(inputs.max_dti_percent.into());
+                    ui.set_aff_tax_rate_percent(inputs.tax_rate_percent.into());
+                    ui.set_aff_insurance(inputs.insurance.into());
+                    ui.set_aff_hoa(inputs.hoa.into());
+                    recompute_affordability(ui);
+                }
+            });
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_aff_delete_scenario(move |id| {
+            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Affordability, id.to_string());
+        });
+    }
+
+    // --- Refinance scenarios ---
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_refi_save_scenario(move |name| {
+            let Some(ui) = ui_handle.upgrade() else { return };
+            let inputs = RefiInputs {
+                current_balance: ui.get_refi_current_balance().to_string(),
+                current_rate_percent: ui.get_refi_current_rate_percent().to_string(),
+                remaining_periods: ui.get_refi_remaining_periods().to_string(),
+                new_rate_percent: ui.get_refi_new_rate_percent().to_string(),
+                new_term_years: ui.get_refi_new_term_years().to_string(),
+                closing_costs: ui.get_refi_closing_costs().to_string(),
+            };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            do_save(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Refinance,
+                name.to_string(),
+                inputs_json,
+                |ui, err| ui.set_refi_scenario_error(err),
+            );
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_refi_load_scenario(move |id| {
+            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
+                if let Ok(inputs) = serde_json::from_str::<RefiInputs>(json) {
+                    ui.set_refi_current_balance(inputs.current_balance.into());
+                    ui.set_refi_current_rate_percent(inputs.current_rate_percent.into());
+                    ui.set_refi_remaining_periods(inputs.remaining_periods.into());
+                    ui.set_refi_new_rate_percent(inputs.new_rate_percent.into());
+                    ui.set_refi_new_term_years(inputs.new_term_years.into());
+                    ui.set_refi_closing_costs(inputs.closing_costs.into());
+                    recompute_refinance(ui);
+                }
+            });
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_refi_delete_scenario(move |id| {
+            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Refinance, id.to_string());
+        });
+    }
+
+    // --- Compare scenarios ---
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_cmp_save_scenario(move |name| {
+            let Some(ui) = ui_handle.upgrade() else { return };
+            let inputs = CompareInputs {
+                principal: ui.get_cmp_principal().to_string(),
+                a_label: ui.get_cmp_a_label().to_string(),
+                a_floating: ui.get_cmp_a_floating(),
+                a_rate_percent: ui.get_cmp_a_rate_percent().to_string(),
+                a_base_rate_percent: ui.get_cmp_a_base_rate_percent().to_string(),
+                a_spread_percent: ui.get_cmp_a_spread_percent().to_string(),
+                a_term_years: ui.get_cmp_a_term_years().to_string(),
+                b_label: ui.get_cmp_b_label().to_string(),
+                b_floating: ui.get_cmp_b_floating(),
+                b_rate_percent: ui.get_cmp_b_rate_percent().to_string(),
+                b_base_rate_percent: ui.get_cmp_b_base_rate_percent().to_string(),
+                b_spread_percent: ui.get_cmp_b_spread_percent().to_string(),
+                b_term_years: ui.get_cmp_b_term_years().to_string(),
+            };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            do_save(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Comparison,
+                name.to_string(),
+                inputs_json,
+                |ui, err| ui.set_cmp_scenario_error(err),
+            );
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_cmp_load_scenario(move |id| {
+            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
+                if let Ok(inputs) = serde_json::from_str::<CompareInputs>(json) {
+                    ui.set_cmp_principal(inputs.principal.into());
+                    ui.set_cmp_a_label(inputs.a_label.into());
+                    ui.set_cmp_a_floating(inputs.a_floating);
+                    ui.set_cmp_a_rate_percent(inputs.a_rate_percent.into());
+                    ui.set_cmp_a_base_rate_percent(inputs.a_base_rate_percent.into());
+                    ui.set_cmp_a_spread_percent(inputs.a_spread_percent.into());
+                    ui.set_cmp_a_term_years(inputs.a_term_years.into());
+                    ui.set_cmp_b_label(inputs.b_label.into());
+                    ui.set_cmp_b_floating(inputs.b_floating);
+                    ui.set_cmp_b_rate_percent(inputs.b_rate_percent.into());
+                    ui.set_cmp_b_base_rate_percent(inputs.b_base_rate_percent.into());
+                    ui.set_cmp_b_spread_percent(inputs.b_spread_percent.into());
+                    ui.set_cmp_b_term_years(inputs.b_term_years.into());
+                    recompute_compare(ui);
+                }
+            });
+        });
+    }
+    {
+        let store_cell = store_cell.clone();
+        let ui_handle = ui.as_weak();
+        ui.on_cmp_delete_scenario(move |id| {
+            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Comparison, id.to_string());
+        });
+    }
+
+    ui.run()?;
+
+    Ok(())
+}
+
+#[cfg(target_family = "wasm")]
+#[wasm_bindgen(start)]
+pub fn run_wasm() {
+    run_app().expect("failed to start mortgage-ui-slint");
+}
