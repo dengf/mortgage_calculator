@@ -763,3 +763,10 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
 pub fn run_wasm() {
     run_app().expect("failed to start mortgage-ui-slint");
 }
+
+#[cfg(target_os = "android")]
+#[unsafe(no_mangle)]
+fn android_main(app: slint::android::AndroidApp) {
+    slint::android::init(app).unwrap();
+    run_app().expect("failed to start mortgage-ui-slint");
+}
