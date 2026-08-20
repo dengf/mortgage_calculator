@@ -1,4 +1,4 @@
-import { LineEdit, CheckBox, ComboBox, ListView, ScrollView, Switch } from "std-widgets.slint";
+import { LineEdit, CheckBox, ComboBox, ListView, ScrollView, Switch, AboutSlint } from "std-widgets.slint";
 
 struct ScenarioRow {
     id: string,
@@ -239,6 +239,48 @@ component RegionToggle inherits Rectangle {
         spacing: 2px;
         RegionOption { text: "US"; active: root.region == "US"; clicked => { root.region = "US"; root.changed("US"); } }
         RegionOption { text: "SG"; active: root.region == "SG"; clicked => { root.region = "SG"; root.changed("SG"); } }
+    }
+}
+
+// Top-level "About" entry point, required by the Slint royalty-free
+// license's attribution clause (option a: an About screen/dialog
+// reachable from the app's top-level menu, showing the AboutSlint
+// widget) — see LICENSES/LicenseRef-Slint-Royalty-free-2.0.md in the
+// slint crate.
+component AboutButton inherits Rectangle {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: touch.has-hover ? #202a3c : transparent;
+
+    Text {
+        text: "?";
+        color: #92a0b3;
+        font-size: 13px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        clicked => { about-popup.show(); }
+    }
+
+    about-popup := PopupWindow {
+        x: root.width - self.width;
+        y: root.height + 6px;
+        width: 260px;
+        height: 170px;
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: #161f2e;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #232e42;
+            clip: true;
+            AboutSlint { }
+        }
     }
 }
 
@@ -867,6 +909,8 @@ export component AppWindow inherits Window {
                 color: white;
             }
             Rectangle { horizontal-stretch: 1; }
+            AboutButton { }
+            Rectangle { width: 8px; }
             RegionToggle {
                 region <=> root.region;
                 changed(r) => { root.region-changed(r); }
