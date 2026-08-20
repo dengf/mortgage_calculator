@@ -1,4 +1,4 @@
-import { LineEdit, CheckBox, ListView, ScrollView } from "std-widgets.slint";
+import { LineEdit, CheckBox, ListView, ScrollView, Switch } from "std-widgets.slint";
 
 struct ScenarioRow {
     id: string,
@@ -307,6 +307,92 @@ component ScheduleTable inherits VerticalLayout {
     }
 }
 
+component HabitToggle inherits Rectangle {
+    in property <string> label;
+    in property <string> amount-label;
+    in-out property <bool> on: false;
+    callback toggled();
+
+    background: root.on ? #16321f : #10161f;
+    border-radius: 8px;
+    height: 44px;
+    animate background { duration: 200ms; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text { text: root.label; color: #d7dee8; font-size: 13px; }
+            Text { text: root.amount-label; color: root.on ? #7ee787 : #5c6b80; font-size: 11px; }
+        }
+        Switch {
+            checked <=> root.on;
+            toggled => { root.toggled(); }
+        }
+    }
+}
+
+component WhatIfPanel inherits VerticalLayout {
+    in-out property <bool> lattes-on: false;
+    in-out property <bool> subscription-on: false;
+    in-out property <bool> bonus-on: false;
+    in property <string> boom-text: "";
+    callback toggled();
+
+    spacing: 10px;
+
+    Text { text: "What if?"; font-weight: 700; font-size: 14px; }
+    Text {
+        text: "Flip a habit on to see how it speeds up payoff. Sets the extra payment above.";
+        color: #92a0b3;
+        font-size: 11px;
+        wrap: word-wrap;
+    }
+
+    HabitToggle {
+        label: "Skip 2 lattes a week";
+        amount-label: "+$50/mo";
+        on <=> root.lattes-on;
+        toggled => { root.toggled(); }
+    }
+    HabitToggle {
+        label: "Cancel an unused subscription";
+        amount-label: "+$15/mo";
+        on <=> root.subscription-on;
+        toggled => { root.toggled(); }
+    }
+    HabitToggle {
+        label: "Apply half your $2,000 bonus";
+        amount-label: "+$83/mo";
+        on <=> root.bonus-on;
+        toggled => { root.toggled(); }
+    }
+
+    if root.boom-text != "": Rectangle {
+        background: #16321f;
+        border-radius: 10px;
+        border-width: 1px;
+        border-color: #2a5c3a;
+
+        HorizontalLayout {
+            padding: 12px;
+            Text {
+                text: root.boom-text;
+                color: #7ee787;
+                font-weight: 700;
+                font-size: 14px;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+            }
+        }
+
+        animate opacity { duration: 250ms; }
+    }
+}
+
 export component AppWindow inherits Window {
     title: "Mortgage Calculator";
     preferred-width: 520px;
@@ -346,12 +432,17 @@ export component AppWindow inherits Window {
     in-out property <string> amort-periods-saved: "";
     in-out property <string> amort-interest-saved: "";
     in-out property <string> amort-new-payoff: "";
+    in-out property <string> amort-boom-text: "";
+    in-out property <bool> amort-lattes-on: false;
+    in-out property <bool> amort-subscription-on: false;
+    in-out property <bool> amort-bonus-on: false;
     in-out property <[AmortScheduleRow]> amort-schedule-rows: [];
     in-out property <bool> amort-show-full: false;
     in-out property <[ScenarioRow]> amort-scenarios: [];
     in-out property <string> amort-scenario-error: "";
     callback amort-recompute();
     callback amort-rate-slider-changed(float);
+    callback amort-whatif-toggled();
     callback amort-toggle-full();
     callback amort-save-scenario(string);
     callback amort-load-scenario(string);
@@ -558,6 +649,16 @@ export component AppWindow inherits Window {
             }
             if root.amort-has-error: Card {
                 ErrorText { text: "Enter valid loan details."; }
+            }
+
+            if !root.amort-has-error: Card {
+                WhatIfPanel {
+                    lattes-on <=> root.amort-lattes-on;
+                    subscription-on <=> root.amort-subscription-on;
+                    bonus-on <=> root.amort-bonus-on;
+                    boom-text: root.amort-boom-text;
+                    toggled => { root.amort-whatif-toggled(); }
+                }
             }
 
             if !root.amort-has-error: Card {

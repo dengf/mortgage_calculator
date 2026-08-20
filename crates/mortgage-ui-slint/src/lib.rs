@@ -199,6 +199,29 @@ fn format_rate_value(v: f32) -> String {
     if s.is_empty() { "0".to_string() } else { s.to_string() }
 }
 
+fn boom_text(periods_saved: u32, interest_saved: Decimal) -> String {
+    if periods_saved == 0 {
+        return format!("Boom! You just chopped ${} in interest off your mortgage.", interest_saved);
+    }
+    let years = periods_saved / 12;
+    let months = periods_saved % 12;
+    let time_phrase = match (years, months) {
+        (0, m) => format!("{} month{}", m, if m == 1 { "" } else { "s" }),
+        (y, 0) => format!("{} year{}", y, if y == 1 { "" } else { "s" }),
+        (y, m) => format!(
+            "{} year{} {} month{}",
+            y,
+            if y == 1 { "" } else { "s" },
+            m,
+            if m == 1 { "" } else { "s" }
+        ),
+    };
+    format!(
+        "Boom! You just chopped {} and ${} in interest off your mortgage.",
+        time_phrase, interest_saved
+    )
+}
+
 fn recompute_payment(ui: &AppWindow) {
     ui.set_rate_percent_value(parse_rate_value(ui.get_rate_percent().as_str()));
     let loan = build_loan(
@@ -248,11 +271,14 @@ fn recompute_amortization(ui: &AppWindow) {
             ui.set_amort_periods_saved(impact.periods_saved.to_string().into());
             ui.set_amort_interest_saved(format!("${}", impact.interest_saved).into());
             ui.set_amort_new_payoff(impact.payoff_periods.to_string().into());
+            ui.set_amort_boom_text(boom_text(impact.periods_saved, impact.interest_saved).into());
         } else {
             ui.set_amort_show_impact(false);
+            ui.set_amort_boom_text("".into());
         }
     } else {
         ui.set_amort_show_impact(false);
+        ui.set_amort_boom_text("".into());
     }
 
     match mortgage_calc::amortization::schedule(&loan, extra) {
@@ -481,6 +507,23 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     ui.on_amort_rate_slider_changed(move |v| {
         let ui = ui_handle.unwrap();
         ui.set_amort_rate_percent(format_rate_value(v).into());
+        recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_whatif_toggled(move || {
+        let ui = ui_handle.unwrap();
+        let mut extra = Decimal::ZERO;
+        if ui.get_amort_lattes_on() {
+            extra += Decimal::from(50);
+        }
+        if ui.get_amort_subscription_on() {
+            extra += Decimal::from(15);
+        }
+        if ui.get_amort_bonus_on() {
+            extra += Decimal::from(83);
+        }
+        ui.set_amort_extra_payment(extra.to_string().into());
         recompute_amortization(&ui);
     });
 
