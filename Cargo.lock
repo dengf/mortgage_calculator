@@ -3038,6 +3038,7 @@ dependencies = [
  "mortgage-ports",
  "objc2 0.6.4",
  "rust_decimal",
+ "rust_decimal_macros",
  "serde",
  "serde_json",
  "slint",

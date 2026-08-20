@@ -6,11 +6,12 @@ use std::str::FromStr;
 use mortgage_calc::affordability::AffordabilityInput;
 use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput};
 use mortgage_calc::refinance::RefinanceInput;
-use mortgage_calc::{Loan, PaymentFrequency, RateType};
+use mortgage_calc::{singapore, Loan, PaymentFrequency, RateType};
 use mortgage_core::Region;
 use mortgage_ext_redb::RedbScenarioStore;
 use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore};
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use slint::{ModelRc, VecModel, Weak};
 
@@ -223,6 +224,94 @@ fn boom_text(periods_saved: u32, interest_saved: Decimal) -> String {
     )
 }
 
+fn parse_residency(s: &str) -> singapore::Residency {
+    match s {
+        "PR" => singapore::Residency::PermanentResident,
+        "Foreigner" => singapore::Residency::Foreigner,
+        _ => singapore::Residency::Citizen,
+    }
+}
+
+fn parse_property_count(s: &str) -> singapore::PropertyCount {
+    match s {
+        "2nd" => singapore::PropertyCount::Second,
+        "3rd+" => singapore::PropertyCount::ThirdOrMore,
+        _ => singapore::PropertyCount::First,
+    }
+}
+
+fn blank_sg_limits(ui: &AppWindow) {
+    ui.set_sg_tdsr_label("".into());
+    ui.set_sg_tdsr_exceeded(false);
+    ui.set_sg_tdsr_near(false);
+    ui.set_sg_msr_label("".into());
+    ui.set_sg_msr_exceeded(false);
+    ui.set_sg_msr_near(false);
+    ui.set_sg_limit_warning("".into());
+}
+
+/// Recomputes the Payment tab's Singapore panel (TDSR/MSR limits, CPF/cash
+/// split, and BSD/ABSD upfront costs). `monthly_payment` is the Payment
+/// tab's own result, if the loan inputs were valid — the limits and CPF
+/// split depend on it, but upfront costs are priced off a separate home
+/// price input and don't.
+fn recompute_payment_sg(ui: &AppWindow, monthly_payment: Option<Decimal>) {
+    match monthly_payment {
+        Some(payment) => {
+            let income = Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default();
+            let other_debts = Decimal::from_str(ui.get_sg_other_debts().as_str()).unwrap_or_default();
+
+            match singapore::check_tdsr_msr(payment, other_debts, income, ui.get_sg_is_hdb()) {
+                Ok(check) => {
+                    ui.set_sg_tdsr_label(format!("{:.1}%", check.tdsr.ratio * dec!(100)).into());
+                    ui.set_sg_tdsr_exceeded(check.tdsr.exceeded);
+                    ui.set_sg_tdsr_near(check.tdsr.near_limit);
+
+                    let mut warnings = Vec::new();
+                    if check.tdsr.exceeded {
+                        warnings.push("Exceeds MAS TDSR limit (55%).");
+                    }
+                    match check.msr {
+                        Some(msr) => {
+                            ui.set_sg_msr_label(format!("{:.1}%", msr.ratio * dec!(100)).into());
+                            ui.set_sg_msr_exceeded(msr.exceeded);
+                            ui.set_sg_msr_near(msr.near_limit);
+                            if msr.exceeded {
+                                warnings.push("Exceeds MAS MSR limit (30%) for HDB/EC.");
+                            }
+                        }
+                        None => {
+                            ui.set_sg_msr_label("".into());
+                            ui.set_sg_msr_exceeded(false);
+                            ui.set_sg_msr_near(false);
+                        }
+                    }
+                    ui.set_sg_limit_warning(warnings.join(" ").into());
+                }
+                Err(_) => blank_sg_limits(ui),
+            }
+
+            let cpf_oa = Decimal::from_str(ui.get_sg_cpf_oa_available().as_str()).unwrap_or_default();
+            let split = singapore::cpf_cash_split(payment, cpf_oa);
+            ui.set_sg_cpf_used_label(format!("${}", split.cpf_used).into());
+            ui.set_sg_cash_required_label(format!("${}", split.cash_required).into());
+        }
+        None => {
+            blank_sg_limits(ui);
+            ui.set_sg_cpf_used_label("".into());
+            ui.set_sg_cash_required_label("".into());
+        }
+    }
+
+    let price = Decimal::from_str(ui.get_sg_home_price().as_str()).unwrap_or_default();
+    let residency = parse_residency(ui.get_sg_residency().as_str());
+    let count = parse_property_count(ui.get_sg_property_count().as_str());
+    let costs = singapore::upfront_costs(price, residency, count);
+    ui.set_sg_bsd_label(format!("${}", costs.bsd).into());
+    ui.set_sg_absd_label(format!("${}", costs.absd).into());
+    ui.set_sg_upfront_total_label(format!("${}", costs.total).into());
+}
+
 fn recompute_payment(ui: &AppWindow) {
     ui.set_rate_percent_value(parse_rate_value(ui.get_rate_percent().as_str()));
     let loan = build_loan(
@@ -238,8 +327,12 @@ fn recompute_payment(ui: &AppWindow) {
             ui.set_payment_result(format!("${}", summary.payment).into());
             ui.set_total_paid_result(format!("${}", summary.total_paid).into());
             ui.set_total_interest_result(format!("${}", summary.total_interest).into());
+            recompute_payment_sg(ui, Some(summary.payment));
         }
-        None => ui.set_has_error(true),
+        None => {
+            ui.set_has_error(true);
+            recompute_payment_sg(ui, None);
+        }
     }
 }
 
@@ -682,12 +775,13 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     ui.set_region(detect_region().as_str().into());
 
     // The `region` property is already updated by the toggle's two-way
-    // binding by the time this fires; region-specific calculators wire
-    // their own recompute into this callback as they're added.
+    // binding by the time this fires; region-specific calculators re-run
+    // here so their region-gated panels populate immediately on switch.
     let ui_handle = ui.as_weak();
     ui.on_region_changed(move |region| {
         let ui = ui_handle.unwrap();
         ui.set_region(region);
+        recompute_payment(&ui);
     });
 
     recompute_payment(&ui);

@@ -1,4 +1,4 @@
-import { LineEdit, CheckBox, ListView, ScrollView, Switch } from "std-widgets.slint";
+import { LineEdit, CheckBox, ComboBox, ListView, ScrollView, Switch } from "std-widgets.slint";
 
 struct ScenarioRow {
     id: string,
@@ -236,6 +236,38 @@ component RegionToggle inherits Rectangle {
         spacing: 2px;
         RegionOption { text: "US"; active: root.region == "US"; clicked => { root.region = "US"; root.changed("US"); } }
         RegionOption { text: "SG"; active: root.region == "SG"; clicked => { root.region = "SG"; root.changed("SG"); } }
+    }
+}
+
+// Reusable regulatory-limit banner: a ratio against a hard cap, with the
+// border/background shifting amber as it approaches the limit and red once
+// it's breached. Generic over whatever ratio+limit a region's rules need
+// (SG's TDSR/MSR here; reusable for similar caps elsewhere).
+component LimitBar inherits Rectangle {
+    in property <string> label;
+    in property <string> value-label;
+    in property <bool> exceeded;
+    in property <bool> near-limit: false;
+
+    height: 40px;
+    border-width: 1px;
+    border-radius: 8px;
+    background: exceeded ? #3a1414 : (near-limit ? #3a2c14 : #10161f);
+    border-color: exceeded ? #ef4444 : (near-limit ? #eab308 : #232e42);
+    animate background, border-color { duration: 200ms; }
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        Text { text: root.label; color: #92a0b3; font-size: 12px; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        Text {
+            text: root.value-label;
+            color: exceeded ? #ff8a8a : (near-limit ? #fbbf24 : #d7dee8);
+            font-size: 13px;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
     }
 }
 
@@ -658,6 +690,28 @@ export component AppWindow inherits Window {
     callback payment-load-scenario(string);
     callback payment-delete-scenario(string);
 
+    // --- Payment: Singapore panel (region == "SG" only) ---
+    in-out property <string> sg-gross-income: "8000";
+    in-out property <string> sg-other-debts: "0";
+    in-out property <bool> sg-is-hdb: true;
+    in-out property <string> sg-tdsr-label: "";
+    in-out property <bool> sg-tdsr-exceeded: false;
+    in-out property <bool> sg-tdsr-near: false;
+    in-out property <string> sg-msr-label: "";
+    in-out property <bool> sg-msr-exceeded: false;
+    in-out property <bool> sg-msr-near: false;
+    in-out property <string> sg-limit-warning: "";
+    in-out property <bool> sg-use-cpf: false;
+    in-out property <string> sg-cpf-oa-available: "1500";
+    in-out property <string> sg-cpf-used-label: "";
+    in-out property <string> sg-cash-required-label: "";
+    in-out property <string> sg-home-price: "1000000";
+    in-out property <string> sg-residency: "Citizen";
+    in-out property <string> sg-property-count: "1st";
+    in-out property <string> sg-bsd-label: "";
+    in-out property <string> sg-absd-label: "";
+    in-out property <string> sg-upfront-total-label: "";
+
     // --- Amortization ---
     in-out property <string> amort-principal: "400000";
     in-out property <string> amort-rate-percent: "6.5";
@@ -848,6 +902,94 @@ export component AppWindow inherits Window {
             }
             if root.has-error: Card {
                 ErrorText { text: "Enter valid loan details."; }
+            }
+
+            if root.region == "SG": Card {
+                Text { text: "Singapore"; font-weight: 700; font-size: 14px; }
+
+                Field {
+                    label: "Gross monthly income";
+                    LineEdit { text <=> root.sg-gross-income; edited => { root.recompute(); } }
+                }
+                Field {
+                    label: "Other monthly debts";
+                    LineEdit { text <=> root.sg-other-debts; edited => { root.recompute(); } }
+                }
+                HorizontalLayout {
+                    Text {
+                        text: "HDB flat / EC (MSR applies)";
+                        color: #92a0b3;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    CheckBox { checked <=> root.sg-is-hdb; toggled => { root.recompute(); } }
+                }
+
+                LimitBar {
+                    label: "TDSR (max 55%)";
+                    value-label: root.sg-tdsr-label;
+                    exceeded: root.sg-tdsr-exceeded;
+                    near-limit: root.sg-tdsr-near;
+                }
+                if root.sg-is-hdb: LimitBar {
+                    label: "MSR (max 30%, HDB/EC)";
+                    value-label: root.sg-msr-label;
+                    exceeded: root.sg-msr-exceeded;
+                    near-limit: root.sg-msr-near;
+                }
+                if root.sg-limit-warning != "": ErrorText { text: root.sg-limit-warning; }
+
+                HorizontalLayout {
+                    Text {
+                        text: "Use CPF OA for monthly payment";
+                        color: #92a0b3;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Switch { checked <=> root.sg-use-cpf; toggled => { root.recompute(); } }
+                }
+                if root.sg-use-cpf: Field {
+                    label: "Monthly CPF OA available";
+                    LineEdit { text <=> root.sg-cpf-oa-available; edited => { root.recompute(); } }
+                }
+                if root.sg-use-cpf: ResultRow { label: "CPF OA portion"; value: root.sg-cpf-used-label; }
+                if root.sg-use-cpf: ResultRow { label: "Cash required"; value: root.sg-cash-required-label; emphasize: true; }
+            }
+
+            if root.region == "SG": Card {
+                Text { text: "Upfront costs (BSD/ABSD)"; font-weight: 700; font-size: 14px; }
+                Field {
+                    label: "Home purchase price";
+                    LineEdit { text <=> root.sg-home-price; edited => { root.recompute(); } }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    VerticalLayout {
+                        spacing: 4px;
+                        horizontal-stretch: 1;
+                        Text { text: "Residency"; color: #92a0b3; font-size: 12px; }
+                        ComboBox {
+                            model: ["Citizen", "PR", "Foreigner"];
+                            current-value <=> root.sg-residency;
+                            selected => { root.recompute(); }
+                        }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        horizontal-stretch: 1;
+                        Text { text: "Property count"; color: #92a0b3; font-size: 12px; }
+                        ComboBox {
+                            model: ["1st", "2nd", "3rd+"];
+                            current-value <=> root.sg-property-count;
+                            selected => { root.recompute(); }
+                        }
+                    }
+                }
+                ResultRow { label: "Buyer's Stamp Duty (BSD)"; value: root.sg-bsd-label; }
+                ResultRow { label: "Additional BSD (ABSD)"; value: root.sg-absd-label; }
+                ResultRow { label: "Total upfront stamp duty"; value: root.sg-upfront-total-label; emphasize: true; }
             }
 
             Card {
