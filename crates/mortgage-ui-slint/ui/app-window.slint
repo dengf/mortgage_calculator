@@ -712,6 +712,21 @@ export component AppWindow inherits Window {
     in-out property <string> sg-absd-label: "";
     in-out property <string> sg-upfront-total-label: "";
 
+    // --- Payment: United States panel (region == "US" only) ---
+    in-out property <string> us-home-price: "500000";
+    in-out property <string> us-zip: "90210";
+    in-out property <string> us-property-tax-rate-label: "";
+    in-out property <string> us-monthly-property-tax-label: "";
+    in-out property <string> us-down-payment-percent-label: "";
+    in-out property <bool> us-pmi-required: false;
+    in-out property <string> us-pmi-rate-percent: "0.75";
+    in-out property <string> us-monthly-pmi-label: "";
+    in-out property <bool> us-use-tax-deduction: false;
+    in-out property <string> us-marginal-tax-rate-percent: "22";
+    in-out property <string> us-monthly-tax-savings-label: "";
+    in-out property <string> us-monthly-piti-label: "";
+    in-out property <string> us-net-monthly-cost-label: "";
+
     // --- Amortization ---
     in-out property <string> amort-principal: "400000";
     in-out property <string> amort-rate-percent: "6.5";
@@ -990,6 +1005,57 @@ export component AppWindow inherits Window {
                 ResultRow { label: "Buyer's Stamp Duty (BSD)"; value: root.sg-bsd-label; }
                 ResultRow { label: "Additional BSD (ABSD)"; value: root.sg-absd-label; }
                 ResultRow { label: "Total upfront stamp duty"; value: root.sg-upfront-total-label; emphasize: true; }
+            }
+
+            if root.region == "US": Card {
+                Text { text: "United States"; font-weight: 700; font-size: 14px; }
+
+                Field {
+                    label: "Home price";
+                    LineEdit { text <=> root.us-home-price; edited => { root.recompute(); } }
+                }
+                Field {
+                    label: "ZIP code";
+                    LineEdit { text <=> root.us-zip; edited => { root.recompute(); } }
+                }
+                ResultRow { label: "Est. property tax rate"; value: root.us-property-tax-rate-label; }
+                ResultRow { label: "Monthly property tax"; value: root.us-monthly-property-tax-label; }
+                ResultRow { label: "Down payment"; value: root.us-down-payment-percent-label; }
+
+                if root.us-pmi-required: ResultRow {
+                    label: "PMI (required, down payment < 20%)";
+                    value: root.us-monthly-pmi-label;
+                }
+                if root.us-pmi-required: Field {
+                    label: "PMI rate (annual %, of loan amount)";
+                    LineEdit { text <=> root.us-pmi-rate-percent; edited => { root.recompute(); } }
+                }
+
+                ResultRow { label: "Estimated monthly PITI"; value: root.us-monthly-piti-label; emphasize: true; }
+
+                HorizontalLayout {
+                    Text {
+                        text: "Show net cost after tax deductions";
+                        color: #92a0b3;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Switch { checked <=> root.us-use-tax-deduction; toggled => { root.recompute(); } }
+                }
+                if root.us-use-tax-deduction: Field {
+                    label: "Marginal federal tax rate (%)";
+                    LineEdit { text <=> root.us-marginal-tax-rate-percent; edited => { root.recompute(); } }
+                }
+                if root.us-use-tax-deduction: ResultRow {
+                    label: "Monthly tax savings";
+                    value: root.us-monthly-tax-savings-label;
+                }
+                if root.us-use-tax-deduction: ResultRow {
+                    label: "Net monthly cost";
+                    value: root.us-net-monthly-cost-label;
+                    emphasize: true;
+                }
             }
 
             Card {

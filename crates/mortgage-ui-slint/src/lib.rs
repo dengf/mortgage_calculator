@@ -6,11 +6,11 @@ use std::str::FromStr;
 use mortgage_calc::affordability::AffordabilityInput;
 use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput};
 use mortgage_calc::refinance::RefinanceInput;
-use mortgage_calc::{singapore, Loan, PaymentFrequency, RateType};
-use mortgage_core::Region;
+use mortgage_calc::{singapore, united_states, Loan, PaymentFrequency, RateType};
+use mortgage_core::{round_currency, Region};
 use mortgage_ext_redb::RedbScenarioStore;
 use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use slint::{ModelRc, VecModel, Weak};
@@ -201,6 +201,16 @@ fn format_rate_value(v: f32) -> String {
     if s.is_empty() { "0".to_string() } else { s.to_string() }
 }
 
+/// Formats `ratio` (e.g. `0.0909` for 9.09%) as a percentage string with
+/// `dp` decimal places, rounded rather than truncated — `Decimal`'s own
+/// `{:.N}` formatting truncates, which silently understates borderline
+/// figures (9.0909...% would print as "9.0%" instead of "9.1%").
+fn format_percent(ratio: Decimal, dp: u32) -> String {
+    (ratio * dec!(100))
+        .round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero)
+        .to_string()
+}
+
 fn boom_text(periods_saved: u32, interest_saved: Decimal) -> String {
     if periods_saved == 0 {
         return format!("Boom! You just chopped ${} in interest off your mortgage.", interest_saved);
@@ -263,7 +273,7 @@ fn recompute_payment_sg(ui: &AppWindow, monthly_payment: Option<Decimal>) {
 
             match singapore::check_tdsr_msr(payment, other_debts, income, ui.get_sg_is_hdb()) {
                 Ok(check) => {
-                    ui.set_sg_tdsr_label(format!("{:.1}%", check.tdsr.ratio * dec!(100)).into());
+                    ui.set_sg_tdsr_label(format!("{}%", format_percent(check.tdsr.ratio, 1)).into());
                     ui.set_sg_tdsr_exceeded(check.tdsr.exceeded);
                     ui.set_sg_tdsr_near(check.tdsr.near_limit);
 
@@ -273,7 +283,7 @@ fn recompute_payment_sg(ui: &AppWindow, monthly_payment: Option<Decimal>) {
                     }
                     match check.msr {
                         Some(msr) => {
-                            ui.set_sg_msr_label(format!("{:.1}%", msr.ratio * dec!(100)).into());
+                            ui.set_sg_msr_label(format!("{}%", format_percent(msr.ratio, 1)).into());
                             ui.set_sg_msr_exceeded(msr.exceeded);
                             ui.set_sg_msr_near(msr.near_limit);
                             if msr.exceeded {
@@ -312,6 +322,67 @@ fn recompute_payment_sg(ui: &AppWindow, monthly_payment: Option<Decimal>) {
     ui.set_sg_upfront_total_label(format!("${}", costs.total).into());
 }
 
+/// Recomputes the Payment tab's United States panel (ZIP-based property
+/// tax, PMI trigger, and the tax-deductibility "net cost" simulator).
+/// `principal`/`monthly_pi`/`first_period_interest` come from the Payment
+/// tab's own loan, if the inputs were valid — home price (independent
+/// input) and PMI/property tax still compute without a valid loan, but
+/// PITI and the tax-savings figure need it.
+fn recompute_payment_us(
+    ui: &AppWindow,
+    principal: Decimal,
+    monthly_pi: Option<Decimal>,
+    first_period_interest: Option<Decimal>,
+) {
+    let home_price = Decimal::from_str(ui.get_us_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
+    let tax_rate = united_states::estimate_property_tax_rate(ui.get_us_zip().as_str());
+    let monthly_property_tax = tax_rate
+        .map(|rate| round_currency(home_price * rate / dec!(12)))
+        .unwrap_or(Decimal::ZERO);
+
+    match tax_rate {
+        Some(rate) => ui.set_us_property_tax_rate_label(format!("{}%", format_percent(rate, 2)).into()),
+        None => ui.set_us_property_tax_rate_label("Unrecognized ZIP".into()),
+    }
+    ui.set_us_monthly_property_tax_label(format!("${}", monthly_property_tax).into());
+
+    let down_payment = (home_price - principal).max(Decimal::ZERO);
+    let down_payment_percent = if home_price > Decimal::ZERO {
+        down_payment / home_price
+    } else {
+        Decimal::ZERO
+    };
+    ui.set_us_down_payment_percent_label(format!("{}%", format_percent(down_payment_percent, 1)).into());
+
+    let pmi_required = home_price > Decimal::ZERO && united_states::requires_pmi(down_payment_percent);
+    ui.set_us_pmi_required(pmi_required);
+
+    let pmi_rate_percent = Decimal::from_str(ui.get_us_pmi_rate_percent().as_str())
+        .unwrap_or(united_states::DEFAULT_PMI_ANNUAL_RATE * dec!(100));
+    let monthly_pmi = if pmi_required {
+        united_states::monthly_pmi(principal, pmi_rate_percent / dec!(100))
+    } else {
+        Decimal::ZERO
+    };
+    ui.set_us_monthly_pmi_label(format!("${}", monthly_pmi).into());
+
+    let monthly_piti = round_currency(monthly_pi.unwrap_or(Decimal::ZERO) + monthly_property_tax + monthly_pmi);
+    ui.set_us_monthly_piti_label(format!("${}", monthly_piti).into());
+
+    if ui.get_us_use_tax_deduction() {
+        let marginal_rate_percent = Decimal::from_str(ui.get_us_marginal_tax_rate_percent().as_str()).unwrap_or_default();
+        let savings = united_states::monthly_tax_savings(
+            first_period_interest.unwrap_or(Decimal::ZERO),
+            marginal_rate_percent / dec!(100),
+        );
+        ui.set_us_monthly_tax_savings_label(format!("${}", savings).into());
+        ui.set_us_net_monthly_cost_label(format!("${}", round_currency(monthly_piti - savings)).into());
+    } else {
+        ui.set_us_monthly_tax_savings_label("".into());
+        ui.set_us_net_monthly_cost_label("".into());
+    }
+}
+
 fn recompute_payment(ui: &AppWindow) {
     ui.set_rate_percent_value(parse_rate_value(ui.get_rate_percent().as_str()));
     let loan = build_loan(
@@ -328,10 +399,13 @@ fn recompute_payment(ui: &AppWindow) {
             ui.set_total_paid_result(format!("${}", summary.total_paid).into());
             ui.set_total_interest_result(format!("${}", summary.total_interest).into());
             recompute_payment_sg(ui, Some(summary.payment));
+            let first_period_interest = loan.principal() * loan.periodic_rate();
+            recompute_payment_us(ui, loan.principal(), Some(summary.payment), Some(first_period_interest));
         }
         None => {
             ui.set_has_error(true);
             recompute_payment_sg(ui, None);
+            recompute_payment_us(ui, Decimal::ZERO, None, None);
         }
     }
 }
@@ -453,8 +527,8 @@ fn recompute_affordability(ui: &AppWindow) {
             ui.set_aff_max_home_price(format!("${}", result.max_home_price).into());
             ui.set_aff_max_loan_amount(format!("${}", result.max_loan_amount).into());
             ui.set_aff_max_pi(format!("${}", result.max_principal_and_interest).into());
-            ui.set_aff_front_dti(format!("{:.1}", result.front_end_dti * Decimal::from(100)).into());
-            ui.set_aff_back_dti(format!("{:.1}", result.back_end_dti * Decimal::from(100)).into());
+            ui.set_aff_front_dti(format_percent(result.front_end_dti, 1).into());
+            ui.set_aff_back_dti(format_percent(result.back_end_dti, 1).into());
         }
         None => ui.set_aff_has_error(true),
     }
