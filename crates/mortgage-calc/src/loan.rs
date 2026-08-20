@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use crate::rate::RateType;
 
 /// A fixed-rate amortizing loan: the shared input to every calculation in
-/// this crate, analogous to `FixedRateBond` in the `convex` project.
+/// this crate.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Loan {
     principal: Decimal,
@@ -41,9 +41,8 @@ impl Loan {
     }
 }
 
-/// Validating builder for [`Loan`]. Mirrors the `FixedRateBond::builder()`
-/// pattern from `convex-bonds`: construction is the single place inputs are
-/// checked, so every downstream calculation can assume a valid loan.
+/// Validating builder for [`Loan`]: construction is the single place inputs
+/// are checked, so every downstream calculation can assume a valid loan.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LoanBuilder {
     principal: Option<Decimal>,

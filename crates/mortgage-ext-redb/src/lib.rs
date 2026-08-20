@@ -1,11 +1,10 @@
-//! [`mortgage_ports::ScenarioStore`] implemented on top of `redb`, mirroring
-//! `convex-ext-redb` in the sibling `convex` project.
+//! [`mortgage_ports::ScenarioStore`] implemented on top of `redb`.
 //!
 //! The table logic (schema, save/list/load/delete) is identical on every
 //! platform — only *how the bytes get durable* differs:
 //!
 //! - Native targets ([`native`]): `redb`'s ordinary file backend. A plain
-//!   file on disk, exactly like `convex-ext-redb`.
+//!   file on disk.
 //! - `wasm32` ([`wasm`]): a custom [`redb::StorageBackend`] backed by an
 //!   in-memory buffer, asynchronously flushed to the browser's IndexedDB
 //!   after each write. Real `redb` (actual ACID transactions, actual

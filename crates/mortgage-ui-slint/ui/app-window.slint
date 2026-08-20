@@ -1,4 +1,4 @@
-import { LineEdit, CheckBox, ListView, ScrollView, Switch } from "std-widgets.slint";
+import { LineEdit, CheckBox, ComboBox, ListView, ScrollView, Switch } from "std-widgets.slint";
 
 struct ScenarioRow {
     id: string,
@@ -76,9 +76,12 @@ component RiskSlider inherits Rectangle {
     in property <float> maximum: 15.0;
     in-out property <float> value: 6.5;
     in property <float> danger-threshold: 7.0;
+    // Set false to use this as a plain (always-blue) slider, e.g. for a
+    // value with no risk connotation like down payment percentage.
+    in property <bool> risk-coloring: true;
     callback changed(float);
 
-    property <color> handle-color: root.value >= root.danger-threshold ? #ef4444 : #4f8cff;
+    property <color> handle-color: root.risk-coloring && root.value >= root.danger-threshold ? #ef4444 : #4f8cff;
     property <float> ratio: max(0.0, min(1.0, (root.value - root.minimum) / (root.maximum - root.minimum)));
 
     height: 24px;
@@ -194,6 +197,80 @@ component TabBarButton inherits Rectangle {
 
     touch := TouchArea {
         clicked => { root.clicked(); }
+    }
+}
+
+component RegionOption inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked();
+
+    width: 36px;
+    height: 26px;
+    border-radius: 6px;
+    background: active ? #4f8cff : (touch.has-hover ? #202a3c : transparent);
+
+    Text {
+        text: root.text;
+        color: active ? white : #92a0b3;
+        font-size: 11px;
+        font-weight: active ? 700 : 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Region selector: which country's rules (limits, upfront costs, and
+// terminology) the calculators and labels below should use. Detected from
+// the device locale on startup, with this as the manual override.
+component RegionToggle inherits Rectangle {
+    in-out property <string> region: "US";
+    callback changed(string);
+
+    background: #10161f;
+    border-radius: 8px;
+
+    HorizontalLayout {
+        padding: 2px;
+        spacing: 2px;
+        RegionOption { text: "US"; active: root.region == "US"; clicked => { root.region = "US"; root.changed("US"); } }
+        RegionOption { text: "SG"; active: root.region == "SG"; clicked => { root.region = "SG"; root.changed("SG"); } }
+    }
+}
+
+// Reusable regulatory-limit banner: a ratio against a hard cap, with the
+// border/background shifting amber as it approaches the limit and red once
+// it's breached. Generic over whatever ratio+limit a region's rules need
+// (SG's TDSR/MSR here; reusable for similar caps elsewhere).
+component LimitBar inherits Rectangle {
+    in property <string> label;
+    in property <string> value-label;
+    in property <bool> exceeded;
+    in property <bool> near-limit: false;
+
+    height: 40px;
+    border-width: 1px;
+    border-radius: 8px;
+    background: exceeded ? #3a1414 : (near-limit ? #3a2c14 : #10161f);
+    border-color: exceeded ? #ef4444 : (near-limit ? #eab308 : #232e42);
+    animate background, border-color { duration: 200ms; }
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        Text { text: root.label; color: #92a0b3; font-size: 12px; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        Text {
+            text: root.value-label;
+            color: exceeded ? #ff8a8a : (near-limit ? #fbbf24 : #d7dee8);
+            font-size: 13px;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
     }
 }
 
@@ -592,6 +669,13 @@ export component AppWindow inherits Window {
 
     in-out property <int> current-tab: 0;
 
+    // --- Region: "US" or "SG". Drives which regulatory limits, upfront
+    // costs, and terminology the calculators and labels below use.
+    // Auto-detected from the device locale at startup (see run_app in
+    // lib.rs); the header toggle lets the user override it.
+    in-out property <string> region: "US";
+    callback region-changed(string);
+
     // --- Payment ---
     in-out property <string> principal: "400000";
     in-out property <string> rate-percent: "6.5";
@@ -608,6 +692,47 @@ export component AppWindow inherits Window {
     callback payment-save-scenario(string);
     callback payment-load-scenario(string);
     callback payment-delete-scenario(string);
+
+    // --- Payment: Singapore panel (region == "SG" only) ---
+    in-out property <string> sg-gross-income: "8000";
+    in-out property <string> sg-other-debts: "0";
+    in-out property <bool> sg-is-hdb: true;
+    in-out property <string> sg-tdsr-label: "";
+    in-out property <bool> sg-tdsr-exceeded: false;
+    in-out property <bool> sg-tdsr-near: false;
+    in-out property <string> sg-msr-label: "";
+    in-out property <bool> sg-msr-exceeded: false;
+    in-out property <bool> sg-msr-near: false;
+    in-out property <string> sg-limit-warning: "";
+    in-out property <bool> sg-use-cpf: false;
+    in-out property <string> sg-cpf-oa-available: "1500";
+    in-out property <string> sg-cpf-used-label: "";
+    in-out property <string> sg-cash-required-label: "";
+    in-out property <string> sg-home-price: "1000000";
+    in-out property <string> sg-residency: "Citizen";
+    in-out property <string> sg-property-count: "1st";
+    in-out property <string> sg-bsd-label: "";
+    in-out property <string> sg-absd-label: "";
+    in-out property <string> sg-upfront-total-label: "";
+    in-out property <string> sg-down-payment-label: "";
+    in-out property <string> sg-total-cash-required-label: "";
+
+    // --- Payment: United States panel (region == "US" only) ---
+    in-out property <string> us-home-price: "500000";
+    in-out property <string> us-zip: "90210";
+    in-out property <string> us-property-tax-rate-label: "";
+    in-out property <string> us-monthly-property-tax-label: "";
+    in-out property <string> us-down-payment-percent-label: "";
+    in-out property <float> us-down-payment-percent-value: 20.0;
+    callback us-down-payment-changed(float);
+    in-out property <bool> us-pmi-required: false;
+    in-out property <string> us-pmi-rate-percent: "0.75";
+    in-out property <string> us-monthly-pmi-label: "";
+    in-out property <bool> us-use-tax-deduction: false;
+    in-out property <string> us-marginal-tax-rate-percent: "22";
+    in-out property <string> us-monthly-tax-savings-label: "";
+    in-out property <string> us-monthly-piti-label: "";
+    in-out property <string> us-net-monthly-cost-label: "";
 
     // --- Amortization ---
     in-out property <string> amort-principal: "400000";
@@ -731,11 +856,18 @@ export component AppWindow inherits Window {
         padding: 20px;
         spacing: 16px;
 
-        Text {
-            text: "Mortgage Calculator";
-            font-size: 22px;
-            font-weight: 800;
-            color: white;
+        HorizontalLayout {
+            Text {
+                text: "Mortgage Calculator";
+                font-size: 22px;
+                font-weight: 800;
+                color: white;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            RegionToggle {
+                region <=> root.region;
+                changed(r) => { root.region-changed(r); }
+            }
         }
 
         Rectangle {
@@ -792,6 +924,171 @@ export component AppWindow inherits Window {
             }
             if root.has-error: Card {
                 ErrorText { text: "Enter valid loan details."; }
+            }
+
+            if root.region == "SG": Card {
+                Text { text: "Singapore"; font-weight: 700; font-size: 14px; }
+
+                Field {
+                    label: "Gross monthly income";
+                    LineEdit { text <=> root.sg-gross-income; edited => { root.recompute(); } }
+                }
+                Field {
+                    label: "Other monthly debts";
+                    LineEdit { text <=> root.sg-other-debts; edited => { root.recompute(); } }
+                }
+                HorizontalLayout {
+                    Text {
+                        text: "HDB flat / EC (MSR applies)";
+                        color: #92a0b3;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    CheckBox { checked <=> root.sg-is-hdb; toggled => { root.recompute(); } }
+                }
+
+                LimitBar {
+                    label: "TDSR (max 55%)";
+                    value-label: root.sg-tdsr-label;
+                    exceeded: root.sg-tdsr-exceeded;
+                    near-limit: root.sg-tdsr-near;
+                }
+                if root.sg-is-hdb: LimitBar {
+                    label: "MSR (max 30%, HDB/EC)";
+                    value-label: root.sg-msr-label;
+                    exceeded: root.sg-msr-exceeded;
+                    near-limit: root.sg-msr-near;
+                }
+                if root.sg-limit-warning != "": ErrorText { text: root.sg-limit-warning; }
+
+                HorizontalLayout {
+                    Text {
+                        text: "Use CPF OA for monthly payment";
+                        color: #92a0b3;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Switch { checked <=> root.sg-use-cpf; toggled => { root.recompute(); } }
+                }
+                if root.sg-use-cpf: Field {
+                    label: "Monthly CPF OA available";
+                    LineEdit { text <=> root.sg-cpf-oa-available; edited => { root.recompute(); } }
+                }
+                if root.sg-use-cpf: ResultRow { label: "CPF OA portion"; value: root.sg-cpf-used-label; }
+                if root.sg-use-cpf: ResultRow { label: "Cash required"; value: root.sg-cash-required-label; emphasize: true; }
+            }
+
+            if root.region == "SG": Card {
+                Text { text: "Upfront costs (BSD/ABSD)"; font-weight: 700; font-size: 14px; }
+                Field {
+                    label: "Home purchase price";
+                    LineEdit { text <=> root.sg-home-price; edited => { root.recompute(); } }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    VerticalLayout {
+                        spacing: 4px;
+                        horizontal-stretch: 1;
+                        Text { text: "Residency"; color: #92a0b3; font-size: 12px; }
+                        ComboBox {
+                            model: ["Citizen", "PR", "Foreigner"];
+                            current-value <=> root.sg-residency;
+                            selected => { root.recompute(); }
+                        }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        horizontal-stretch: 1;
+                        Text { text: "Property count"; color: #92a0b3; font-size: 12px; }
+                        ComboBox {
+                            model: ["1st", "2nd", "3rd+"];
+                            current-value <=> root.sg-property-count;
+                            selected => { root.recompute(); }
+                        }
+                    }
+                }
+                ResultRow { label: "Buyer's Stamp Duty (BSD)"; value: root.sg-bsd-label; }
+                ResultRow { label: "Additional BSD (ABSD)"; value: root.sg-absd-label; }
+                ResultRow { label: "Total upfront stamp duty"; value: root.sg-upfront-total-label; }
+                ResultRow { label: "Down payment"; value: root.sg-down-payment-label; }
+                ResultRow { label: "Total cash required"; value: root.sg-total-cash-required-label; emphasize: true; }
+            }
+
+            if root.region == "US": Card {
+                Text { text: "United States"; font-weight: 700; font-size: 14px; }
+
+                Field {
+                    label: "Home price";
+                    LineEdit { text <=> root.us-home-price; edited => { root.recompute(); } }
+                }
+                Field {
+                    label: "Down payment (" + root.us-down-payment-percent-label + ")";
+                    RiskSlider {
+                        risk-coloring: false;
+                        minimum: 0.0;
+                        maximum: 50.0;
+                        value <=> root.us-down-payment-percent-value;
+                        changed(v) => { root.us-down-payment-changed(v); }
+                    }
+                }
+                Field {
+                    label: "ZIP code";
+                    LineEdit { text <=> root.us-zip; edited => { root.recompute(); } }
+                }
+                ResultRow { label: "Est. property tax rate"; value: root.us-property-tax-rate-label; }
+                ResultRow { label: "Monthly property tax"; value: root.us-monthly-property-tax-label; }
+
+                // Animates open rather than snapping in/out, per the feature
+                // request: PMI should "smoothly animate into the monthly
+                // cost breakdown" the moment down payment drops below 20%.
+                Rectangle {
+                    clip: true;
+                    height: root.us-pmi-required ? 74px : 0px;
+                    animate height { duration: 200ms; easing: ease-in-out; }
+
+                    VerticalLayout {
+                        spacing: 12px;
+                        opacity: root.us-pmi-required ? 1.0 : 0.0;
+                        animate opacity { duration: 200ms; }
+
+                        ResultRow {
+                            label: "PMI (required, down payment < 20%)";
+                            value: root.us-monthly-pmi-label;
+                        }
+                        Field {
+                            label: "PMI rate (annual %, of loan amount)";
+                            LineEdit { text <=> root.us-pmi-rate-percent; edited => { root.recompute(); } }
+                        }
+                    }
+                }
+
+                ResultRow { label: "Estimated monthly PITI"; value: root.us-monthly-piti-label; emphasize: true; }
+
+                HorizontalLayout {
+                    Text {
+                        text: "Show net cost after tax deductions";
+                        color: #92a0b3;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Switch { checked <=> root.us-use-tax-deduction; toggled => { root.recompute(); } }
+                }
+                if root.us-use-tax-deduction: Field {
+                    label: "Marginal federal tax rate (%)";
+                    LineEdit { text <=> root.us-marginal-tax-rate-percent; edited => { root.recompute(); } }
+                }
+                if root.us-use-tax-deduction: ResultRow {
+                    label: "Monthly tax savings";
+                    value: root.us-monthly-tax-savings-label;
+                }
+                if root.us-use-tax-deduction: ResultRow {
+                    label: "Net monthly cost";
+                    value: root.us-net-monthly-cost-label;
+                    emphasize: true;
+                }
             }
 
             Card {
@@ -935,7 +1232,7 @@ export component AppWindow inherits Window {
                     LineEdit { text <=> root.aff-insurance; edited => { root.aff-recompute(); } }
                 }
                 Field {
-                    label: "Monthly HOA";
+                    label: root.region == "SG" ? "Monthly maintenance / condo fees" : "Monthly HOA";
                     LineEdit { text <=> root.aff-hoa; edited => { root.aff-recompute(); } }
                 }
             }

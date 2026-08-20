@@ -1,9 +1,8 @@
 # Mortgage Calculator - workspace configuration
 #
-# Architecture mirrors the layered pattern used by the `convex` fixed-income
-# library: a dependency-free domain-types crate at the bottom, pure
-# calculation logic in the middle, and a thin wasm-bindgen crate on top that
-# only translates JS <-> Rust and never contains business logic itself.
+# Layered architecture: a dependency-free domain-types crate at the bottom,
+# pure calculation logic in the middle, and a thin wasm-bindgen crate on top
+# that only translates JS <-> Rust and never contains business logic itself.
 
 [workspace]
 members = [
