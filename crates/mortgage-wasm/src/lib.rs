@@ -2,9 +2,7 @@
 //!
 //! This crate provides WASM bindings for `mortgage-calc`, enabling the same
 //! calculations to run client-side in a browser. The public
-//! `#[wasm_bindgen]` surface is split across submodules by responsibility,
-//! following the pattern used by `convex-wasm` in the sibling `convex`
-//! project:
+//! `#[wasm_bindgen]` surface is split across submodules by responsibility:
 //!
 //! - [`payment`] — `calculate_payment`
 //! - [`amortization`] — `calculate_amortization_schedule`, `calculate_extra_payment_impact`

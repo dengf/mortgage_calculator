@@ -1,6 +1,6 @@
 //! Shared helper for turning a [`LoanParams`] DTO into a validated
 //! [`mortgage_calc::Loan`], used by every wasm entrypoint that takes loan
-//! terms. Mirrors `convex-wasm::bond::create_bond`.
+//! terms.
 
 use mortgage_calc::Loan;
 

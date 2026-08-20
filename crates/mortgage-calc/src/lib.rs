@@ -1,8 +1,7 @@
 //! Pure mortgage math: no I/O, no serialization, no JS boundary concerns.
 //!
-//! This mirrors `convex-bonds` + `convex-analytics` in the `convex` sibling
-//! project — [`Loan`] is the equivalent of a bond instrument, and each
-//! submodule below is an analytics function family that operates on it:
+//! [`Loan`] is the shared instrument type, and each submodule below is an
+//! analytics function family that operates on it:
 //!
 //! - [`payment`] — standard amortizing payment amount and lifetime summary
 //! - [`amortization`] — full payment-by-payment schedule, extra-payment payoff impact

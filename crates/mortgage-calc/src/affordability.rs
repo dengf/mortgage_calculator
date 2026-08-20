@@ -1,8 +1,7 @@
 //! Maximum affordable home price given income, debts, and loan terms.
 //!
-//! This is the calculator-shaped equivalent of `convex`'s "Hedge Advisor":
-//! not a bond/loan analysis of a *given* instrument, but a decision-support
-//! layer that works backwards from a constraint (debt-to-income ratio) to a
+//! Unlike the other calculators, which analyze a *given* loan, this one
+//! works backwards from a constraint (debt-to-income ratio) to a
 //! recommended input (home price).
 
 use mortgage_core::{round_currency, MortgageError, MortgageResult, PaymentFrequency};

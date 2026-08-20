@@ -1,5 +1,4 @@
-//! Native construction: a plain `redb` file on disk, exactly like
-//! `convex-ext-redb`.
+//! Native construction: a plain `redb` file on disk.
 
 use std::path::Path;
 

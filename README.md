@@ -1,10 +1,10 @@
 # Mortgage Calculator
 
 A mortgage payment, amortization, affordability, and refinance calculator,
-built as a **Rust backend compiled to WebAssembly** with a React frontend:
-pure calculation logic in one layer, a thin `wasm-bindgen` crate translating
-JS &lt;-&gt; Rust in another, and a webpack app that dynamically loads the
-compiled `.wasm` module in the browser.
+with a pure Rust calculation core shared by two separate UIs: a React web
+app that loads the core compiled to WebAssembly, and a [Slint](https://slint.dev)
+app that runs the same Rust code natively on desktop, iOS, and Android (and
+also compiles to a wasm canvas for the browser).
 
 ## Features
 
@@ -41,16 +41,16 @@ crates/
   mortgage-wasm     - wasm-bindgen bindings: parses JsValue, calls
                       mortgage-calc / mortgage-ext-redb, serializes the
                       result back. No business logic lives here.
+  mortgage-ui-slint - Slint UI: one Rust codebase targeting desktop, iOS,
+                      Android, and a wasm canvas for the browser
 www/                - webpack + React app that loads the compiled wasm module
 ```
 
-This mirrors `convex`'s layering (`convex-core` -> `convex-bonds` /
-`convex-analytics` -> `convex-wasm` -> `www`, and `convex-ports` ->
-`convex-ext-redb` for storage): the calculation crates are 100% pure Rust
-and unit-tested on their own, and only the top `-wasm` crate knows about
-`wasm-bindgen`. That keeps the math reusable from a future CLI, native
-mobile app, or server without dragging wasm-bindgen along, and keeps the
-wasm crate itself trivial to review since it's pure plumbing.
+The calculation crates are 100% pure Rust and unit-tested on their own, with
+no knowledge of `wasm-bindgen`, Slint, or any other UI layer. That keeps the
+math reusable across both UIs (and any future one) without dragging their
+dependencies along, and keeps each UI crate itself trivial to review since
+it's pure plumbing over `mortgage-calc`.
 
 Money is `rust_decimal::Decimal` throughout the Rust layers (never `f64`)
 to avoid floating-point drift in currency arithmetic; the wasm boundary
@@ -59,11 +59,9 @@ converts to/from `f64` since that's what JS numbers are.
 ### Local persistence: redb, not SQLite
 
 Saved scenarios are stored with [`redb`](https://docs.rs/redb), a pure-Rust
-embedded database — the same one `convex-ext-redb` uses — rather than
-SQLite. `mortgage-ext-redb::native` opens a plain redb file, exactly like
-`convex-ext-redb`; that path is untested by the current web app (nothing
-runs mortgage-calculator natively yet) but is ready for a future native
-CLI or mobile build.
+embedded database, rather than SQLite. `mortgage-ext-redb::native` opens a
+plain redb file on disk, used by the Slint app's desktop, iOS, and Android
+builds.
 
 The browser path (`mortgage-ext-redb::wasm`) is the interesting one: redb's
 pluggable `StorageBackend` trait is implemented over an in-memory buffer,
@@ -96,8 +94,28 @@ npm run deploy
 
 `npm start` also works without `build:wasm` having been run yet — `src/index.js`
 falls back to a mock JS implementation of the same functions so the UI is
-usable before you've built the wasm module, mirroring `convex/www`'s dev
-fallback.
+usable before you've built the wasm module.
+
+### Slint app (desktop / web / iOS / Android)
+
+```bash
+# Desktop (native window)
+cargo run -p mortgage-ui-slint
+
+# Web (compiles to a wasm canvas, separate from the React app above)
+cd crates/mortgage-ui-slint
+wasm-pack build --target web --out-dir pkg
+python3 -m http.server 4173   # then open index.html
+
+# iOS (generates an Xcode project that cargo-builds the Rust binary
+# as a postCompileScript; open in Xcode or `xcodebuild` from there)
+cd crates/mortgage-ui-slint/ios
+xcodegen generate
+
+# Android (via `xbuild`, which cross-compiles and packages the
+# slint/backend-android-activity binary into an APK)
+x run --manifest-path crates/mortgage-ui-slint/Cargo.toml --platform android
+```
 
 ## A note on the `--target web` + webpack combination
 
