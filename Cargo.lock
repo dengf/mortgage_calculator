@@ -3033,6 +3033,7 @@ version = "0.1.0"
 dependencies = [
  "js-sys",
  "mortgage-calc",
+ "mortgage-core",
  "mortgage-ext-redb",
  "mortgage-ports",
  "objc2 0.6.4",
@@ -3041,6 +3042,7 @@ dependencies = [
  "serde_json",
  "slint",
  "slint-build",
+ "sys-locale",
  "wasm-bindgen",
 ]
 

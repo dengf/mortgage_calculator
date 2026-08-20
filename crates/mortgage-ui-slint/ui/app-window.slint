@@ -197,6 +197,48 @@ component TabBarButton inherits Rectangle {
     }
 }
 
+component RegionOption inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked();
+
+    width: 36px;
+    height: 26px;
+    border-radius: 6px;
+    background: active ? #4f8cff : (touch.has-hover ? #202a3c : transparent);
+
+    Text {
+        text: root.text;
+        color: active ? white : #92a0b3;
+        font-size: 11px;
+        font-weight: active ? 700 : 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Region selector: which country's rules (limits, upfront costs, and
+// terminology) the calculators and labels below should use. Detected from
+// the device locale on startup, with this as the manual override.
+component RegionToggle inherits Rectangle {
+    in-out property <string> region: "US";
+    callback changed(string);
+
+    background: #10161f;
+    border-radius: 8px;
+
+    HorizontalLayout {
+        padding: 2px;
+        spacing: 2px;
+        RegionOption { text: "US"; active: root.region == "US"; clicked => { root.region = "US"; root.changed("US"); } }
+        RegionOption { text: "SG"; active: root.region == "SG"; clicked => { root.region = "SG"; root.changed("SG"); } }
+    }
+}
+
 component SavedScenariosPanel inherits VerticalLayout {
     in property <[ScenarioRow]> scenarios: [];
     in property <string> error-text: "";
@@ -592,6 +634,13 @@ export component AppWindow inherits Window {
 
     in-out property <int> current-tab: 0;
 
+    // --- Region: "US" or "SG". Drives which regulatory limits, upfront
+    // costs, and terminology the calculators and labels below use.
+    // Auto-detected from the device locale at startup (see run_app in
+    // lib.rs); the header toggle lets the user override it.
+    in-out property <string> region: "US";
+    callback region-changed(string);
+
     // --- Payment ---
     in-out property <string> principal: "400000";
     in-out property <string> rate-percent: "6.5";
@@ -731,11 +780,18 @@ export component AppWindow inherits Window {
         padding: 20px;
         spacing: 16px;
 
-        Text {
-            text: "Mortgage Calculator";
-            font-size: 22px;
-            font-weight: 800;
-            color: white;
+        HorizontalLayout {
+            Text {
+                text: "Mortgage Calculator";
+                font-size: 22px;
+                font-weight: 800;
+                color: white;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            RegionToggle {
+                region <=> root.region;
+                changed(r) => { root.region-changed(r); }
+            }
         }
 
         Rectangle {

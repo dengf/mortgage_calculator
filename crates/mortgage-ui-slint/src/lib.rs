@@ -7,6 +7,7 @@ use mortgage_calc::affordability::AffordabilityInput;
 use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput};
 use mortgage_calc::refinance::RefinanceInput;
 use mortgage_calc::{Loan, PaymentFrequency, RateType};
+use mortgage_core::Region;
 use mortgage_ext_redb::RedbScenarioStore;
 use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore};
 use rust_decimal::Decimal;
@@ -647,11 +648,47 @@ fn recompute_compare(ui: &AppWindow) {
     }
 }
 
+/// Best-effort region guess from the device/browser locale (e.g. `en-SG`),
+/// used to preset the region toggle on startup. Falls back to
+/// [`Region::US`] when the locale can't be read or isn't recognized.
+#[cfg(not(target_family = "wasm"))]
+fn detect_region() -> Region {
+    sys_locale::get_locale()
+        .map(|locale| Region::parse(&locale))
+        .unwrap_or_default()
+}
+
+#[cfg(target_family = "wasm")]
+#[wasm_bindgen(inline_js = "export function navigator_language() { \
+    return (typeof navigator !== 'undefined' && navigator.language) || null; \
+}")]
+extern "C" {
+    fn navigator_language() -> Option<String>;
+}
+
+#[cfg(target_family = "wasm")]
+fn detect_region() -> Region {
+    navigator_language()
+        .map(|locale| Region::parse(&locale))
+        .unwrap_or_default()
+}
+
 /// Shared entry point: builds the window, wires callbacks, and runs the
 /// event loop. Called from `main.rs` on native targets and from
 /// [`run_wasm`] on wasm32.
 pub fn run_app() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
+
+    ui.set_region(detect_region().as_str().into());
+
+    // The `region` property is already updated by the toggle's two-way
+    // binding by the time this fires; region-specific calculators wire
+    // their own recompute into this callback as they're added.
+    let ui_handle = ui.as_weak();
+    ui.on_region_changed(move |region| {
+        let ui = ui_handle.unwrap();
+        ui.set_region(region);
+    });
 
     recompute_payment(&ui);
     recompute_amortization(&ui);
