@@ -268,6 +268,13 @@ fn blank_sg_limits(ui: &AppWindow) {
 /// minus loan amount) that upfront costs get added to for the total cash
 /// figure.
 fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Option<Decimal>) {
+    let wants_hdb_loan = ui.get_sg_loan_type() == "HDB Loan";
+    if wants_hdb_loan && !singapore::hdb_loan_eligible(ui.get_sg_is_hdb()) {
+        ui.set_sg_loan_type_warning("HDB loans are only available for HDB flats/ECs bought from HDB.".into());
+    } else {
+        ui.set_sg_loan_type_warning("".into());
+    }
+
     match monthly_payment {
         Some(payment) => {
             let income = Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default();
@@ -341,6 +348,13 @@ fn recompute_payment_us(
     first_period_interest: Option<Decimal>,
 ) {
     let home_price = Decimal::from_str(ui.get_us_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
+
+    let loan_type_label = match united_states::classify_loan(principal) {
+        united_states::LoanConformance::Conforming => "Conforming",
+        united_states::LoanConformance::Jumbo => "Jumbo",
+    };
+    ui.set_us_loan_type_label(loan_type_label.into());
+
     let tax_rate = united_states::estimate_property_tax_rate(ui.get_us_zip().as_str());
     let monthly_property_tax = tax_rate
         .map(|rate| round_currency(home_price * rate / dec!(12)))

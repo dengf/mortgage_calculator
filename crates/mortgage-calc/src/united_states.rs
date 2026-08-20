@@ -5,6 +5,7 @@
 use mortgage_core::round_currency;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 
 /// Maps a ZIP code's first three digits to a state via published USPS ZIP3
 /// prefix ranges. This is a coarse regional estimate — some ZIP3 prefixes
@@ -89,6 +90,29 @@ pub fn monthly_tax_savings(deductible_monthly_interest: Decimal, marginal_tax_ra
     round_currency(deductible_monthly_interest.max(Decimal::ZERO) * marginal_tax_rate)
 }
 
+/// The financing framework a loan falls under, which determines investor
+/// eligibility, underwriting, and typically pricing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LoanConformance {
+    Conforming,
+    Jumbo,
+}
+
+/// 2026 FHFA baseline conforming loan limit for a one-unit property in
+/// most counties. High-cost areas (up to Alaska/Hawaii) have a higher
+/// ceiling, up to $1,249,125, that this doesn't model — this is a
+/// baseline classification, not a county-precise one.
+pub const CONFORMING_LOAN_LIMIT: Decimal = dec!(832_750);
+
+/// Classifies a loan as conforming or jumbo against the baseline limit.
+pub fn classify_loan(principal: Decimal) -> LoanConformance {
+    if principal > CONFORMING_LOAN_LIMIT {
+        LoanConformance::Jumbo
+    } else {
+        LoanConformance::Conforming
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,5 +167,16 @@ mod tests {
     fn tax_savings_scales_with_bracket() {
         let savings = monthly_tax_savings(dec!(2000), dec!(0.22));
         assert_eq!(savings, dec!(440.00));
+    }
+
+    #[test]
+    fn loans_at_or_below_the_limit_are_conforming() {
+        assert_eq!(classify_loan(CONFORMING_LOAN_LIMIT), LoanConformance::Conforming);
+        assert_eq!(classify_loan(dec!(400_000)), LoanConformance::Conforming);
+    }
+
+    #[test]
+    fn loans_above_the_limit_are_jumbo() {
+        assert_eq!(classify_loan(CONFORMING_LOAN_LIMIT + dec!(1)), LoanConformance::Jumbo);
     }
 }
