@@ -443,6 +443,147 @@ component PayoffChart inherits Rectangle {
     }
 }
 
+component EquityTimeline inherits VerticalLayout {
+    in property <string> balance-path: "";
+    in property <string> interest-path: "";
+    in property <float> scrub-fraction: 0.0;
+    in property <string> month-label: "";
+    in property <string> balance-label: "";
+    in property <string> interest-label: "";
+    in property <string> equity-label: "";
+    in property <float> equity-percent: 0.0;
+    callback scrub(float);
+
+    spacing: 10px;
+
+    Text { text: "Payoff timeline"; font-weight: 700; font-size: 14px; }
+
+    HorizontalLayout {
+        spacing: 14px;
+        Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #4f8cff; }
+        Text { text: "Remaining principal"; color: #92a0b3; font-size: 11px; }
+        Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #ef4444; }
+        Text { text: "Interest paid so far"; color: #92a0b3; font-size: 11px; }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    chart-area := Rectangle {
+        height: 120px;
+        background: #10161f;
+        border-radius: 8px;
+        clip: true;
+
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-width: 300;
+            viewbox-height: 140;
+            stroke: #4f8cff;
+            stroke-width: 2px;
+            fill: transparent;
+            commands: root.balance-path;
+        }
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-width: 300;
+            viewbox-height: 140;
+            stroke: #ef4444;
+            stroke-width: 2px;
+            fill: transparent;
+            commands: root.interest-path;
+        }
+
+        Rectangle {
+            x: root.scrub-fraction * (parent.width - 2px);
+            width: 2px;
+            height: 100%;
+            background: white;
+            opacity: 0.55;
+        }
+
+        scrub-touch := TouchArea {
+            width: 100%;
+            height: 100%;
+            clicked => { root.scrub(max(0.0, min(1.0, scrub-touch.mouse-x / self.width))); }
+            moved => {
+                if (self.pressed) {
+                    root.scrub(max(0.0, min(1.0, scrub-touch.mouse-x / self.width)));
+                }
+            }
+        }
+    }
+
+    Text { text: root.month-label; font-weight: 700; font-size: 13px; color: white; }
+
+    HorizontalLayout {
+        spacing: 20px;
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Balance remaining"; color: #92a0b3; font-size: 11px; }
+            Text { text: root.balance-label; color: #4f8cff; font-weight: 700; font-size: 14px; }
+        }
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Interest paid"; color: #92a0b3; font-size: 11px; }
+            Text { text: root.interest-label; color: #ef4444; font-weight: 700; font-size: 14px; }
+        }
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Equity"; color: #92a0b3; font-size: 11px; }
+            Text { text: root.equity-label; color: #7ee787; font-weight: 700; font-size: 14px; }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        VerticalLayout {
+            spacing: 6px;
+            alignment: center;
+            house := Rectangle {
+                width: 90px;
+                height: 80px;
+
+                Path {
+                    width: 100%;
+                    height: 34px;
+                    y: 0px;
+                    viewbox-width: 90;
+                    viewbox-height: 34;
+                    commands: "M 2 34 L 45 2 L 88 34";
+                    stroke: #5c6b80;
+                    stroke-width: 2px;
+                    fill: transparent;
+                }
+
+                body := Rectangle {
+                    y: 30px;
+                    height: parent.height - 30px;
+                    width: 100%;
+                    border-width: 2px;
+                    border-color: #5c6b80;
+                    background: transparent;
+                    clip: true;
+
+                    Rectangle {
+                        y: parent.height * (1 - root.equity-percent / 100);
+                        height: parent.height * (root.equity-percent / 100);
+                        width: 100%;
+                        background: root.equity-percent >= 50 ? #22c55e : #4f8cff;
+                        animate y, height, background { duration: 200ms; }
+                    }
+                }
+            }
+            Text {
+                text: round(root.equity-percent) + "% equity";
+                color: #92a0b3;
+                font-size: 11px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}
+
 export component AppWindow inherits Window {
     title: "Mortgage Calculator";
     preferred-width: 520px;
@@ -486,6 +627,14 @@ export component AppWindow inherits Window {
     in-out property <bool> amort-lattes-on: false;
     in-out property <bool> amort-subscription-on: false;
     in-out property <bool> amort-bonus-on: false;
+    in-out property <string> amort-timeline-balance-path: "";
+    in-out property <string> amort-timeline-interest-path: "";
+    in-out property <float> amort-scrub-fraction: 0.0;
+    in-out property <string> amort-scrub-month-label: "";
+    in-out property <string> amort-scrub-balance-label: "";
+    in-out property <string> amort-scrub-interest-label: "";
+    in-out property <string> amort-scrub-equity-label: "";
+    in-out property <float> amort-scrub-equity-percent: 0.0;
     in-out property <[AmortScheduleRow]> amort-schedule-rows: [];
     in-out property <bool> amort-show-full: false;
     in-out property <[ScenarioRow]> amort-scenarios: [];
@@ -493,6 +642,7 @@ export component AppWindow inherits Window {
     callback amort-recompute();
     callback amort-rate-slider-changed(float);
     callback amort-whatif-toggled();
+    callback amort-scrub(float);
     callback amort-toggle-full();
     callback amort-save-scenario(string);
     callback amort-load-scenario(string);
@@ -701,6 +851,20 @@ export component AppWindow inherits Window {
             }
             if root.amort-has-error: Card {
                 ErrorText { text: "Enter valid loan details."; }
+            }
+
+            if !root.amort-has-error: Card {
+                EquityTimeline {
+                    balance-path: root.amort-timeline-balance-path;
+                    interest-path: root.amort-timeline-interest-path;
+                    scrub-fraction: root.amort-scrub-fraction;
+                    month-label: root.amort-scrub-month-label;
+                    balance-label: root.amort-scrub-balance-label;
+                    interest-label: root.amort-scrub-interest-label;
+                    equity-label: root.amort-scrub-equity-label;
+                    equity-percent: root.amort-scrub-equity-percent;
+                    scrub(v) => { root.amort-scrub(v); }
+                }
             }
 
             if !root.amort-has-error: Card {

@@ -281,12 +281,21 @@ fn recompute_amortization(ui: &AppWindow) {
         ui.set_amort_boom_text("".into());
     }
 
+    let principal_d = Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
+
     match mortgage_calc::amortization::schedule(&loan, extra) {
         Ok(rows) => {
             ui.set_amort_schedule_rows(build_schedule_rows(&rows, ui.get_amort_show_full()));
+            let (balance_path, interest_path) = build_timeline_paths(&rows, principal_d);
+            ui.set_amort_timeline_balance_path(balance_path.into());
+            ui.set_amort_timeline_interest_path(interest_path.into());
+            apply_scrub(ui, &rows, principal_d, ui.get_amort_scrub_fraction());
         }
         Err(_) => {
             ui.set_amort_schedule_rows(ModelRc::new(VecModel::from(Vec::<AmortScheduleRow>::new())));
+            ui.set_amort_timeline_balance_path("".into());
+            ui.set_amort_timeline_interest_path("".into());
+            apply_scrub(ui, &[], Decimal::ZERO, 0.0);
         }
     }
 }
@@ -435,30 +444,102 @@ fn build_compare_loan(
 /// top-left sloping to zero at bottom-right) so the Compare tab can overlay
 /// both scenarios on one chart. Scenarios that pay off before
 /// `max_periods` get a flat tail at zero for the remaining width.
-fn build_chart_path(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, max_periods: usize) -> String {
-    const W: f64 = 300.0;
-    const H: f64 = 140.0;
+const CHART_W: f64 = 300.0;
+const CHART_H: f64 = 140.0;
 
-    if rows.is_empty() || max_periods == 0 {
+/// SVG-style path (viewBox 300x140) plotting `values` against `max_value`,
+/// high value at the top (y=0) sloping toward the bottom (y=H) as it drops
+/// toward zero. Shared by the Compare-tab payoff chart and the
+/// Amortization-tab equity timeline so both stay pixel-compatible.
+fn path_from_values(values: &[f64], max_value: f64, max_periods: usize) -> String {
+    if values.is_empty() || max_periods == 0 {
         return String::new();
     }
-    let principal_f = principal.to_string().parse::<f64>().unwrap_or(1.0).max(1.0);
-    let x_for = |i: usize| (i as f64 / max_periods.max(1) as f64) * W;
-
+    let max_value = max_value.max(1.0);
     let mut s = String::new();
-    for (i, row) in rows.iter().enumerate() {
-        let bal = row.remaining_balance.to_string().parse::<f64>().unwrap_or(0.0);
-        let y = H - (bal / principal_f).clamp(0.0, 1.0) * H;
+    for (i, &v) in values.iter().enumerate() {
+        let x = (i as f64 / max_periods.max(1) as f64) * CHART_W;
+        let y = CHART_H - (v / max_value).clamp(0.0, 1.0) * CHART_H;
         if i == 0 {
-            s.push_str(&format!("M {:.2} {:.2} ", x_for(i), y));
+            s.push_str(&format!("M {:.2} {:.2} ", x, y));
         } else {
-            s.push_str(&format!("L {:.2} {:.2} ", x_for(i), y));
+            s.push_str(&format!("L {:.2} {:.2} ", x, y));
         }
     }
+    s
+}
+
+fn decimal_to_f64(d: Decimal) -> f64 {
+    d.to_string().parse::<f64>().unwrap_or(0.0)
+}
+
+fn build_chart_path(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, max_periods: usize) -> String {
+    if rows.is_empty() {
+        return String::new();
+    }
+    let values: Vec<f64> = rows.iter().map(|r| decimal_to_f64(r.remaining_balance)).collect();
+    let mut s = path_from_values(&values, decimal_to_f64(principal), max_periods);
     if rows.len() < max_periods {
-        s.push_str(&format!("L {:.2} {:.2} ", W, H));
+        s.push_str(&format!("L {:.2} {:.2} ", CHART_W, CHART_H));
     }
     s
+}
+
+/// Remaining-principal and cumulative-interest-paid curves for the
+/// Amortization tab's equity timeline (single schedule, so no padding tail
+/// like the Compare-tab chart needs).
+fn build_timeline_paths(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal) -> (String, String) {
+    let n = rows.len();
+    let balance_values: Vec<f64> = rows.iter().map(|r| decimal_to_f64(r.remaining_balance)).collect();
+
+    let mut cumulative_interest = Decimal::ZERO;
+    let interest_values: Vec<f64> = rows
+        .iter()
+        .map(|r| {
+            cumulative_interest += r.interest_portion;
+            decimal_to_f64(cumulative_interest)
+        })
+        .collect();
+    let total_interest_f = interest_values.last().copied().unwrap_or(1.0);
+
+    let balance_path = path_from_values(&balance_values, decimal_to_f64(principal), n);
+    let interest_path = path_from_values(&interest_values, total_interest_f, n);
+    (balance_path, interest_path)
+}
+
+/// Recomputes the scrub summary (month/balance/interest/equity) for the
+/// given `fraction` (0..1) along `rows`, or clears it when there's no
+/// schedule. Called both when the user drags the scrub line and whenever
+/// the underlying loan changes, so the summary stays in sync either way.
+fn apply_scrub(ui: &AppWindow, rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, fraction: f32) {
+    if rows.is_empty() {
+        ui.set_amort_scrub_month_label("".into());
+        ui.set_amort_scrub_balance_label("".into());
+        ui.set_amort_scrub_interest_label("".into());
+        ui.set_amort_scrub_equity_label("".into());
+        ui.set_amort_scrub_equity_percent(0.0);
+        return;
+    }
+
+    let fraction = fraction.clamp(0.0, 1.0);
+    let idx = ((fraction as f64) * (rows.len() - 1) as f64).round() as usize;
+    let idx = idx.min(rows.len() - 1);
+    let row = rows[idx];
+
+    let cumulative_interest: Decimal = rows[..=idx].iter().map(|r| r.interest_portion).sum();
+    let equity = (principal - row.remaining_balance).max(Decimal::ZERO);
+    let equity_percent = if principal > Decimal::ZERO {
+        decimal_to_f64(equity / principal * Decimal::from(100)) as f32
+    } else {
+        0.0
+    };
+
+    ui.set_amort_scrub_fraction(fraction);
+    ui.set_amort_scrub_month_label(format!("Month {}", row.period).into());
+    ui.set_amort_scrub_balance_label(format!("${}", row.remaining_balance).into());
+    ui.set_amort_scrub_interest_label(format!("${}", cumulative_interest).into());
+    ui.set_amort_scrub_equity_label(format!("${}", equity).into());
+    ui.set_amort_scrub_equity_percent(equity_percent);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -626,6 +707,26 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let ui = ui_handle.unwrap();
         ui.set_amort_show_full(!ui.get_amort_show_full());
         recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_scrub(move |fraction| {
+        let ui = ui_handle.unwrap();
+        let Some(loan) = build_loan(
+            ui.get_amort_principal().as_str(),
+            ui.get_amort_rate_percent().as_str(),
+            ui.get_amort_term_years().as_str(),
+        ) else {
+            return;
+        };
+        let extra = Decimal::from_str(ui.get_amort_extra_payment().as_str())
+            .unwrap_or(Decimal::ZERO)
+            .max(Decimal::ZERO);
+        let Ok(rows) = mortgage_calc::amortization::schedule(&loan, extra) else {
+            return;
+        };
+        let principal_d = Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
+        apply_scrub(&ui, &rows, principal_d, fraction);
     });
 
     let ui_handle = ui.as_weak();
