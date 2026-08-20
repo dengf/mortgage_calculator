@@ -394,6 +394,73 @@ fn recompute_refinance(ui: &AppWindow) {
     }
 }
 
+fn build_rate_type(
+    floating: bool,
+    rate_percent: &str,
+    base_rate_percent: &str,
+    spread_percent: &str,
+) -> Option<RateType> {
+    if floating {
+        Some(RateType::Floating {
+            base_rate: Decimal::from_str(base_rate_percent).ok()? / Decimal::from(100),
+            spread: Decimal::from_str(spread_percent).ok()? / Decimal::from(100),
+        })
+    } else {
+        Some(RateType::Fixed {
+            rate: Decimal::from_str(rate_percent).ok()? / Decimal::from(100),
+        })
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_compare_loan(
+    principal: Decimal,
+    floating: bool,
+    rate_percent: &str,
+    base_rate_percent: &str,
+    spread_percent: &str,
+    term_years: &str,
+) -> Option<Loan> {
+    let rate_type = build_rate_type(floating, rate_percent, base_rate_percent, spread_percent)?;
+    Loan::builder()
+        .principal(principal)
+        .rate_type(rate_type)
+        .term_years(Decimal::from_str(term_years).ok()?)
+        .frequency(PaymentFrequency::Monthly)
+        .build()
+        .ok()
+}
+
+/// Balance-over-time as an SVG path string (viewBox 300x140, high balance at
+/// top-left sloping to zero at bottom-right) so the Compare tab can overlay
+/// both scenarios on one chart. Scenarios that pay off before
+/// `max_periods` get a flat tail at zero for the remaining width.
+fn build_chart_path(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, max_periods: usize) -> String {
+    const W: f64 = 300.0;
+    const H: f64 = 140.0;
+
+    if rows.is_empty() || max_periods == 0 {
+        return String::new();
+    }
+    let principal_f = principal.to_string().parse::<f64>().unwrap_or(1.0).max(1.0);
+    let x_for = |i: usize| (i as f64 / max_periods.max(1) as f64) * W;
+
+    let mut s = String::new();
+    for (i, row) in rows.iter().enumerate() {
+        let bal = row.remaining_balance.to_string().parse::<f64>().unwrap_or(0.0);
+        let y = H - (bal / principal_f).clamp(0.0, 1.0) * H;
+        if i == 0 {
+            s.push_str(&format!("M {:.2} {:.2} ", x_for(i), y));
+        } else {
+            s.push_str(&format!("L {:.2} {:.2} ", x_for(i), y));
+        }
+    }
+    if rows.len() < max_periods {
+        s.push_str(&format!("L {:.2} {:.2} ", W, H));
+    }
+    s
+}
+
 #[allow(clippy::too_many_arguments)]
 fn compare_slot(
     principal: Decimal,
@@ -403,16 +470,7 @@ fn compare_slot(
     spread_percent: &str,
     term_years: &str,
 ) -> Option<String> {
-    let rate_type = if floating {
-        RateType::Floating {
-            base_rate: Decimal::from_str(base_rate_percent).ok()? / Decimal::from(100),
-            spread: Decimal::from_str(spread_percent).ok()? / Decimal::from(100),
-        }
-    } else {
-        RateType::Fixed {
-            rate: Decimal::from_str(rate_percent).ok()? / Decimal::from(100),
-        }
-    };
+    let rate_type = build_rate_type(floating, rate_percent, base_rate_percent, spread_percent)?;
 
     let input = ComparisonInput {
         principal,
@@ -468,7 +526,43 @@ fn recompute_compare(ui: &AppWindow) {
             ui.set_cmp_a_result(a.into());
             ui.set_cmp_b_result(b.into());
         }
-        _ => ui.set_cmp_has_error(true),
+        _ => {
+            ui.set_cmp_has_error(true);
+            ui.set_cmp_chart_path_a("".into());
+            ui.set_cmp_chart_path_b("".into());
+            return;
+        }
+    }
+
+    let loan_a = build_compare_loan(
+        principal,
+        ui.get_cmp_a_floating(),
+        ui.get_cmp_a_rate_percent().as_str(),
+        ui.get_cmp_a_base_rate_percent().as_str(),
+        ui.get_cmp_a_spread_percent().as_str(),
+        ui.get_cmp_a_term_years().as_str(),
+    );
+    let loan_b = build_compare_loan(
+        principal,
+        ui.get_cmp_b_floating(),
+        ui.get_cmp_b_rate_percent().as_str(),
+        ui.get_cmp_b_base_rate_percent().as_str(),
+        ui.get_cmp_b_spread_percent().as_str(),
+        ui.get_cmp_b_term_years().as_str(),
+    );
+
+    match (loan_a, loan_b) {
+        (Some(loan_a), Some(loan_b)) => {
+            let rows_a = mortgage_calc::amortization::schedule(&loan_a, Decimal::ZERO).unwrap_or_default();
+            let rows_b = mortgage_calc::amortization::schedule(&loan_b, Decimal::ZERO).unwrap_or_default();
+            let max_periods = rows_a.len().max(rows_b.len());
+            ui.set_cmp_chart_path_a(build_chart_path(&rows_a, principal, max_periods).into());
+            ui.set_cmp_chart_path_b(build_chart_path(&rows_b, principal, max_periods).into());
+        }
+        _ => {
+            ui.set_cmp_chart_path_a("".into());
+            ui.set_cmp_chart_path_b("".into());
+        }
     }
 }
 

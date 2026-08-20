@@ -393,6 +393,56 @@ component WhatIfPanel inherits VerticalLayout {
     }
 }
 
+component PayoffChart inherits Rectangle {
+    in property <string> path-a: "";
+    in property <string> path-b: "";
+    in property <string> label-a: "Scenario A";
+    in property <string> label-b: "Scenario B";
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text { text: "Remaining balance over time"; font-weight: 700; font-size: 14px; }
+
+        HorizontalLayout {
+            spacing: 14px;
+            Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #4f8cff; }
+            Text { text: root.label-a; color: #92a0b3; font-size: 11px; }
+            Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #f59e0b; }
+            Text { text: root.label-b; color: #92a0b3; font-size: 11px; }
+            Rectangle { horizontal-stretch: 1; }
+        }
+
+        Rectangle {
+            height: 120px;
+            background: #10161f;
+            border-radius: 8px;
+            clip: true;
+
+            Path {
+                width: 100%;
+                height: 100%;
+                viewbox-width: 300;
+                viewbox-height: 140;
+                stroke: #4f8cff;
+                stroke-width: 2.5px;
+                fill: transparent;
+                commands: root.path-a;
+            }
+            Path {
+                width: 100%;
+                height: 100%;
+                viewbox-width: 300;
+                viewbox-height: 140;
+                stroke: #f59e0b;
+                stroke-width: 2.5px;
+                fill: transparent;
+                commands: root.path-b;
+            }
+        }
+    }
+}
+
 export component AppWindow inherits Window {
     title: "Mortgage Calculator";
     preferred-width: 520px;
@@ -516,6 +566,8 @@ export component AppWindow inherits Window {
     in-out property <string> cmp-b-term-years: "15";
     in-out property <string> cmp-b-result: "";
     in-out property <bool> cmp-has-error: false;
+    in-out property <string> cmp-chart-path-a: "";
+    in-out property <string> cmp-chart-path-b: "";
     in-out property <[ScenarioRow]> cmp-scenarios: [];
     in-out property <string> cmp-scenario-error: "";
     callback cmp-recompute();
@@ -812,6 +864,15 @@ export component AppWindow inherits Window {
                         text <=> root.cmp-principal;
                         edited => { root.cmp-recompute(); }
                     }
+                }
+            }
+
+            if !root.cmp-has-error: Card {
+                PayoffChart {
+                    path-a: root.cmp-chart-path-a;
+                    path-b: root.cmp-chart-path-b;
+                    label-a: root.cmp-a-label;
+                    label-b: root.cmp-b-label;
                 }
             }
 
