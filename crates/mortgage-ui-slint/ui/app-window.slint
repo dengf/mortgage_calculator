@@ -1199,7 +1199,7 @@ export component AppWindow inherits Window {
                     LineEdit { text <=> root.aff-insurance; edited => { root.aff-recompute(); } }
                 }
                 Field {
-                    label: "Monthly HOA";
+                    label: root.region == "SG" ? "Monthly maintenance / condo fees" : "Monthly HOA";
                     LineEdit { text <=> root.aff-hoa; edited => { root.aff-recompute(); } }
                 }
             }
