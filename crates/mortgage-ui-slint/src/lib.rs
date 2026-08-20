@@ -189,7 +189,18 @@ fn build_loan(principal: &str, rate_percent: &str, term_years: &str) -> Option<L
         .ok()
 }
 
+fn parse_rate_value(s: &str) -> f32 {
+    s.parse::<f32>().unwrap_or(0.0)
+}
+
+fn format_rate_value(v: f32) -> String {
+    let s = format!("{:.2}", v);
+    let s = s.trim_end_matches('0').trim_end_matches('.');
+    if s.is_empty() { "0".to_string() } else { s.to_string() }
+}
+
 fn recompute_payment(ui: &AppWindow) {
+    ui.set_rate_percent_value(parse_rate_value(ui.get_rate_percent().as_str()));
     let loan = build_loan(
         ui.get_principal().as_str(),
         ui.get_rate_percent().as_str(),
@@ -209,6 +220,7 @@ fn recompute_payment(ui: &AppWindow) {
 }
 
 fn recompute_amortization(ui: &AppWindow) {
+    ui.set_amort_rate_percent_value(parse_rate_value(ui.get_amort_rate_percent().as_str()));
     let loan = build_loan(
         ui.get_amort_principal().as_str(),
         ui.get_amort_rate_percent().as_str(),
@@ -289,6 +301,7 @@ fn build_schedule_rows(
 }
 
 fn recompute_affordability(ui: &AppWindow) {
+    ui.set_aff_rate_percent_value(parse_rate_value(ui.get_aff_rate_percent().as_str()));
     let result = (|| {
         let input = AffordabilityInput {
             gross_monthly_income: Decimal::from_str(ui.get_aff_income().as_str()).ok()?,
@@ -319,6 +332,8 @@ fn recompute_affordability(ui: &AppWindow) {
 }
 
 fn recompute_refinance(ui: &AppWindow) {
+    ui.set_refi_current_rate_percent_value(parse_rate_value(ui.get_refi_current_rate_percent().as_str()));
+    ui.set_refi_new_rate_percent_value(parse_rate_value(ui.get_refi_new_rate_percent().as_str()));
     let result = (|| {
         let input = RefinanceInput {
             current_balance: Decimal::from_str(ui.get_refi_current_balance().as_str()).ok()?,
@@ -397,6 +412,8 @@ fn compare_slot(
 }
 
 fn recompute_compare(ui: &AppWindow) {
+    ui.set_cmp_a_rate_percent_value(parse_rate_value(ui.get_cmp_a_rate_percent().as_str()));
+    ui.set_cmp_b_rate_percent_value(parse_rate_value(ui.get_cmp_b_rate_percent().as_str()));
     let Some(principal) = Decimal::from_str(ui.get_cmp_principal().as_str()).ok() else {
         ui.set_cmp_has_error(true);
         return;
@@ -448,8 +465,22 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_rate_percent(format_rate_value(v).into());
+        recompute_payment(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_amort_recompute(move || {
         let ui = ui_handle.unwrap();
+        recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_amort_rate_percent(format_rate_value(v).into());
         recompute_amortization(&ui);
     });
 
@@ -467,14 +498,49 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_aff_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_aff_rate_percent(format_rate_value(v).into());
+        recompute_affordability(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_refi_recompute(move || {
         let ui = ui_handle.unwrap();
         recompute_refinance(&ui);
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_refi_current_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_refi_current_rate_percent(format_rate_value(v).into());
+        recompute_refinance(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_refi_new_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_refi_new_rate_percent(format_rate_value(v).into());
+        recompute_refinance(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_cmp_recompute(move || {
         let ui = ui_handle.unwrap();
+        recompute_compare(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_cmp_a_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_cmp_a_rate_percent(format_rate_value(v).into());
+        recompute_compare(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_cmp_b_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_cmp_b_rate_percent(format_rate_value(v).into());
         recompute_compare(&ui);
     });
 

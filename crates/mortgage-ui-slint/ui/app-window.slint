@@ -68,6 +68,87 @@ component Field inherits VerticalLayout {
     @children
 }
 
+// Hand-built slider (not the std-widgets Slider) so its handle color can
+// animate between states — the native widget hardcodes its own palette and
+// exposes no way to recolor the handle per instance.
+component RiskSlider inherits Rectangle {
+    in property <float> minimum: 0.0;
+    in property <float> maximum: 15.0;
+    in-out property <float> value: 6.5;
+    in property <float> danger-threshold: 7.0;
+    callback changed(float);
+
+    property <color> handle-color: root.value >= root.danger-threshold ? #ef4444 : #4f8cff;
+    property <float> ratio: max(0.0, min(1.0, (root.value - root.minimum) / (root.maximum - root.minimum)));
+
+    height: 24px;
+    vertical-stretch: 0;
+
+    function set-value-from-x(x: length) {
+        root.value = max(root.minimum, min(root.maximum, root.minimum + (x / root.width) * (root.maximum - root.minimum)));
+        root.changed(root.value);
+    }
+
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 4px;
+        background: #232e42;
+        border-radius: 2px;
+    }
+
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 4px;
+        width: root.ratio * parent.width;
+        background: root.handle-color;
+        border-radius: 2px;
+        animate background { duration: 200ms; }
+    }
+
+    thumb := Rectangle {
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: root.handle-color;
+        border-width: 2px;
+        border-color: #0b1119;
+        x: max(0px, min(parent.width - self.width, root.ratio * (parent.width - self.width)));
+        y: (parent.height - self.height) / 2;
+        animate background { duration: 200ms; }
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => { root.set-value-from-x(touch.mouse-x); }
+        moved => {
+            if (self.pressed) {
+                root.set-value-from-x(touch.mouse-x);
+            }
+        }
+    }
+}
+
+component RateField inherits VerticalLayout {
+    in property <string> label;
+    in-out property <float> rate: 6.5;
+    in-out property <string> value <=> input.text;
+    callback edited();
+    callback rate-changed(float);
+
+    spacing: 4px;
+    Text { text: root.label; color: #92a0b3; font-size: 12px; }
+    input := LineEdit {
+        vertical-stretch: 0;
+        edited => { root.edited(); }
+    }
+    RiskSlider {
+        vertical-stretch: 0;
+        value <=> root.rate;
+        changed(v) => { root.rate-changed(v); }
+    }
+}
+
 component ResultRow inherits HorizontalLayout {
     in property <string> label;
     in property <string> value;
@@ -237,6 +318,7 @@ export component AppWindow inherits Window {
     // --- Payment ---
     in-out property <string> principal: "400000";
     in-out property <string> rate-percent: "6.5";
+    in-out property <float> rate-percent-value: 6.5;
     in-out property <string> term-years: "30";
     in-out property <string> payment-result: "";
     in-out property <string> total-paid-result: "";
@@ -245,6 +327,7 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> payment-scenarios: [];
     in-out property <string> payment-scenario-error: "";
     callback recompute();
+    callback rate-slider-changed(float);
     callback payment-save-scenario(string);
     callback payment-load-scenario(string);
     callback payment-delete-scenario(string);
@@ -252,6 +335,7 @@ export component AppWindow inherits Window {
     // --- Amortization ---
     in-out property <string> amort-principal: "400000";
     in-out property <string> amort-rate-percent: "6.5";
+    in-out property <float> amort-rate-percent-value: 6.5;
     in-out property <string> amort-term-years: "30";
     in-out property <string> amort-extra-payment: "0";
     in-out property <string> amort-payment-result: "";
@@ -267,6 +351,7 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> amort-scenarios: [];
     in-out property <string> amort-scenario-error: "";
     callback amort-recompute();
+    callback amort-rate-slider-changed(float);
     callback amort-toggle-full();
     callback amort-save-scenario(string);
     callback amort-load-scenario(string);
@@ -277,6 +362,7 @@ export component AppWindow inherits Window {
     in-out property <string> aff-debts: "500";
     in-out property <string> aff-down-payment: "60000";
     in-out property <string> aff-rate-percent: "6.5";
+    in-out property <float> aff-rate-percent-value: 6.5;
     in-out property <string> aff-term-years: "30";
     in-out property <string> aff-max-dti-percent: "36";
     in-out property <string> aff-tax-rate-percent: "1.2";
@@ -291,6 +377,7 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> aff-scenarios: [];
     in-out property <string> aff-scenario-error: "";
     callback aff-recompute();
+    callback aff-rate-slider-changed(float);
     callback aff-save-scenario(string);
     callback aff-load-scenario(string);
     callback aff-delete-scenario(string);
@@ -298,8 +385,10 @@ export component AppWindow inherits Window {
     // --- Refinance ---
     in-out property <string> refi-current-balance: "300000";
     in-out property <string> refi-current-rate-percent: "7.5";
+    in-out property <float> refi-current-rate-percent-value: 7.5;
     in-out property <string> refi-remaining-periods: "300";
     in-out property <string> refi-new-rate-percent: "6.0";
+    in-out property <float> refi-new-rate-percent-value: 6.0;
     in-out property <string> refi-new-term-years: "30";
     in-out property <string> refi-closing-costs: "6000";
     in-out property <string> refi-current-payment: "";
@@ -311,6 +400,8 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> refi-scenarios: [];
     in-out property <string> refi-scenario-error: "";
     callback refi-recompute();
+    callback refi-current-rate-slider-changed(float);
+    callback refi-new-rate-slider-changed(float);
     callback refi-save-scenario(string);
     callback refi-load-scenario(string);
     callback refi-delete-scenario(string);
@@ -320,6 +411,7 @@ export component AppWindow inherits Window {
     in-out property <string> cmp-a-label: "30-Year Fixed";
     in-out property <bool> cmp-a-floating: false;
     in-out property <string> cmp-a-rate-percent: "6.5";
+    in-out property <float> cmp-a-rate-percent-value: 6.5;
     in-out property <string> cmp-a-base-rate-percent: "4.3";
     in-out property <string> cmp-a-spread-percent: "2.0";
     in-out property <string> cmp-a-term-years: "30";
@@ -327,6 +419,7 @@ export component AppWindow inherits Window {
     in-out property <string> cmp-b-label: "15-Year Fixed";
     in-out property <bool> cmp-b-floating: false;
     in-out property <string> cmp-b-rate-percent: "6.0";
+    in-out property <float> cmp-b-rate-percent-value: 6.0;
     in-out property <string> cmp-b-base-rate-percent: "4.3";
     in-out property <string> cmp-b-spread-percent: "2.5";
     in-out property <string> cmp-b-term-years: "15";
@@ -335,6 +428,8 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> cmp-scenarios: [];
     in-out property <string> cmp-scenario-error: "";
     callback cmp-recompute();
+    callback cmp-a-rate-slider-changed(float);
+    callback cmp-b-rate-slider-changed(float);
     callback cmp-save-scenario(string);
     callback cmp-load-scenario(string);
     callback cmp-delete-scenario(string);
@@ -381,12 +476,12 @@ export component AppWindow inherits Window {
                         edited => { root.recompute(); }
                     }
                 }
-                Field {
+                RateField {
                     label: "Interest rate (%)";
-                    LineEdit {
-                        text <=> root.rate-percent;
-                        edited => { root.recompute(); }
-                    }
+                    rate <=> root.rate-percent-value;
+                    value <=> root.rate-percent;
+                    edited => { root.recompute(); }
+                    rate-changed(v) => { root.rate-slider-changed(v); }
                 }
                 Field {
                     label: "Loan term (years)";
@@ -427,12 +522,12 @@ export component AppWindow inherits Window {
                         edited => { root.amort-recompute(); }
                     }
                 }
-                Field {
+                RateField {
                     label: "Interest rate (%)";
-                    LineEdit {
-                        text <=> root.amort-rate-percent;
-                        edited => { root.amort-recompute(); }
-                    }
+                    rate <=> root.amort-rate-percent-value;
+                    value <=> root.amort-rate-percent;
+                    edited => { root.amort-recompute(); }
+                    rate-changed(v) => { root.amort-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Loan term (years)";
@@ -499,9 +594,12 @@ export component AppWindow inherits Window {
                     label: "Down payment";
                     LineEdit { text <=> root.aff-down-payment; edited => { root.aff-recompute(); } }
                 }
-                Field {
+                RateField {
                     label: "Interest rate (%)";
-                    LineEdit { text <=> root.aff-rate-percent; edited => { root.aff-recompute(); } }
+                    rate <=> root.aff-rate-percent-value;
+                    value <=> root.aff-rate-percent;
+                    edited => { root.aff-recompute(); }
+                    rate-changed(v) => { root.aff-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Loan term (years)";
@@ -554,17 +652,23 @@ export component AppWindow inherits Window {
                     label: "Current balance";
                     LineEdit { text <=> root.refi-current-balance; edited => { root.refi-recompute(); } }
                 }
-                Field {
+                RateField {
                     label: "Current rate (%)";
-                    LineEdit { text <=> root.refi-current-rate-percent; edited => { root.refi-recompute(); } }
+                    rate <=> root.refi-current-rate-percent-value;
+                    value <=> root.refi-current-rate-percent;
+                    edited => { root.refi-recompute(); }
+                    rate-changed(v) => { root.refi-current-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Payments remaining";
                     LineEdit { text <=> root.refi-remaining-periods; edited => { root.refi-recompute(); } }
                 }
-                Field {
+                RateField {
                     label: "New rate (%)";
-                    LineEdit { text <=> root.refi-new-rate-percent; edited => { root.refi-recompute(); } }
+                    rate <=> root.refi-new-rate-percent-value;
+                    value <=> root.refi-new-rate-percent;
+                    edited => { root.refi-recompute(); }
+                    rate-changed(v) => { root.refi-new-rate-slider-changed(v); }
                 }
                 Field {
                     label: "New term (years)";
@@ -620,12 +724,12 @@ export component AppWindow inherits Window {
                     checked <=> root.cmp-a-floating;
                     toggled => { root.cmp-recompute(); }
                 }
-                if !root.cmp-a-floating: Field {
+                if !root.cmp-a-floating: RateField {
                     label: "Rate (%)";
-                    LineEdit {
-                        text <=> root.cmp-a-rate-percent;
-                        edited => { root.cmp-recompute(); }
-                    }
+                    rate <=> root.cmp-a-rate-percent-value;
+                    value <=> root.cmp-a-rate-percent;
+                    edited => { root.cmp-recompute(); }
+                    rate-changed(v) => { root.cmp-a-rate-slider-changed(v); }
                 }
                 if root.cmp-a-floating: HorizontalLayout {
                     spacing: 10px;
@@ -664,12 +768,12 @@ export component AppWindow inherits Window {
                     checked <=> root.cmp-b-floating;
                     toggled => { root.cmp-recompute(); }
                 }
-                if !root.cmp-b-floating: Field {
+                if !root.cmp-b-floating: RateField {
                     label: "Rate (%)";
-                    LineEdit {
-                        text <=> root.cmp-b-rate-percent;
-                        edited => { root.cmp-recompute(); }
-                    }
+                    rate <=> root.cmp-b-rate-percent-value;
+                    value <=> root.cmp-b-rate-percent;
+                    edited => { root.cmp-recompute(); }
+                    rate-changed(v) => { root.cmp-b-rate-slider-changed(v); }
                 }
                 if root.cmp-b-floating: HorizontalLayout {
                     spacing: 10px;
