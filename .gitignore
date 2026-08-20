@@ -10,3 +10,7 @@ crates/mortgage-wasm/pkg/
 crates/mortgage-wasm/target/
 
 .DS_Store
+
+# XcodeGen-generated project + build output (regenerate with `xcodegen generate`)
+crates/mortgage-ui-slint/ios/*.xcodeproj/
+crates/mortgage-ui-slint/ios/build/

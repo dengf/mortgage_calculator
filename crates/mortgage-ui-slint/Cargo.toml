@@ -1,0 +1,48 @@
+[package]
+name = "mortgage-ui-slint"
+description = "Slint UI for mortgage-calculator: one Rust codebase targeting desktop, iOS, Android, and web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "mortgage_ui_slint"
+path = "src/lib.rs"
+# cdylib for wasm-pack (web target); rlib so the native `[[bin]]` below can
+# link against this same crate for desktop/iOS/Android.
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "mortgage-ui-slint"
+path = "src/main.rs"
+
+[dependencies]
+mortgage-calc = { workspace = true }
+mortgage-ports = { workspace = true }
+mortgage-ext-redb = { workspace = true }
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+slint = "1.16"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+
+[target.'cfg(target_os = "android")'.dependencies]
+slint = { version = "1.16", features = ["backend-android-activity-06"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+# Simulator SDKs report a different MTLResourceID struct encoding than objc2-metal
+# expects, causing a spurious runtime panic. Slint's own fix (upstream PR #9739)
+# only disables the assertion for the arm64 simulator slice; disable it here for
+# all iOS targets so it also covers x86_64-apple-ios. See slint-ui/slint#9583
+# and madsmtm/objc2#795.
+objc2 = { version = "0.6", features = ["disable-encoding-assertions"] }
+
+[build-dependencies]
+slint-build = "1.16"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
