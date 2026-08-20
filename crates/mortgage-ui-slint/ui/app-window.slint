@@ -697,6 +697,8 @@ export component AppWindow inherits Window {
     in-out property <string> sg-gross-income: "8000";
     in-out property <string> sg-other-debts: "0";
     in-out property <bool> sg-is-hdb: true;
+    in-out property <string> sg-loan-type: "HDB Loan";
+    in-out property <string> sg-loan-type-warning: "";
     in-out property <string> sg-tdsr-label: "";
     in-out property <bool> sg-tdsr-exceeded: false;
     in-out property <bool> sg-tdsr-near: false;
@@ -719,6 +721,7 @@ export component AppWindow inherits Window {
 
     // --- Payment: United States panel (region == "US" only) ---
     in-out property <string> us-home-price: "500000";
+    in-out property <string> us-loan-type-label: "";
     in-out property <string> us-zip: "90210";
     in-out property <string> us-property-tax-rate-label: "";
     in-out property <string> us-monthly-property-tax-label: "";
@@ -947,6 +950,15 @@ export component AppWindow inherits Window {
                     }
                     CheckBox { checked <=> root.sg-is-hdb; toggled => { root.recompute(); } }
                 }
+                Field {
+                    label: "Loan type";
+                    ComboBox {
+                        model: ["HDB Loan", "Bank Loan"];
+                        current-value <=> root.sg-loan-type;
+                        selected => { root.recompute(); }
+                    }
+                }
+                if root.sg-loan-type-warning != "": ErrorText { text: root.sg-loan-type-warning; }
 
                 LimitBar {
                     label: "TDSR (max 55%)";
@@ -1023,6 +1035,7 @@ export component AppWindow inherits Window {
                     label: "Home price";
                     LineEdit { text <=> root.us-home-price; edited => { root.recompute(); } }
                 }
+                ResultRow { label: "Loan type"; value: root.us-loan-type-label; }
                 Field {
                     label: "Down payment (" + root.us-down-payment-percent-label + ")";
                     RiskSlider {

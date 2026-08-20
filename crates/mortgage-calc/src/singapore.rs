@@ -110,6 +110,21 @@ pub enum PropertyCount {
     ThirdOrMore,
 }
 
+/// The financing framework used: HDB's own concessionary loan, or a
+/// private bank loan.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LoanType {
+    HdbLoan,
+    BankLoan,
+}
+
+/// HDB concessionary loans are only available for HDB flats/ECs bought
+/// directly from HDB — never for private property, and not offered by
+/// banks.
+pub fn hdb_loan_eligible(is_hdb_or_ec: bool) -> bool {
+    is_hdb_or_ec
+}
+
 /// Progressive Buyer's Stamp Duty on a residential property's purchase
 /// price (or market value, if higher).
 pub fn buyers_stamp_duty(price: Decimal) -> Decimal {
@@ -247,5 +262,11 @@ mod tests {
         assert_eq!(costs.bsd, dec!(24_600));
         assert_eq!(costs.absd, dec!(300_000));
         assert_eq!(costs.total, dec!(324_600));
+    }
+
+    #[test]
+    fn hdb_loan_requires_an_hdb_or_ec_flat() {
+        assert!(hdb_loan_eligible(true));
+        assert!(!hdb_loan_eligible(false));
     }
 }
