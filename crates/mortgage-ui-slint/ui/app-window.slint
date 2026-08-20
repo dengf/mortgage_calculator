@@ -76,9 +76,12 @@ component RiskSlider inherits Rectangle {
     in property <float> maximum: 15.0;
     in-out property <float> value: 6.5;
     in property <float> danger-threshold: 7.0;
+    // Set false to use this as a plain (always-blue) slider, e.g. for a
+    // value with no risk connotation like down payment percentage.
+    in property <bool> risk-coloring: true;
     callback changed(float);
 
-    property <color> handle-color: root.value >= root.danger-threshold ? #ef4444 : #4f8cff;
+    property <color> handle-color: root.risk-coloring && root.value >= root.danger-threshold ? #ef4444 : #4f8cff;
     property <float> ratio: max(0.0, min(1.0, (root.value - root.minimum) / (root.maximum - root.minimum)));
 
     height: 24px;
@@ -711,6 +714,8 @@ export component AppWindow inherits Window {
     in-out property <string> sg-bsd-label: "";
     in-out property <string> sg-absd-label: "";
     in-out property <string> sg-upfront-total-label: "";
+    in-out property <string> sg-down-payment-label: "";
+    in-out property <string> sg-total-cash-required-label: "";
 
     // --- Payment: United States panel (region == "US" only) ---
     in-out property <string> us-home-price: "500000";
@@ -718,6 +723,8 @@ export component AppWindow inherits Window {
     in-out property <string> us-property-tax-rate-label: "";
     in-out property <string> us-monthly-property-tax-label: "";
     in-out property <string> us-down-payment-percent-label: "";
+    in-out property <float> us-down-payment-percent-value: 20.0;
+    callback us-down-payment-changed(float);
     in-out property <bool> us-pmi-required: false;
     in-out property <string> us-pmi-rate-percent: "0.75";
     in-out property <string> us-monthly-pmi-label: "";
@@ -1004,7 +1011,9 @@ export component AppWindow inherits Window {
                 }
                 ResultRow { label: "Buyer's Stamp Duty (BSD)"; value: root.sg-bsd-label; }
                 ResultRow { label: "Additional BSD (ABSD)"; value: root.sg-absd-label; }
-                ResultRow { label: "Total upfront stamp duty"; value: root.sg-upfront-total-label; emphasize: true; }
+                ResultRow { label: "Total upfront stamp duty"; value: root.sg-upfront-total-label; }
+                ResultRow { label: "Down payment"; value: root.sg-down-payment-label; }
+                ResultRow { label: "Total cash required"; value: root.sg-total-cash-required-label; emphasize: true; }
             }
 
             if root.region == "US": Card {
@@ -1015,20 +1024,44 @@ export component AppWindow inherits Window {
                     LineEdit { text <=> root.us-home-price; edited => { root.recompute(); } }
                 }
                 Field {
+                    label: "Down payment (" + root.us-down-payment-percent-label + ")";
+                    RiskSlider {
+                        risk-coloring: false;
+                        minimum: 0.0;
+                        maximum: 50.0;
+                        value <=> root.us-down-payment-percent-value;
+                        changed(v) => { root.us-down-payment-changed(v); }
+                    }
+                }
+                Field {
                     label: "ZIP code";
                     LineEdit { text <=> root.us-zip; edited => { root.recompute(); } }
                 }
                 ResultRow { label: "Est. property tax rate"; value: root.us-property-tax-rate-label; }
                 ResultRow { label: "Monthly property tax"; value: root.us-monthly-property-tax-label; }
-                ResultRow { label: "Down payment"; value: root.us-down-payment-percent-label; }
 
-                if root.us-pmi-required: ResultRow {
-                    label: "PMI (required, down payment < 20%)";
-                    value: root.us-monthly-pmi-label;
-                }
-                if root.us-pmi-required: Field {
-                    label: "PMI rate (annual %, of loan amount)";
-                    LineEdit { text <=> root.us-pmi-rate-percent; edited => { root.recompute(); } }
+                // Animates open rather than snapping in/out, per the feature
+                // request: PMI should "smoothly animate into the monthly
+                // cost breakdown" the moment down payment drops below 20%.
+                Rectangle {
+                    clip: true;
+                    height: root.us-pmi-required ? 74px : 0px;
+                    animate height { duration: 200ms; easing: ease-in-out; }
+
+                    VerticalLayout {
+                        spacing: 12px;
+                        opacity: root.us-pmi-required ? 1.0 : 0.0;
+                        animate opacity { duration: 200ms; }
+
+                        ResultRow {
+                            label: "PMI (required, down payment < 20%)";
+                            value: root.us-monthly-pmi-label;
+                        }
+                        Field {
+                            label: "PMI rate (annual %, of loan amount)";
+                            LineEdit { text <=> root.us-pmi-rate-percent; edited => { root.recompute(); } }
+                        }
+                    }
                 }
 
                 ResultRow { label: "Estimated monthly PITI"; value: root.us-monthly-piti-label; emphasize: true; }

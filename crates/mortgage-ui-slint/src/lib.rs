@@ -264,8 +264,10 @@ fn blank_sg_limits(ui: &AppWindow) {
 /// split, and BSD/ABSD upfront costs). `monthly_payment` is the Payment
 /// tab's own result, if the loan inputs were valid — the limits and CPF
 /// split depend on it, but upfront costs are priced off a separate home
-/// price input and don't.
-fn recompute_payment_sg(ui: &AppWindow, monthly_payment: Option<Decimal>) {
+/// price input and don't. `principal` feeds the down payment (home price
+/// minus loan amount) that upfront costs get added to for the total cash
+/// figure.
+fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Option<Decimal>) {
     match monthly_payment {
         Some(payment) => {
             let income = Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default();
@@ -313,13 +315,17 @@ fn recompute_payment_sg(ui: &AppWindow, monthly_payment: Option<Decimal>) {
         }
     }
 
-    let price = Decimal::from_str(ui.get_sg_home_price().as_str()).unwrap_or_default();
+    let price = Decimal::from_str(ui.get_sg_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
     let residency = parse_residency(ui.get_sg_residency().as_str());
     let count = parse_property_count(ui.get_sg_property_count().as_str());
     let costs = singapore::upfront_costs(price, residency, count);
     ui.set_sg_bsd_label(format!("${}", costs.bsd).into());
     ui.set_sg_absd_label(format!("${}", costs.absd).into());
     ui.set_sg_upfront_total_label(format!("${}", costs.total).into());
+
+    let down_payment = round_currency((price - principal).max(Decimal::ZERO));
+    ui.set_sg_down_payment_label(format!("${}", down_payment).into());
+    ui.set_sg_total_cash_required_label(format!("${}", round_currency(down_payment + costs.total)).into());
 }
 
 /// Recomputes the Payment tab's United States panel (ZIP-based property
@@ -353,6 +359,9 @@ fn recompute_payment_us(
         Decimal::ZERO
     };
     ui.set_us_down_payment_percent_label(format!("{}%", format_percent(down_payment_percent, 1)).into());
+    // Keeps the slider in sync no matter what triggered this recompute —
+    // dragging it, or editing home price / loan amount directly.
+    ui.set_us_down_payment_percent_value(decimal_to_f64(down_payment_percent * dec!(100)) as f32);
 
     let pmi_required = home_price > Decimal::ZERO && united_states::requires_pmi(down_payment_percent);
     ui.set_us_pmi_required(pmi_required);
@@ -398,13 +407,13 @@ fn recompute_payment(ui: &AppWindow) {
             ui.set_payment_result(format!("${}", summary.payment).into());
             ui.set_total_paid_result(format!("${}", summary.total_paid).into());
             ui.set_total_interest_result(format!("${}", summary.total_interest).into());
-            recompute_payment_sg(ui, Some(summary.payment));
+            recompute_payment_sg(ui, loan.principal(), Some(summary.payment));
             let first_period_interest = loan.principal() * loan.periodic_rate();
             recompute_payment_us(ui, loan.principal(), Some(summary.payment), Some(first_period_interest));
         }
         None => {
             ui.set_has_error(true);
-            recompute_payment_sg(ui, None);
+            recompute_payment_sg(ui, Decimal::ZERO, None);
             recompute_payment_us(ui, Decimal::ZERO, None, None);
         }
     }
@@ -874,6 +883,20 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     ui.on_rate_slider_changed(move |v| {
         let ui = ui_handle.unwrap();
         ui.set_rate_percent(format_rate_value(v).into());
+        recompute_payment(&ui);
+    });
+
+    // Dragging down payment % re-derives the loan amount from home price,
+    // exactly like editing "Home loan amount" directly would.
+    let ui_handle = ui.as_weak();
+    ui.on_us_down_payment_changed(move |percent| {
+        let ui = ui_handle.unwrap();
+        let home_price = Decimal::from_str(ui.get_us_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
+        let percent_dec = Decimal::from_str(&format_rate_value(percent.clamp(0.0, 100.0)))
+            .unwrap_or_default()
+            / dec!(100);
+        let new_principal = round_currency(home_price * (Decimal::ONE - percent_dec));
+        ui.set_principal(new_principal.to_string().into());
         recompute_payment(&ui);
     });
 
