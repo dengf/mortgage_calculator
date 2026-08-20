@@ -24,11 +24,49 @@ slint::include_modules!();
 
 type StoreCell = Rc<RefCell<Option<Rc<RedbScenarioStore>>>>;
 
+fn default_true() -> bool {
+    true
+}
+
+// `#[serde(default)]` on every region/SG/US field keeps this
+// backward-compatible with scenarios saved before those panels existed —
+// loading an old save just leaves them at their zero-ish defaults instead
+// of failing to deserialize.
 #[derive(Serialize, Deserialize)]
 struct PaymentInputs {
     principal: String,
     rate_percent: String,
     term_years: String,
+    #[serde(default)]
+    region: String,
+    #[serde(default)]
+    sg_gross_income: String,
+    #[serde(default)]
+    sg_other_debts: String,
+    #[serde(default = "default_true")]
+    sg_is_hdb: bool,
+    #[serde(default)]
+    sg_loan_type: String,
+    #[serde(default)]
+    sg_use_cpf: bool,
+    #[serde(default)]
+    sg_cpf_oa_available: String,
+    #[serde(default)]
+    sg_home_price: String,
+    #[serde(default)]
+    sg_residency: String,
+    #[serde(default)]
+    sg_property_count: String,
+    #[serde(default)]
+    us_home_price: String,
+    #[serde(default)]
+    us_zip: String,
+    #[serde(default)]
+    us_pmi_rate_percent: String,
+    #[serde(default)]
+    us_use_tax_deduction: bool,
+    #[serde(default)]
+    us_marginal_tax_rate_percent: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1049,6 +1087,21 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
                 principal: ui.get_principal().to_string(),
                 rate_percent: ui.get_rate_percent().to_string(),
                 term_years: ui.get_term_years().to_string(),
+                region: ui.get_region().to_string(),
+                sg_gross_income: ui.get_sg_gross_income().to_string(),
+                sg_other_debts: ui.get_sg_other_debts().to_string(),
+                sg_is_hdb: ui.get_sg_is_hdb(),
+                sg_loan_type: ui.get_sg_loan_type().to_string(),
+                sg_use_cpf: ui.get_sg_use_cpf(),
+                sg_cpf_oa_available: ui.get_sg_cpf_oa_available().to_string(),
+                sg_home_price: ui.get_sg_home_price().to_string(),
+                sg_residency: ui.get_sg_residency().to_string(),
+                sg_property_count: ui.get_sg_property_count().to_string(),
+                us_home_price: ui.get_us_home_price().to_string(),
+                us_zip: ui.get_us_zip().to_string(),
+                us_pmi_rate_percent: ui.get_us_pmi_rate_percent().to_string(),
+                us_use_tax_deduction: ui.get_us_use_tax_deduction(),
+                us_marginal_tax_rate_percent: ui.get_us_marginal_tax_rate_percent().to_string(),
             };
             let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
             do_save(
@@ -1070,6 +1123,33 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
                     ui.set_principal(inputs.principal.into());
                     ui.set_rate_percent(inputs.rate_percent.into());
                     ui.set_term_years(inputs.term_years.into());
+                    // Scenarios saved before the region/SG/US panels existed
+                    // deserialize these as empty strings (see `#[serde(default)]`
+                    // on PaymentInputs) — leave the panel's own defaults alone
+                    // in that case rather than blanking them out.
+                    let apply = |value: String, set: &mut dyn FnMut(slint::SharedString)| {
+                        if !value.is_empty() {
+                            set(value.into());
+                        }
+                    };
+                    apply(inputs.region, &mut |v| ui.set_region(v));
+                    apply(inputs.sg_gross_income, &mut |v| ui.set_sg_gross_income(v));
+                    apply(inputs.sg_other_debts, &mut |v| ui.set_sg_other_debts(v));
+                    apply(inputs.sg_loan_type, &mut |v| ui.set_sg_loan_type(v));
+                    apply(inputs.sg_cpf_oa_available, &mut |v| ui.set_sg_cpf_oa_available(v));
+                    apply(inputs.sg_home_price, &mut |v| ui.set_sg_home_price(v));
+                    apply(inputs.sg_residency, &mut |v| ui.set_sg_residency(v));
+                    apply(inputs.sg_property_count, &mut |v| ui.set_sg_property_count(v));
+                    apply(inputs.us_home_price, &mut |v| ui.set_us_home_price(v));
+                    apply(inputs.us_zip, &mut |v| ui.set_us_zip(v));
+                    apply(inputs.us_pmi_rate_percent, &mut |v| ui.set_us_pmi_rate_percent(v));
+                    apply(inputs.us_marginal_tax_rate_percent, &mut |v| ui.set_us_marginal_tax_rate_percent(v));
+                    // Bools default to exactly what a fresh panel already
+                    // shows (sg_is_hdb: true, the rest: false), so applying
+                    // them unconditionally is safe even for old scenarios.
+                    ui.set_sg_is_hdb(inputs.sg_is_hdb);
+                    ui.set_sg_use_cpf(inputs.sg_use_cpf);
+                    ui.set_us_use_tax_deduction(inputs.us_use_tax_deduction);
                     recompute_payment(ui);
                 }
             });
