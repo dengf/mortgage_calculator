@@ -189,7 +189,41 @@ fn build_loan(principal: &str, rate_percent: &str, term_years: &str) -> Option<L
         .ok()
 }
 
+fn parse_rate_value(s: &str) -> f32 {
+    s.parse::<f32>().unwrap_or(0.0)
+}
+
+fn format_rate_value(v: f32) -> String {
+    let s = format!("{:.2}", v);
+    let s = s.trim_end_matches('0').trim_end_matches('.');
+    if s.is_empty() { "0".to_string() } else { s.to_string() }
+}
+
+fn boom_text(periods_saved: u32, interest_saved: Decimal) -> String {
+    if periods_saved == 0 {
+        return format!("Boom! You just chopped ${} in interest off your mortgage.", interest_saved);
+    }
+    let years = periods_saved / 12;
+    let months = periods_saved % 12;
+    let time_phrase = match (years, months) {
+        (0, m) => format!("{} month{}", m, if m == 1 { "" } else { "s" }),
+        (y, 0) => format!("{} year{}", y, if y == 1 { "" } else { "s" }),
+        (y, m) => format!(
+            "{} year{} {} month{}",
+            y,
+            if y == 1 { "" } else { "s" },
+            m,
+            if m == 1 { "" } else { "s" }
+        ),
+    };
+    format!(
+        "Boom! You just chopped {} and ${} in interest off your mortgage.",
+        time_phrase, interest_saved
+    )
+}
+
 fn recompute_payment(ui: &AppWindow) {
+    ui.set_rate_percent_value(parse_rate_value(ui.get_rate_percent().as_str()));
     let loan = build_loan(
         ui.get_principal().as_str(),
         ui.get_rate_percent().as_str(),
@@ -209,6 +243,7 @@ fn recompute_payment(ui: &AppWindow) {
 }
 
 fn recompute_amortization(ui: &AppWindow) {
+    ui.set_amort_rate_percent_value(parse_rate_value(ui.get_amort_rate_percent().as_str()));
     let loan = build_loan(
         ui.get_amort_principal().as_str(),
         ui.get_amort_rate_percent().as_str(),
@@ -236,19 +271,31 @@ fn recompute_amortization(ui: &AppWindow) {
             ui.set_amort_periods_saved(impact.periods_saved.to_string().into());
             ui.set_amort_interest_saved(format!("${}", impact.interest_saved).into());
             ui.set_amort_new_payoff(impact.payoff_periods.to_string().into());
+            ui.set_amort_boom_text(boom_text(impact.periods_saved, impact.interest_saved).into());
         } else {
             ui.set_amort_show_impact(false);
+            ui.set_amort_boom_text("".into());
         }
     } else {
         ui.set_amort_show_impact(false);
+        ui.set_amort_boom_text("".into());
     }
+
+    let principal_d = Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
 
     match mortgage_calc::amortization::schedule(&loan, extra) {
         Ok(rows) => {
             ui.set_amort_schedule_rows(build_schedule_rows(&rows, ui.get_amort_show_full()));
+            let (balance_path, interest_path) = build_timeline_paths(&rows, principal_d);
+            ui.set_amort_timeline_balance_path(balance_path.into());
+            ui.set_amort_timeline_interest_path(interest_path.into());
+            apply_scrub(ui, &rows, principal_d, ui.get_amort_scrub_fraction());
         }
         Err(_) => {
             ui.set_amort_schedule_rows(ModelRc::new(VecModel::from(Vec::<AmortScheduleRow>::new())));
+            ui.set_amort_timeline_balance_path("".into());
+            ui.set_amort_timeline_interest_path("".into());
+            apply_scrub(ui, &[], Decimal::ZERO, 0.0);
         }
     }
 }
@@ -289,6 +336,7 @@ fn build_schedule_rows(
 }
 
 fn recompute_affordability(ui: &AppWindow) {
+    ui.set_aff_rate_percent_value(parse_rate_value(ui.get_aff_rate_percent().as_str()));
     let result = (|| {
         let input = AffordabilityInput {
             gross_monthly_income: Decimal::from_str(ui.get_aff_income().as_str()).ok()?,
@@ -319,6 +367,8 @@ fn recompute_affordability(ui: &AppWindow) {
 }
 
 fn recompute_refinance(ui: &AppWindow) {
+    ui.set_refi_current_rate_percent_value(parse_rate_value(ui.get_refi_current_rate_percent().as_str()));
+    ui.set_refi_new_rate_percent_value(parse_rate_value(ui.get_refi_new_rate_percent().as_str()));
     let result = (|| {
         let input = RefinanceInput {
             current_balance: Decimal::from_str(ui.get_refi_current_balance().as_str()).ok()?,
@@ -353,6 +403,145 @@ fn recompute_refinance(ui: &AppWindow) {
     }
 }
 
+fn build_rate_type(
+    floating: bool,
+    rate_percent: &str,
+    base_rate_percent: &str,
+    spread_percent: &str,
+) -> Option<RateType> {
+    if floating {
+        Some(RateType::Floating {
+            base_rate: Decimal::from_str(base_rate_percent).ok()? / Decimal::from(100),
+            spread: Decimal::from_str(spread_percent).ok()? / Decimal::from(100),
+        })
+    } else {
+        Some(RateType::Fixed {
+            rate: Decimal::from_str(rate_percent).ok()? / Decimal::from(100),
+        })
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_compare_loan(
+    principal: Decimal,
+    floating: bool,
+    rate_percent: &str,
+    base_rate_percent: &str,
+    spread_percent: &str,
+    term_years: &str,
+) -> Option<Loan> {
+    let rate_type = build_rate_type(floating, rate_percent, base_rate_percent, spread_percent)?;
+    Loan::builder()
+        .principal(principal)
+        .rate_type(rate_type)
+        .term_years(Decimal::from_str(term_years).ok()?)
+        .frequency(PaymentFrequency::Monthly)
+        .build()
+        .ok()
+}
+
+/// Balance-over-time as an SVG path string (viewBox 300x140, high balance at
+/// top-left sloping to zero at bottom-right) so the Compare tab can overlay
+/// both scenarios on one chart. Scenarios that pay off before
+/// `max_periods` get a flat tail at zero for the remaining width.
+const CHART_W: f64 = 300.0;
+const CHART_H: f64 = 140.0;
+
+/// SVG-style path (viewBox 300x140) plotting `values` against `max_value`,
+/// high value at the top (y=0) sloping toward the bottom (y=H) as it drops
+/// toward zero. Shared by the Compare-tab payoff chart and the
+/// Amortization-tab equity timeline so both stay pixel-compatible.
+fn path_from_values(values: &[f64], max_value: f64, max_periods: usize) -> String {
+    if values.is_empty() || max_periods == 0 {
+        return String::new();
+    }
+    let max_value = max_value.max(1.0);
+    let mut s = String::new();
+    for (i, &v) in values.iter().enumerate() {
+        let x = (i as f64 / max_periods.max(1) as f64) * CHART_W;
+        let y = CHART_H - (v / max_value).clamp(0.0, 1.0) * CHART_H;
+        if i == 0 {
+            s.push_str(&format!("M {:.2} {:.2} ", x, y));
+        } else {
+            s.push_str(&format!("L {:.2} {:.2} ", x, y));
+        }
+    }
+    s
+}
+
+fn decimal_to_f64(d: Decimal) -> f64 {
+    d.to_string().parse::<f64>().unwrap_or(0.0)
+}
+
+fn build_chart_path(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, max_periods: usize) -> String {
+    if rows.is_empty() {
+        return String::new();
+    }
+    let values: Vec<f64> = rows.iter().map(|r| decimal_to_f64(r.remaining_balance)).collect();
+    let mut s = path_from_values(&values, decimal_to_f64(principal), max_periods);
+    if rows.len() < max_periods {
+        s.push_str(&format!("L {:.2} {:.2} ", CHART_W, CHART_H));
+    }
+    s
+}
+
+/// Remaining-principal and cumulative-interest-paid curves for the
+/// Amortization tab's equity timeline (single schedule, so no padding tail
+/// like the Compare-tab chart needs).
+fn build_timeline_paths(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal) -> (String, String) {
+    let n = rows.len();
+    let balance_values: Vec<f64> = rows.iter().map(|r| decimal_to_f64(r.remaining_balance)).collect();
+
+    let mut cumulative_interest = Decimal::ZERO;
+    let interest_values: Vec<f64> = rows
+        .iter()
+        .map(|r| {
+            cumulative_interest += r.interest_portion;
+            decimal_to_f64(cumulative_interest)
+        })
+        .collect();
+    let total_interest_f = interest_values.last().copied().unwrap_or(1.0);
+
+    let balance_path = path_from_values(&balance_values, decimal_to_f64(principal), n);
+    let interest_path = path_from_values(&interest_values, total_interest_f, n);
+    (balance_path, interest_path)
+}
+
+/// Recomputes the scrub summary (month/balance/interest/equity) for the
+/// given `fraction` (0..1) along `rows`, or clears it when there's no
+/// schedule. Called both when the user drags the scrub line and whenever
+/// the underlying loan changes, so the summary stays in sync either way.
+fn apply_scrub(ui: &AppWindow, rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, fraction: f32) {
+    if rows.is_empty() {
+        ui.set_amort_scrub_month_label("".into());
+        ui.set_amort_scrub_balance_label("".into());
+        ui.set_amort_scrub_interest_label("".into());
+        ui.set_amort_scrub_equity_label("".into());
+        ui.set_amort_scrub_equity_percent(0.0);
+        return;
+    }
+
+    let fraction = fraction.clamp(0.0, 1.0);
+    let idx = ((fraction as f64) * (rows.len() - 1) as f64).round() as usize;
+    let idx = idx.min(rows.len() - 1);
+    let row = rows[idx];
+
+    let cumulative_interest: Decimal = rows[..=idx].iter().map(|r| r.interest_portion).sum();
+    let equity = (principal - row.remaining_balance).max(Decimal::ZERO);
+    let equity_percent = if principal > Decimal::ZERO {
+        decimal_to_f64(equity / principal * Decimal::from(100)) as f32
+    } else {
+        0.0
+    };
+
+    ui.set_amort_scrub_fraction(fraction);
+    ui.set_amort_scrub_month_label(format!("Month {}", row.period).into());
+    ui.set_amort_scrub_balance_label(format!("${}", row.remaining_balance).into());
+    ui.set_amort_scrub_interest_label(format!("${}", cumulative_interest).into());
+    ui.set_amort_scrub_equity_label(format!("${}", equity).into());
+    ui.set_amort_scrub_equity_percent(equity_percent);
+}
+
 #[allow(clippy::too_many_arguments)]
 fn compare_slot(
     principal: Decimal,
@@ -362,16 +551,7 @@ fn compare_slot(
     spread_percent: &str,
     term_years: &str,
 ) -> Option<String> {
-    let rate_type = if floating {
-        RateType::Floating {
-            base_rate: Decimal::from_str(base_rate_percent).ok()? / Decimal::from(100),
-            spread: Decimal::from_str(spread_percent).ok()? / Decimal::from(100),
-        }
-    } else {
-        RateType::Fixed {
-            rate: Decimal::from_str(rate_percent).ok()? / Decimal::from(100),
-        }
-    };
+    let rate_type = build_rate_type(floating, rate_percent, base_rate_percent, spread_percent)?;
 
     let input = ComparisonInput {
         principal,
@@ -397,6 +577,8 @@ fn compare_slot(
 }
 
 fn recompute_compare(ui: &AppWindow) {
+    ui.set_cmp_a_rate_percent_value(parse_rate_value(ui.get_cmp_a_rate_percent().as_str()));
+    ui.set_cmp_b_rate_percent_value(parse_rate_value(ui.get_cmp_b_rate_percent().as_str()));
     let Some(principal) = Decimal::from_str(ui.get_cmp_principal().as_str()).ok() else {
         ui.set_cmp_has_error(true);
         return;
@@ -425,7 +607,43 @@ fn recompute_compare(ui: &AppWindow) {
             ui.set_cmp_a_result(a.into());
             ui.set_cmp_b_result(b.into());
         }
-        _ => ui.set_cmp_has_error(true),
+        _ => {
+            ui.set_cmp_has_error(true);
+            ui.set_cmp_chart_path_a("".into());
+            ui.set_cmp_chart_path_b("".into());
+            return;
+        }
+    }
+
+    let loan_a = build_compare_loan(
+        principal,
+        ui.get_cmp_a_floating(),
+        ui.get_cmp_a_rate_percent().as_str(),
+        ui.get_cmp_a_base_rate_percent().as_str(),
+        ui.get_cmp_a_spread_percent().as_str(),
+        ui.get_cmp_a_term_years().as_str(),
+    );
+    let loan_b = build_compare_loan(
+        principal,
+        ui.get_cmp_b_floating(),
+        ui.get_cmp_b_rate_percent().as_str(),
+        ui.get_cmp_b_base_rate_percent().as_str(),
+        ui.get_cmp_b_spread_percent().as_str(),
+        ui.get_cmp_b_term_years().as_str(),
+    );
+
+    match (loan_a, loan_b) {
+        (Some(loan_a), Some(loan_b)) => {
+            let rows_a = mortgage_calc::amortization::schedule(&loan_a, Decimal::ZERO).unwrap_or_default();
+            let rows_b = mortgage_calc::amortization::schedule(&loan_b, Decimal::ZERO).unwrap_or_default();
+            let max_periods = rows_a.len().max(rows_b.len());
+            ui.set_cmp_chart_path_a(build_chart_path(&rows_a, principal, max_periods).into());
+            ui.set_cmp_chart_path_b(build_chart_path(&rows_b, principal, max_periods).into());
+        }
+        _ => {
+            ui.set_cmp_chart_path_a("".into());
+            ui.set_cmp_chart_path_b("".into());
+        }
     }
 }
 
@@ -448,8 +666,39 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_rate_percent(format_rate_value(v).into());
+        recompute_payment(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_amort_recompute(move || {
         let ui = ui_handle.unwrap();
+        recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_amort_rate_percent(format_rate_value(v).into());
+        recompute_amortization(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_amort_whatif_toggled(move || {
+        let ui = ui_handle.unwrap();
+        let mut extra = Decimal::ZERO;
+        if ui.get_amort_lattes_on() {
+            extra += Decimal::from(50);
+        }
+        if ui.get_amort_subscription_on() {
+            extra += Decimal::from(15);
+        }
+        if ui.get_amort_bonus_on() {
+            extra += Decimal::from(83);
+        }
+        ui.set_amort_extra_payment(extra.to_string().into());
         recompute_amortization(&ui);
     });
 
@@ -461,8 +710,35 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_amort_scrub(move |fraction| {
+        let ui = ui_handle.unwrap();
+        let Some(loan) = build_loan(
+            ui.get_amort_principal().as_str(),
+            ui.get_amort_rate_percent().as_str(),
+            ui.get_amort_term_years().as_str(),
+        ) else {
+            return;
+        };
+        let extra = Decimal::from_str(ui.get_amort_extra_payment().as_str())
+            .unwrap_or(Decimal::ZERO)
+            .max(Decimal::ZERO);
+        let Ok(rows) = mortgage_calc::amortization::schedule(&loan, extra) else {
+            return;
+        };
+        let principal_d = Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
+        apply_scrub(&ui, &rows, principal_d, fraction);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_aff_recompute(move || {
         let ui = ui_handle.unwrap();
+        recompute_affordability(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_aff_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_aff_rate_percent(format_rate_value(v).into());
         recompute_affordability(&ui);
     });
 
@@ -473,8 +749,36 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     let ui_handle = ui.as_weak();
+    ui.on_refi_current_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_refi_current_rate_percent(format_rate_value(v).into());
+        recompute_refinance(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_refi_new_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_refi_new_rate_percent(format_rate_value(v).into());
+        recompute_refinance(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
     ui.on_cmp_recompute(move || {
         let ui = ui_handle.unwrap();
+        recompute_compare(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_cmp_a_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_cmp_a_rate_percent(format_rate_value(v).into());
+        recompute_compare(&ui);
+    });
+
+    let ui_handle = ui.as_weak();
+    ui.on_cmp_b_rate_slider_changed(move |v| {
+        let ui = ui_handle.unwrap();
+        ui.set_cmp_b_rate_percent(format_rate_value(v).into());
         recompute_compare(&ui);
     });
 

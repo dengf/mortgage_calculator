@@ -1,4 +1,4 @@
-import { LineEdit, CheckBox, ListView, ScrollView } from "std-widgets.slint";
+import { LineEdit, CheckBox, ListView, ScrollView, Switch } from "std-widgets.slint";
 
 struct ScenarioRow {
     id: string,
@@ -66,6 +66,87 @@ component Field inherits VerticalLayout {
     spacing: 4px;
     Text { text: root.label; color: #92a0b3; font-size: 12px; }
     @children
+}
+
+// Hand-built slider (not the std-widgets Slider) so its handle color can
+// animate between states — the native widget hardcodes its own palette and
+// exposes no way to recolor the handle per instance.
+component RiskSlider inherits Rectangle {
+    in property <float> minimum: 0.0;
+    in property <float> maximum: 15.0;
+    in-out property <float> value: 6.5;
+    in property <float> danger-threshold: 7.0;
+    callback changed(float);
+
+    property <color> handle-color: root.value >= root.danger-threshold ? #ef4444 : #4f8cff;
+    property <float> ratio: max(0.0, min(1.0, (root.value - root.minimum) / (root.maximum - root.minimum)));
+
+    height: 24px;
+    vertical-stretch: 0;
+
+    function set-value-from-x(x: length) {
+        root.value = max(root.minimum, min(root.maximum, root.minimum + (x / root.width) * (root.maximum - root.minimum)));
+        root.changed(root.value);
+    }
+
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 4px;
+        background: #232e42;
+        border-radius: 2px;
+    }
+
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 4px;
+        width: root.ratio * parent.width;
+        background: root.handle-color;
+        border-radius: 2px;
+        animate background { duration: 200ms; }
+    }
+
+    thumb := Rectangle {
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: root.handle-color;
+        border-width: 2px;
+        border-color: #0b1119;
+        x: max(0px, min(parent.width - self.width, root.ratio * (parent.width - self.width)));
+        y: (parent.height - self.height) / 2;
+        animate background { duration: 200ms; }
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => { root.set-value-from-x(touch.mouse-x); }
+        moved => {
+            if (self.pressed) {
+                root.set-value-from-x(touch.mouse-x);
+            }
+        }
+    }
+}
+
+component RateField inherits VerticalLayout {
+    in property <string> label;
+    in-out property <float> rate: 6.5;
+    in-out property <string> value <=> input.text;
+    callback edited();
+    callback rate-changed(float);
+
+    spacing: 4px;
+    Text { text: root.label; color: #92a0b3; font-size: 12px; }
+    input := LineEdit {
+        vertical-stretch: 0;
+        edited => { root.edited(); }
+    }
+    RiskSlider {
+        vertical-stretch: 0;
+        value <=> root.rate;
+        changed(v) => { root.rate-changed(v); }
+    }
 }
 
 component ResultRow inherits HorizontalLayout {
@@ -226,6 +307,283 @@ component ScheduleTable inherits VerticalLayout {
     }
 }
 
+component HabitToggle inherits Rectangle {
+    in property <string> label;
+    in property <string> amount-label;
+    in-out property <bool> on: false;
+    callback toggled();
+
+    background: root.on ? #16321f : #10161f;
+    border-radius: 8px;
+    height: 44px;
+    animate background { duration: 200ms; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text { text: root.label; color: #d7dee8; font-size: 13px; }
+            Text { text: root.amount-label; color: root.on ? #7ee787 : #5c6b80; font-size: 11px; }
+        }
+        Switch {
+            checked <=> root.on;
+            toggled => { root.toggled(); }
+        }
+    }
+}
+
+component WhatIfPanel inherits VerticalLayout {
+    in-out property <bool> lattes-on: false;
+    in-out property <bool> subscription-on: false;
+    in-out property <bool> bonus-on: false;
+    in property <string> boom-text: "";
+    callback toggled();
+
+    spacing: 10px;
+
+    Text { text: "What if?"; font-weight: 700; font-size: 14px; }
+    Text {
+        text: "Flip a habit on to see how it speeds up payoff. Sets the extra payment above.";
+        color: #92a0b3;
+        font-size: 11px;
+        wrap: word-wrap;
+    }
+
+    HabitToggle {
+        label: "Skip 2 lattes a week";
+        amount-label: "+$50/mo";
+        on <=> root.lattes-on;
+        toggled => { root.toggled(); }
+    }
+    HabitToggle {
+        label: "Cancel an unused subscription";
+        amount-label: "+$15/mo";
+        on <=> root.subscription-on;
+        toggled => { root.toggled(); }
+    }
+    HabitToggle {
+        label: "Apply half your $2,000 bonus";
+        amount-label: "+$83/mo";
+        on <=> root.bonus-on;
+        toggled => { root.toggled(); }
+    }
+
+    if root.boom-text != "": Rectangle {
+        background: #16321f;
+        border-radius: 10px;
+        border-width: 1px;
+        border-color: #2a5c3a;
+
+        HorizontalLayout {
+            padding: 12px;
+            Text {
+                text: root.boom-text;
+                color: #7ee787;
+                font-weight: 700;
+                font-size: 14px;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+            }
+        }
+
+        animate opacity { duration: 250ms; }
+    }
+}
+
+component PayoffChart inherits Rectangle {
+    in property <string> path-a: "";
+    in property <string> path-b: "";
+    in property <string> label-a: "Scenario A";
+    in property <string> label-b: "Scenario B";
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text { text: "Remaining balance over time"; font-weight: 700; font-size: 14px; }
+
+        HorizontalLayout {
+            spacing: 14px;
+            Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #4f8cff; }
+            Text { text: root.label-a; color: #92a0b3; font-size: 11px; }
+            Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #f59e0b; }
+            Text { text: root.label-b; color: #92a0b3; font-size: 11px; }
+            Rectangle { horizontal-stretch: 1; }
+        }
+
+        Rectangle {
+            height: 120px;
+            background: #10161f;
+            border-radius: 8px;
+            clip: true;
+
+            Path {
+                width: 100%;
+                height: 100%;
+                viewbox-width: 300;
+                viewbox-height: 140;
+                stroke: #4f8cff;
+                stroke-width: 2.5px;
+                fill: transparent;
+                commands: root.path-a;
+            }
+            Path {
+                width: 100%;
+                height: 100%;
+                viewbox-width: 300;
+                viewbox-height: 140;
+                stroke: #f59e0b;
+                stroke-width: 2.5px;
+                fill: transparent;
+                commands: root.path-b;
+            }
+        }
+    }
+}
+
+component EquityTimeline inherits VerticalLayout {
+    in property <string> balance-path: "";
+    in property <string> interest-path: "";
+    in property <float> scrub-fraction: 0.0;
+    in property <string> month-label: "";
+    in property <string> balance-label: "";
+    in property <string> interest-label: "";
+    in property <string> equity-label: "";
+    in property <float> equity-percent: 0.0;
+    callback scrub(float);
+
+    spacing: 10px;
+
+    Text { text: "Payoff timeline"; font-weight: 700; font-size: 14px; }
+
+    HorizontalLayout {
+        spacing: 14px;
+        Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #4f8cff; }
+        Text { text: "Remaining principal"; color: #92a0b3; font-size: 11px; }
+        Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #ef4444; }
+        Text { text: "Interest paid so far"; color: #92a0b3; font-size: 11px; }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    chart-area := Rectangle {
+        height: 120px;
+        background: #10161f;
+        border-radius: 8px;
+        clip: true;
+
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-width: 300;
+            viewbox-height: 140;
+            stroke: #4f8cff;
+            stroke-width: 2px;
+            fill: transparent;
+            commands: root.balance-path;
+        }
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-width: 300;
+            viewbox-height: 140;
+            stroke: #ef4444;
+            stroke-width: 2px;
+            fill: transparent;
+            commands: root.interest-path;
+        }
+
+        Rectangle {
+            x: root.scrub-fraction * (parent.width - 2px);
+            width: 2px;
+            height: 100%;
+            background: white;
+            opacity: 0.55;
+        }
+
+        scrub-touch := TouchArea {
+            width: 100%;
+            height: 100%;
+            clicked => { root.scrub(max(0.0, min(1.0, scrub-touch.mouse-x / self.width))); }
+            moved => {
+                if (self.pressed) {
+                    root.scrub(max(0.0, min(1.0, scrub-touch.mouse-x / self.width)));
+                }
+            }
+        }
+    }
+
+    Text { text: root.month-label; font-weight: 700; font-size: 13px; color: white; }
+
+    HorizontalLayout {
+        spacing: 20px;
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Balance remaining"; color: #92a0b3; font-size: 11px; }
+            Text { text: root.balance-label; color: #4f8cff; font-weight: 700; font-size: 14px; }
+        }
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Interest paid"; color: #92a0b3; font-size: 11px; }
+            Text { text: root.interest-label; color: #ef4444; font-weight: 700; font-size: 14px; }
+        }
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Equity"; color: #92a0b3; font-size: 11px; }
+            Text { text: root.equity-label; color: #7ee787; font-weight: 700; font-size: 14px; }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        VerticalLayout {
+            spacing: 6px;
+            alignment: center;
+            house := Rectangle {
+                width: 90px;
+                height: 80px;
+
+                Path {
+                    width: 100%;
+                    height: 34px;
+                    y: 0px;
+                    viewbox-width: 90;
+                    viewbox-height: 34;
+                    commands: "M 2 34 L 45 2 L 88 34";
+                    stroke: #5c6b80;
+                    stroke-width: 2px;
+                    fill: transparent;
+                }
+
+                body := Rectangle {
+                    y: 30px;
+                    height: parent.height - 30px;
+                    width: 100%;
+                    border-width: 2px;
+                    border-color: #5c6b80;
+                    background: transparent;
+                    clip: true;
+
+                    Rectangle {
+                        y: parent.height * (1 - root.equity-percent / 100);
+                        height: parent.height * (root.equity-percent / 100);
+                        width: 100%;
+                        background: root.equity-percent >= 50 ? #22c55e : #4f8cff;
+                        animate y, height, background { duration: 200ms; }
+                    }
+                }
+            }
+            Text {
+                text: round(root.equity-percent) + "% equity";
+                color: #92a0b3;
+                font-size: 11px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}
+
 export component AppWindow inherits Window {
     title: "Mortgage Calculator";
     preferred-width: 520px;
@@ -237,6 +595,7 @@ export component AppWindow inherits Window {
     // --- Payment ---
     in-out property <string> principal: "400000";
     in-out property <string> rate-percent: "6.5";
+    in-out property <float> rate-percent-value: 6.5;
     in-out property <string> term-years: "30";
     in-out property <string> payment-result: "";
     in-out property <string> total-paid-result: "";
@@ -245,6 +604,7 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> payment-scenarios: [];
     in-out property <string> payment-scenario-error: "";
     callback recompute();
+    callback rate-slider-changed(float);
     callback payment-save-scenario(string);
     callback payment-load-scenario(string);
     callback payment-delete-scenario(string);
@@ -252,6 +612,7 @@ export component AppWindow inherits Window {
     // --- Amortization ---
     in-out property <string> amort-principal: "400000";
     in-out property <string> amort-rate-percent: "6.5";
+    in-out property <float> amort-rate-percent-value: 6.5;
     in-out property <string> amort-term-years: "30";
     in-out property <string> amort-extra-payment: "0";
     in-out property <string> amort-payment-result: "";
@@ -262,11 +623,26 @@ export component AppWindow inherits Window {
     in-out property <string> amort-periods-saved: "";
     in-out property <string> amort-interest-saved: "";
     in-out property <string> amort-new-payoff: "";
+    in-out property <string> amort-boom-text: "";
+    in-out property <bool> amort-lattes-on: false;
+    in-out property <bool> amort-subscription-on: false;
+    in-out property <bool> amort-bonus-on: false;
+    in-out property <string> amort-timeline-balance-path: "";
+    in-out property <string> amort-timeline-interest-path: "";
+    in-out property <float> amort-scrub-fraction: 0.0;
+    in-out property <string> amort-scrub-month-label: "";
+    in-out property <string> amort-scrub-balance-label: "";
+    in-out property <string> amort-scrub-interest-label: "";
+    in-out property <string> amort-scrub-equity-label: "";
+    in-out property <float> amort-scrub-equity-percent: 0.0;
     in-out property <[AmortScheduleRow]> amort-schedule-rows: [];
     in-out property <bool> amort-show-full: false;
     in-out property <[ScenarioRow]> amort-scenarios: [];
     in-out property <string> amort-scenario-error: "";
     callback amort-recompute();
+    callback amort-rate-slider-changed(float);
+    callback amort-whatif-toggled();
+    callback amort-scrub(float);
     callback amort-toggle-full();
     callback amort-save-scenario(string);
     callback amort-load-scenario(string);
@@ -277,6 +653,7 @@ export component AppWindow inherits Window {
     in-out property <string> aff-debts: "500";
     in-out property <string> aff-down-payment: "60000";
     in-out property <string> aff-rate-percent: "6.5";
+    in-out property <float> aff-rate-percent-value: 6.5;
     in-out property <string> aff-term-years: "30";
     in-out property <string> aff-max-dti-percent: "36";
     in-out property <string> aff-tax-rate-percent: "1.2";
@@ -291,6 +668,7 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> aff-scenarios: [];
     in-out property <string> aff-scenario-error: "";
     callback aff-recompute();
+    callback aff-rate-slider-changed(float);
     callback aff-save-scenario(string);
     callback aff-load-scenario(string);
     callback aff-delete-scenario(string);
@@ -298,8 +676,10 @@ export component AppWindow inherits Window {
     // --- Refinance ---
     in-out property <string> refi-current-balance: "300000";
     in-out property <string> refi-current-rate-percent: "7.5";
+    in-out property <float> refi-current-rate-percent-value: 7.5;
     in-out property <string> refi-remaining-periods: "300";
     in-out property <string> refi-new-rate-percent: "6.0";
+    in-out property <float> refi-new-rate-percent-value: 6.0;
     in-out property <string> refi-new-term-years: "30";
     in-out property <string> refi-closing-costs: "6000";
     in-out property <string> refi-current-payment: "";
@@ -311,6 +691,8 @@ export component AppWindow inherits Window {
     in-out property <[ScenarioRow]> refi-scenarios: [];
     in-out property <string> refi-scenario-error: "";
     callback refi-recompute();
+    callback refi-current-rate-slider-changed(float);
+    callback refi-new-rate-slider-changed(float);
     callback refi-save-scenario(string);
     callback refi-load-scenario(string);
     callback refi-delete-scenario(string);
@@ -320,6 +702,7 @@ export component AppWindow inherits Window {
     in-out property <string> cmp-a-label: "30-Year Fixed";
     in-out property <bool> cmp-a-floating: false;
     in-out property <string> cmp-a-rate-percent: "6.5";
+    in-out property <float> cmp-a-rate-percent-value: 6.5;
     in-out property <string> cmp-a-base-rate-percent: "4.3";
     in-out property <string> cmp-a-spread-percent: "2.0";
     in-out property <string> cmp-a-term-years: "30";
@@ -327,14 +710,19 @@ export component AppWindow inherits Window {
     in-out property <string> cmp-b-label: "15-Year Fixed";
     in-out property <bool> cmp-b-floating: false;
     in-out property <string> cmp-b-rate-percent: "6.0";
+    in-out property <float> cmp-b-rate-percent-value: 6.0;
     in-out property <string> cmp-b-base-rate-percent: "4.3";
     in-out property <string> cmp-b-spread-percent: "2.5";
     in-out property <string> cmp-b-term-years: "15";
     in-out property <string> cmp-b-result: "";
     in-out property <bool> cmp-has-error: false;
+    in-out property <string> cmp-chart-path-a: "";
+    in-out property <string> cmp-chart-path-b: "";
     in-out property <[ScenarioRow]> cmp-scenarios: [];
     in-out property <string> cmp-scenario-error: "";
     callback cmp-recompute();
+    callback cmp-a-rate-slider-changed(float);
+    callback cmp-b-rate-slider-changed(float);
     callback cmp-save-scenario(string);
     callback cmp-load-scenario(string);
     callback cmp-delete-scenario(string);
@@ -381,12 +769,12 @@ export component AppWindow inherits Window {
                         edited => { root.recompute(); }
                     }
                 }
-                Field {
+                RateField {
                     label: "Interest rate (%)";
-                    LineEdit {
-                        text <=> root.rate-percent;
-                        edited => { root.recompute(); }
-                    }
+                    rate <=> root.rate-percent-value;
+                    value <=> root.rate-percent;
+                    edited => { root.recompute(); }
+                    rate-changed(v) => { root.rate-slider-changed(v); }
                 }
                 Field {
                     label: "Loan term (years)";
@@ -427,12 +815,12 @@ export component AppWindow inherits Window {
                         edited => { root.amort-recompute(); }
                     }
                 }
-                Field {
+                RateField {
                     label: "Interest rate (%)";
-                    LineEdit {
-                        text <=> root.amort-rate-percent;
-                        edited => { root.amort-recompute(); }
-                    }
+                    rate <=> root.amort-rate-percent-value;
+                    value <=> root.amort-rate-percent;
+                    edited => { root.amort-recompute(); }
+                    rate-changed(v) => { root.amort-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Loan term (years)";
@@ -463,6 +851,30 @@ export component AppWindow inherits Window {
             }
             if root.amort-has-error: Card {
                 ErrorText { text: "Enter valid loan details."; }
+            }
+
+            if !root.amort-has-error: Card {
+                EquityTimeline {
+                    balance-path: root.amort-timeline-balance-path;
+                    interest-path: root.amort-timeline-interest-path;
+                    scrub-fraction: root.amort-scrub-fraction;
+                    month-label: root.amort-scrub-month-label;
+                    balance-label: root.amort-scrub-balance-label;
+                    interest-label: root.amort-scrub-interest-label;
+                    equity-label: root.amort-scrub-equity-label;
+                    equity-percent: root.amort-scrub-equity-percent;
+                    scrub(v) => { root.amort-scrub(v); }
+                }
+            }
+
+            if !root.amort-has-error: Card {
+                WhatIfPanel {
+                    lattes-on <=> root.amort-lattes-on;
+                    subscription-on <=> root.amort-subscription-on;
+                    bonus-on <=> root.amort-bonus-on;
+                    boom-text: root.amort-boom-text;
+                    toggled => { root.amort-whatif-toggled(); }
+                }
             }
 
             if !root.amort-has-error: Card {
@@ -499,9 +911,12 @@ export component AppWindow inherits Window {
                     label: "Down payment";
                     LineEdit { text <=> root.aff-down-payment; edited => { root.aff-recompute(); } }
                 }
-                Field {
+                RateField {
                     label: "Interest rate (%)";
-                    LineEdit { text <=> root.aff-rate-percent; edited => { root.aff-recompute(); } }
+                    rate <=> root.aff-rate-percent-value;
+                    value <=> root.aff-rate-percent;
+                    edited => { root.aff-recompute(); }
+                    rate-changed(v) => { root.aff-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Loan term (years)";
@@ -554,17 +969,23 @@ export component AppWindow inherits Window {
                     label: "Current balance";
                     LineEdit { text <=> root.refi-current-balance; edited => { root.refi-recompute(); } }
                 }
-                Field {
+                RateField {
                     label: "Current rate (%)";
-                    LineEdit { text <=> root.refi-current-rate-percent; edited => { root.refi-recompute(); } }
+                    rate <=> root.refi-current-rate-percent-value;
+                    value <=> root.refi-current-rate-percent;
+                    edited => { root.refi-recompute(); }
+                    rate-changed(v) => { root.refi-current-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Payments remaining";
                     LineEdit { text <=> root.refi-remaining-periods; edited => { root.refi-recompute(); } }
                 }
-                Field {
+                RateField {
                     label: "New rate (%)";
-                    LineEdit { text <=> root.refi-new-rate-percent; edited => { root.refi-recompute(); } }
+                    rate <=> root.refi-new-rate-percent-value;
+                    value <=> root.refi-new-rate-percent;
+                    edited => { root.refi-recompute(); }
+                    rate-changed(v) => { root.refi-new-rate-slider-changed(v); }
                 }
                 Field {
                     label: "New term (years)";
@@ -610,6 +1031,15 @@ export component AppWindow inherits Window {
                 }
             }
 
+            if !root.cmp-has-error: Card {
+                PayoffChart {
+                    path-a: root.cmp-chart-path-a;
+                    path-b: root.cmp-chart-path-b;
+                    label-a: root.cmp-a-label;
+                    label-b: root.cmp-b-label;
+                }
+            }
+
             Card {
                 Text { text: "Scenario A"; font-weight: 700; font-size: 14px; }
                 LineEdit {
@@ -620,12 +1050,12 @@ export component AppWindow inherits Window {
                     checked <=> root.cmp-a-floating;
                     toggled => { root.cmp-recompute(); }
                 }
-                if !root.cmp-a-floating: Field {
+                if !root.cmp-a-floating: RateField {
                     label: "Rate (%)";
-                    LineEdit {
-                        text <=> root.cmp-a-rate-percent;
-                        edited => { root.cmp-recompute(); }
-                    }
+                    rate <=> root.cmp-a-rate-percent-value;
+                    value <=> root.cmp-a-rate-percent;
+                    edited => { root.cmp-recompute(); }
+                    rate-changed(v) => { root.cmp-a-rate-slider-changed(v); }
                 }
                 if root.cmp-a-floating: HorizontalLayout {
                     spacing: 10px;
@@ -664,12 +1094,12 @@ export component AppWindow inherits Window {
                     checked <=> root.cmp-b-floating;
                     toggled => { root.cmp-recompute(); }
                 }
-                if !root.cmp-b-floating: Field {
+                if !root.cmp-b-floating: RateField {
                     label: "Rate (%)";
-                    LineEdit {
-                        text <=> root.cmp-b-rate-percent;
-                        edited => { root.cmp-recompute(); }
-                    }
+                    rate <=> root.cmp-b-rate-percent-value;
+                    value <=> root.cmp-b-rate-percent;
+                    edited => { root.cmp-recompute(); }
+                    rate-changed(v) => { root.cmp-b-rate-slider-changed(v); }
                 }
                 if root.cmp-b-floating: HorizontalLayout {
                     spacing: 10px;
