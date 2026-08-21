@@ -1,8 +1,10 @@
 import React from 'react';
 import NumberField from './NumberField';
+import { makeFormatMoney } from '../currency';
 
-const formatUsd = (n) =>
-  n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+// This panel only ever renders under the US region, so its currency is
+// fixed rather than passed in.
+const formatUsd = makeFormatMoney('US');
 
 /**
  * US panel: conforming/jumbo classification, ZIP-derived property tax, the

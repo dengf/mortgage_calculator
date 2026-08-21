@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
+import { currencySymbol, makeFormatMoney } from '../currency';
 
-const formatMoney = (n) =>
-  n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-export default function AffordabilityCalculator({ wasmModule }) {
+export default function AffordabilityCalculator({ wasmModule, region }) {
+  const formatMoney = makeFormatMoney(region);
+  const money = currencySymbol(region);
   const [income, setIncome] = useState(10000);
   const [debts, setDebts] = useState(500);
   const [downPayment, setDownPayment] = useState(60000);
@@ -34,15 +35,15 @@ export default function AffordabilityCalculator({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Gross monthly income" value={income} onChange={setIncome} suffix="$" min={0} />
-        <NumberField label="Other monthly debts" value={debts} onChange={setDebts} suffix="$" min={0} />
-        <NumberField label="Down payment" value={downPayment} onChange={setDownPayment} suffix="$" min={0} />
+        <NumberField label="Gross monthly income" value={income} onChange={setIncome} suffix={money} min={0} />
+        <NumberField label="Other monthly debts" value={debts} onChange={setDebts} suffix={money} min={0} />
+        <NumberField label="Down payment" value={downPayment} onChange={setDownPayment} suffix={money} min={0} />
         <NumberField label="Interest rate" value={rate} onChange={setRate} suffix="%" min={0} />
         <NumberField label="Loan term" value={termYears} onChange={setTermYears} suffix="years" min={1} />
         <NumberField label="Max debt-to-income" value={maxDti} onChange={setMaxDti} suffix="%" min={1} />
         <NumberField label="Property tax rate" value={taxRate} onChange={setTaxRate} suffix="%/yr" min={0} />
-        <NumberField label="Annual insurance" value={insurance} onChange={setInsurance} suffix="$" min={0} />
-        <NumberField label="Monthly HOA" value={hoa} onChange={setHoa} suffix="$" min={0} />
+        <NumberField label="Annual insurance" value={insurance} onChange={setInsurance} suffix={money} min={0} />
+        <NumberField label="Monthly HOA" value={hoa} onChange={setHoa} suffix={money} min={0} />
       </div>
 
       <div className="panel-results">
