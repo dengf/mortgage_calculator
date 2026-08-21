@@ -15,6 +15,7 @@
 
 use std::cell::RefCell;
 use std::io;
+use std::rc::Rc;
 
 use mortgage_ports::StoreError;
 use redb::{Builder, StorageBackend};
@@ -37,6 +38,7 @@ impl RedbScenarioStore {
 
         let backend = IndexedDbBackend {
             buffer: RefCell::new(bytes),
+            writer: Rc::new(PersistState::default()),
         };
         let db = Builder::new()
             .create_with_backend(backend)
@@ -49,6 +51,21 @@ impl RedbScenarioStore {
 #[derive(Debug)]
 struct IndexedDbBackend {
     buffer: RefCell<Vec<u8>>,
+    writer: Rc<PersistState>,
+}
+
+/// Coalescing single-flight writer: at most one IndexedDB persist runs at a
+/// time. A `sync_data()` call that lands while a flush is already in
+/// progress just replaces `pending` with its (newer) snapshot rather than
+/// opening a second, independent IndexedDB transaction — two overlapping
+/// writes have no ordering guarantee relative to each other and the older
+/// one finishing last would silently leave stale data as the final state.
+/// `pending` is drained in a loop after each flush so the *latest* snapshot
+/// always eventually wins.
+#[derive(Debug, Default)]
+struct PersistState {
+    flushing: RefCell<bool>,
+    pending: RefCell<Option<Vec<u8>>>,
 }
 
 // Safety: wasm32-unknown-unknown is single-threaded (no shared-memory
@@ -97,15 +114,38 @@ impl StorageBackend for IndexedDbBackend {
 
     fn sync_data(&self) -> Result<(), io::Error> {
         let snapshot = self.buffer.borrow().clone();
-        wasm_bindgen_futures::spawn_local(async move {
+
+        if *self.writer.flushing.borrow() {
+            *self.writer.pending.borrow_mut() = Some(snapshot);
+            return Ok(());
+        }
+
+        *self.writer.flushing.borrow_mut() = true;
+        spawn_flush_loop(self.writer.clone(), snapshot);
+        Ok(())
+    }
+}
+
+/// Persists `snapshot`, then keeps persisting whatever landed in `pending`
+/// while that write was in flight, until nothing newer is waiting. wasm32
+/// is single-threaded and this only yields at the `.await` inside
+/// `persist_blob`, so there's no race between draining `pending` and
+/// clearing `flushing` — see [`PersistState`].
+fn spawn_flush_loop(writer: Rc<PersistState>, mut snapshot: Vec<u8>) {
+    wasm_bindgen_futures::spawn_local(async move {
+        loop {
             if let Err(e) = persist_blob(snapshot).await {
                 web_sys::console::error_1(
                     &format!("mortgage-ext-redb: persist failed: {e}").into(),
                 );
             }
-        });
-        Ok(())
-    }
+            match writer.pending.borrow_mut().take() {
+                Some(next) => snapshot = next,
+                None => break,
+            }
+        }
+        *writer.flushing.borrow_mut() = false;
+    });
 }
 
 async fn open_object_store() -> Result<Rexie, String> {
