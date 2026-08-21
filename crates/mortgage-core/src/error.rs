@@ -33,3 +33,32 @@ pub enum MortgageError {
     #[error("failed to parse input: {0}")]
     ParseError(String),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // mortgage-ui-slint now forwards these Display messages straight to
+    // the user (instead of a generic "enter valid details" string), so a
+    // wording change here is a UI-visible change, not just an internal
+    // refactor — this pins the exact text so that's a deliberate edit.
+    #[test]
+    fn display_messages_are_specific_about_which_value_and_constraint_failed() {
+        assert_eq!(
+            MortgageError::InvalidPrincipal("-100".into()).to_string(),
+            "principal must be positive, got -100"
+        );
+        assert_eq!(
+            MortgageError::TermTooLong(52_000_000).to_string(),
+            "loan term is unreasonably long, got 52000000 payment periods"
+        );
+        assert_eq!(
+            MortgageError::DownPaymentExceedsPrice {
+                down_payment: "600000".into(),
+                home_price: "500000".into(),
+            }
+            .to_string(),
+            "down payment 600000 cannot exceed home price 500000"
+        );
+    }
+}

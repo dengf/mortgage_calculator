@@ -34,3 +34,37 @@ impl Region {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_matches_bare_region_codes_case_insensitively() {
+        assert_eq!(Region::parse("SG"), Region::SG);
+        assert_eq!(Region::parse("sg"), Region::SG);
+        assert_eq!(Region::parse("US"), Region::US);
+        assert_eq!(Region::parse("us"), Region::US);
+    }
+
+    #[test]
+    fn parse_matches_the_trailing_subtag_of_a_locale_string() {
+        assert_eq!(Region::parse("en-SG"), Region::SG);
+        assert_eq!(Region::parse("en_SG"), Region::SG);
+        assert_eq!(Region::parse("zh-Hans-SG"), Region::SG);
+        assert_eq!(Region::parse("en-US"), Region::US);
+    }
+
+    #[test]
+    fn parse_falls_back_to_us_for_anything_unrecognized() {
+        assert_eq!(Region::parse(""), Region::US);
+        assert_eq!(Region::parse("fr-FR"), Region::US);
+        assert_eq!(Region::parse("not a locale"), Region::US);
+    }
+
+    #[test]
+    fn as_str_round_trips_through_parse() {
+        assert_eq!(Region::parse(Region::US.as_str()), Region::US);
+        assert_eq!(Region::parse(Region::SG.as_str()), Region::SG);
+    }
+}

@@ -39,3 +39,57 @@ impl PaymentFrequency {
             .unwrap_or(0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn periods_per_year_matches_each_variant() {
+        assert_eq!(PaymentFrequency::Monthly.periods_per_year(), 12);
+        assert_eq!(PaymentFrequency::BiWeekly.periods_per_year(), 26);
+        assert_eq!(PaymentFrequency::Weekly.periods_per_year(), 52);
+    }
+
+    #[test]
+    fn periodic_rate_divides_the_annual_rate_by_periods_per_year() {
+        assert_eq!(
+            PaymentFrequency::Monthly.periodic_rate(dec!(0.06)),
+            dec!(0.005)
+        );
+        assert_eq!(
+            PaymentFrequency::Weekly.periodic_rate(dec!(0.52)),
+            dec!(0.01)
+        );
+    }
+
+    #[test]
+    fn periods_in_years_converts_whole_years_exactly() {
+        assert_eq!(PaymentFrequency::Monthly.periods_in_years(dec!(30)), 360);
+        assert_eq!(PaymentFrequency::BiWeekly.periods_in_years(dec!(15)), 390);
+        assert_eq!(PaymentFrequency::Weekly.periods_in_years(dec!(1)), 52);
+    }
+
+    #[test]
+    fn periods_in_years_rounds_a_fractional_result_to_the_nearest_period() {
+        // 0.05 years * 52 weeks/yr = 2.6 periods, rounds to 3.
+        assert_eq!(PaymentFrequency::Weekly.periods_in_years(dec!(0.05)), 3);
+    }
+
+    #[test]
+    fn periods_in_years_of_zero_is_zero() {
+        assert_eq!(PaymentFrequency::Monthly.periods_in_years(dec!(0)), 0);
+    }
+
+    #[test]
+    fn periods_in_years_clamps_to_zero_on_overflow_instead_of_panicking() {
+        // mortgage-calc's LoanBuilder relies on exactly this behavior: an
+        // overflowing term must come back as 0 (rejected as InvalidTerm),
+        // not panic and not wrap to some other u32 value.
+        assert_eq!(
+            PaymentFrequency::Weekly.periods_in_years(dec!(999_999_999)),
+            0
+        );
+    }
+}
