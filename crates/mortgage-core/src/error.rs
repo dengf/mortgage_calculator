@@ -12,6 +12,9 @@ pub enum MortgageError {
     #[error("loan term must be at least one payment period, got {0} periods")]
     InvalidTerm(u32),
 
+    #[error("loan term is unreasonably long, got {0} payment periods")]
+    TermTooLong(u32),
+
     #[error("down payment {down_payment} cannot exceed home price {home_price}")]
     DownPaymentExceedsPrice {
         down_payment: String,
