@@ -107,7 +107,9 @@ impl StorageBackend for IndexedDbBackend {
     fn write(&self, offset: u64, data: &[u8]) -> Result<(), io::Error> {
         let mut buffer = self.buffer.borrow_mut();
         let start = offset as usize;
-        let end = start + data.len();
+        let end = start
+            .checked_add(data.len())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "offset overflow"))?;
         if end > buffer.len() {
             buffer.resize(end, 0);
         }
