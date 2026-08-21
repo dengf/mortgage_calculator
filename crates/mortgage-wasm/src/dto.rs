@@ -212,6 +212,48 @@ pub struct DeleteScenarioResult {
     pub error: Option<String>,
 }
 
+/// Inputs for the United States panel.
+///
+/// `monthly_pi` is the principal-and-interest payment from whichever
+/// calculator the panel is attached to, and is `None` when those inputs
+/// don't form a valid loan. Property tax and PMI are priced off the home
+/// price and loan amount alone, so they still compute without it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnitedStatesParams {
+    pub monthly_pi: Option<f64>,
+    pub principal: f64,
+    pub home_price: f64,
+    /// Used to derive the first period's interest for the deduction
+    /// estimate, so the formula stays on this side of the boundary.
+    pub annual_rate_percent: f64,
+    /// Five-digit ZIP; only the first three digits are used to resolve a
+    /// state.
+    pub zip: String,
+    /// Annual PMI rate as a percentage. `None` uses the crate default.
+    pub pmi_rate_percent: Option<f64>,
+    pub use_tax_deduction: bool,
+    pub marginal_tax_rate_percent: f64,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct UnitedStatesResult {
+    /// `"Conforming"` or `"Jumbo"`.
+    pub loan_type: String,
+    /// `None` when the ZIP doesn't resolve to a known state.
+    pub property_tax_rate_percent: Option<f64>,
+    pub monthly_property_tax: f64,
+    pub down_payment: f64,
+    pub down_payment_percent: f64,
+    pub pmi_required: bool,
+    pub monthly_pmi: f64,
+    /// Principal, interest, taxes and insurance. `None` without a payment.
+    pub monthly_piti: Option<f64>,
+    /// Both `None` unless the deduction estimate is switched on.
+    pub monthly_tax_savings: Option<f64>,
+    pub net_monthly_cost: Option<f64>,
+    pub error: Option<String>,
+}
+
 /// Inputs for the Singapore regulatory panel.
 ///
 /// `monthly_payment` comes from whichever calculator the panel is attached

@@ -2,11 +2,20 @@ import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import SingaporePanel from './SingaporePanel';
+import UnitedStatesPanel from './UnitedStatesPanel';
 import { PrincipalInterestSplit } from './Charts';
 
 // Symbols are spelled out rather than left to Intl: it renders SGD in en-SG
 // as a bare "$", indistinguishable from USD once the region toggle exists.
 const CURRENCY = { US: ['en-US', '$'], SG: ['en-SG', 'S$'] };
+
+const US_DEFAULTS = {
+  home_price: 500000,
+  zip: '90210',
+  pmi_rate_percent: 0.75,
+  use_tax_deduction: false,
+  marginal_tax_rate_percent: 24,
+};
 
 const SG_DEFAULTS = {
   home_price: 1000000,
@@ -25,6 +34,7 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   const [termYears, setTermYears] = useState(30);
   const [frequency, setFrequency] = useState('monthly');
   const [sgInputs, setSgInputs] = useState(SG_DEFAULTS);
+  const [usInputs, setUsInputs] = useState(US_DEFAULTS);
 
   const [locale, symbol] = CURRENCY[region] ?? CURRENCY.US;
   const formatMoney = (n) =>
@@ -49,7 +59,10 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   // schedule has no meaningful payment to test against them. Stamp duty
   // still computes either way, since it prices off the property alone.
   const sgResult = useMemo(() => {
-    if (!wasmModule || region !== 'SG') return null;
+    // Guarded on the function, not just the module: a returning visitor can
+    // hold a cached wasm build from before a binding existed, and calling a
+    // missing export would take down the whole tab rather than one panel.
+    if (!wasmModule?.calculate_singapore || region !== 'SG') return null;
     const monthlyPayment =
       result && !result.error && frequency === 'monthly' ? result.payment : null;
     return wasmModule.calculate_singapore({
@@ -58,6 +71,21 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
       principal,
     });
   }, [wasmModule, region, sgInputs, result, frequency, principal]);
+
+  // PITI, PMI and the deduction estimate are all monthly figures, so like
+  // the Singapore panel they only apply to a monthly schedule. Property tax
+  // and PMI price off the home price and loan amount and still compute.
+  const usResult = useMemo(() => {
+    if (!wasmModule?.calculate_united_states || region !== 'US') return null;
+    const monthlyPi =
+      result && !result.error && frequency === 'monthly' ? result.payment : null;
+    return wasmModule.calculate_united_states({
+      ...usInputs,
+      monthly_pi: monthlyPi,
+      principal,
+      annual_rate_percent: rate,
+    });
+  }, [wasmModule, region, usInputs, result, frequency, principal, rate]);
 
   return (
     <section className="panel">
@@ -101,6 +129,10 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
           totalInterest={result.total_interest}
           formatMoney={formatMoney}
         />
+      )}
+
+      {region === 'US' && (
+        <UnitedStatesPanel inputs={usInputs} onChange={setUsInputs} result={usResult} />
       )}
 
       {region === 'SG' && (

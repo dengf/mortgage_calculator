@@ -49,6 +49,9 @@ function createMockModule() {
       warnings: [],
       error: 'Singapore rules need the WASM module — run `npm run build:wasm`.',
     }),
+    calculate_united_states: () => ({
+      error: 'US costs need the WASM module — run `npm run build:wasm`.',
+    }),
     calculate_payment: (params) => {
       const payment = monthlyPayment(params.principal, params.annual_rate_percent, params.term_years);
       const totalPeriods = params.term_years * 12;
