@@ -142,6 +142,10 @@ body {
   border-top: 1px solid #223;
 }
 
+.app-footer a {
+  color: #7ee787;
+}
+
 .panel {
   display: flex;
   flex-direction: column;
