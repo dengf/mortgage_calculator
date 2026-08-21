@@ -99,7 +99,9 @@ impl StorageBackend for IndexedDbBackend {
         let snapshot = self.buffer.borrow().clone();
         wasm_bindgen_futures::spawn_local(async move {
             if let Err(e) = persist_blob(snapshot).await {
-                web_sys::console::error_1(&format!("mortgage-ext-redb: persist failed: {e}").into());
+                web_sys::console::error_1(
+                    &format!("mortgage-ext-redb: persist failed: {e}").into(),
+                );
             }
         });
         Ok(())

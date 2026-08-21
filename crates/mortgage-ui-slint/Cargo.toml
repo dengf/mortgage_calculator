@@ -16,6 +16,10 @@ crate-type = ["cdylib", "rlib"]
 [[bin]]
 name = "mortgage-ui-slint"
 path = "src/main.rs"
+# This just calls run_app() and blocks on the GUI event loop forever — not
+# a test target. Without this, `cargo test --workspace` hangs trying to
+# execute it as its own (harness-less) test binary.
+test = false
 
 [dependencies]
 mortgage-core = { workspace = true }

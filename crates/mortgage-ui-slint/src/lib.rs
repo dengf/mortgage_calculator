@@ -236,7 +236,11 @@ fn parse_rate_value(s: &str) -> f32 {
 fn format_rate_value(v: f32) -> String {
     let s = format!("{:.2}", v);
     let s = s.trim_end_matches('0').trim_end_matches('.');
-    if s.is_empty() { "0".to_string() } else { s.to_string() }
+    if s.is_empty() {
+        "0".to_string()
+    } else {
+        s.to_string()
+    }
 }
 
 /// Formats `ratio` (e.g. `0.0909` for 9.09%) as a percentage string with
@@ -251,7 +255,10 @@ fn format_percent(ratio: Decimal, dp: u32) -> String {
 
 fn boom_text(periods_saved: u32, interest_saved: Decimal) -> String {
     if periods_saved == 0 {
-        return format!("Boom! You just chopped ${} in interest off your mortgage.", interest_saved);
+        return format!(
+            "Boom! You just chopped ${} in interest off your mortgage.",
+            interest_saved
+        );
     }
     let years = periods_saved / 12;
     let months = periods_saved % 12;
@@ -308,7 +315,9 @@ fn blank_sg_limits(ui: &AppWindow) {
 fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Option<Decimal>) {
     let wants_hdb_loan = ui.get_sg_loan_type() == "HDB Loan";
     if wants_hdb_loan && !singapore::hdb_loan_eligible(ui.get_sg_is_hdb()) {
-        ui.set_sg_loan_type_warning("HDB loans are only available for HDB flats/ECs bought from HDB.".into());
+        ui.set_sg_loan_type_warning(
+            "HDB loans are only available for HDB flats/ECs bought from HDB.".into(),
+        );
     } else {
         ui.set_sg_loan_type_warning("".into());
     }
@@ -316,11 +325,14 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
     match monthly_payment {
         Some(payment) => {
             let income = Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default();
-            let other_debts = Decimal::from_str(ui.get_sg_other_debts().as_str()).unwrap_or_default();
+            let other_debts =
+                Decimal::from_str(ui.get_sg_other_debts().as_str()).unwrap_or_default();
 
             match singapore::check_tdsr_msr(payment, other_debts, income, ui.get_sg_is_hdb()) {
                 Ok(check) => {
-                    ui.set_sg_tdsr_label(format!("{}%", format_percent(check.tdsr.ratio, 1)).into());
+                    ui.set_sg_tdsr_label(
+                        format!("{}%", format_percent(check.tdsr.ratio, 1)).into(),
+                    );
                     ui.set_sg_tdsr_exceeded(check.tdsr.exceeded);
                     ui.set_sg_tdsr_near(check.tdsr.near_limit);
 
@@ -330,7 +342,9 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
                     }
                     match check.msr {
                         Some(msr) => {
-                            ui.set_sg_msr_label(format!("{}%", format_percent(msr.ratio, 1)).into());
+                            ui.set_sg_msr_label(
+                                format!("{}%", format_percent(msr.ratio, 1)).into(),
+                            );
                             ui.set_sg_msr_exceeded(msr.exceeded);
                             ui.set_sg_msr_near(msr.near_limit);
                             if msr.exceeded {
@@ -348,7 +362,8 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
                 Err(_) => blank_sg_limits(ui),
             }
 
-            let cpf_oa = Decimal::from_str(ui.get_sg_cpf_oa_available().as_str()).unwrap_or_default();
+            let cpf_oa =
+                Decimal::from_str(ui.get_sg_cpf_oa_available().as_str()).unwrap_or_default();
             let split = singapore::cpf_cash_split(payment, cpf_oa);
             ui.set_sg_cpf_used_label(format!("${}", split.cpf_used).into());
             ui.set_sg_cash_required_label(format!("${}", split.cash_required).into());
@@ -360,7 +375,9 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
         }
     }
 
-    let price = Decimal::from_str(ui.get_sg_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
+    let price = Decimal::from_str(ui.get_sg_home_price().as_str())
+        .unwrap_or_default()
+        .max(Decimal::ZERO);
     let residency = parse_residency(ui.get_sg_residency().as_str());
     let count = parse_property_count(ui.get_sg_property_count().as_str());
     let costs = singapore::upfront_costs(price, residency, count);
@@ -370,7 +387,9 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
 
     let down_payment = round_currency((price - principal).max(Decimal::ZERO));
     ui.set_sg_down_payment_label(format!("${}", down_payment).into());
-    ui.set_sg_total_cash_required_label(format!("${}", round_currency(down_payment + costs.total)).into());
+    ui.set_sg_total_cash_required_label(
+        format!("${}", round_currency(down_payment + costs.total)).into(),
+    );
 }
 
 /// Recomputes the Payment tab's United States panel (ZIP-based property
@@ -385,7 +404,9 @@ fn recompute_payment_us(
     monthly_pi: Option<Decimal>,
     first_period_interest: Option<Decimal>,
 ) {
-    let home_price = Decimal::from_str(ui.get_us_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
+    let home_price = Decimal::from_str(ui.get_us_home_price().as_str())
+        .unwrap_or_default()
+        .max(Decimal::ZERO);
 
     let loan_type_label = match united_states::classify_loan(principal) {
         united_states::LoanConformance::Conforming => "Conforming",
@@ -399,7 +420,9 @@ fn recompute_payment_us(
         .unwrap_or(Decimal::ZERO);
 
     match tax_rate {
-        Some(rate) => ui.set_us_property_tax_rate_label(format!("{}%", format_percent(rate, 2)).into()),
+        Some(rate) => {
+            ui.set_us_property_tax_rate_label(format!("{}%", format_percent(rate, 2)).into())
+        }
         None => ui.set_us_property_tax_rate_label("Unrecognized ZIP".into()),
     }
     ui.set_us_monthly_property_tax_label(format!("${}", monthly_property_tax).into());
@@ -410,12 +433,15 @@ fn recompute_payment_us(
     } else {
         Decimal::ZERO
     };
-    ui.set_us_down_payment_percent_label(format!("{}%", format_percent(down_payment_percent, 1)).into());
+    ui.set_us_down_payment_percent_label(
+        format!("{}%", format_percent(down_payment_percent, 1)).into(),
+    );
     // Keeps the slider in sync no matter what triggered this recompute —
     // dragging it, or editing home price / loan amount directly.
     ui.set_us_down_payment_percent_value(decimal_to_f64(down_payment_percent * dec!(100)) as f32);
 
-    let pmi_required = home_price > Decimal::ZERO && united_states::requires_pmi(down_payment_percent);
+    let pmi_required =
+        home_price > Decimal::ZERO && united_states::requires_pmi(down_payment_percent);
     ui.set_us_pmi_required(pmi_required);
 
     let pmi_rate_percent = Decimal::from_str(ui.get_us_pmi_rate_percent().as_str())
@@ -427,17 +453,21 @@ fn recompute_payment_us(
     };
     ui.set_us_monthly_pmi_label(format!("${}", monthly_pmi).into());
 
-    let monthly_piti = round_currency(monthly_pi.unwrap_or(Decimal::ZERO) + monthly_property_tax + monthly_pmi);
+    let monthly_piti =
+        round_currency(monthly_pi.unwrap_or(Decimal::ZERO) + monthly_property_tax + monthly_pmi);
     ui.set_us_monthly_piti_label(format!("${}", monthly_piti).into());
 
     if ui.get_us_use_tax_deduction() {
-        let marginal_rate_percent = Decimal::from_str(ui.get_us_marginal_tax_rate_percent().as_str()).unwrap_or_default();
+        let marginal_rate_percent =
+            Decimal::from_str(ui.get_us_marginal_tax_rate_percent().as_str()).unwrap_or_default();
         let savings = united_states::monthly_tax_savings(
             first_period_interest.unwrap_or(Decimal::ZERO),
             marginal_rate_percent / dec!(100),
         );
         ui.set_us_monthly_tax_savings_label(format!("${}", savings).into());
-        ui.set_us_net_monthly_cost_label(format!("${}", round_currency(monthly_piti - savings)).into());
+        ui.set_us_net_monthly_cost_label(
+            format!("${}", round_currency(monthly_piti - savings)).into(),
+        );
     } else {
         ui.set_us_monthly_tax_savings_label("".into());
         ui.set_us_net_monthly_cost_label("".into());
@@ -461,7 +491,12 @@ fn recompute_payment(ui: &AppWindow) {
             ui.set_total_interest_result(format!("${}", summary.total_interest).into());
             recompute_payment_sg(ui, loan.principal(), Some(summary.payment));
             let first_period_interest = loan.principal() * loan.periodic_rate();
-            recompute_payment_us(ui, loan.principal(), Some(summary.payment), Some(first_period_interest));
+            recompute_payment_us(
+                ui,
+                loan.principal(),
+                Some(summary.payment),
+                Some(first_period_interest),
+            );
         }
         None => {
             ui.set_has_error(true);
@@ -521,7 +556,9 @@ fn recompute_amortization(ui: &AppWindow) {
             apply_scrub(ui, &rows, principal_d, ui.get_amort_scrub_fraction());
         }
         Err(_) => {
-            ui.set_amort_schedule_rows(ModelRc::new(VecModel::from(Vec::<AmortScheduleRow>::new())));
+            ui.set_amort_schedule_rows(ModelRc::new(
+                VecModel::from(Vec::<AmortScheduleRow>::new()),
+            ));
             ui.set_amort_timeline_balance_path("".into());
             ui.set_amort_timeline_interest_path("".into());
             apply_scrub(ui, &[], Decimal::ZERO, 0.0);
@@ -552,7 +589,10 @@ fn build_schedule_rows(
         let paid: Decimal = chunk.iter().map(|r| r.payment).sum();
         let principal: Decimal = chunk.iter().map(|r| r.principal_portion).sum();
         let interest: Decimal = chunk.iter().map(|r| r.interest_portion).sum();
-        let balance = chunk.last().expect("chunks(12) never yields an empty chunk").remaining_balance;
+        let balance = chunk
+            .last()
+            .expect("chunks(12) never yields an empty chunk")
+            .remaining_balance;
         out.push(AmortScheduleRow {
             label: (i + 1).to_string().into(),
             paid: format!("${}", paid).into(),
@@ -571,10 +611,13 @@ fn recompute_affordability(ui: &AppWindow) {
             gross_monthly_income: Decimal::from_str(ui.get_aff_income().as_str()).ok()?,
             monthly_debts: Decimal::from_str(ui.get_aff_debts().as_str()).ok()?,
             down_payment: Decimal::from_str(ui.get_aff_down_payment().as_str()).ok()?,
-            annual_rate: Decimal::from_str(ui.get_aff_rate_percent().as_str()).ok()? / Decimal::from(100),
+            annual_rate: Decimal::from_str(ui.get_aff_rate_percent().as_str()).ok()?
+                / Decimal::from(100),
             term_years: Decimal::from_str(ui.get_aff_term_years().as_str()).ok()?,
-            max_dti: Decimal::from_str(ui.get_aff_max_dti_percent().as_str()).ok()? / Decimal::from(100),
-            annual_property_tax_rate: Decimal::from_str(ui.get_aff_tax_rate_percent().as_str()).ok()?
+            max_dti: Decimal::from_str(ui.get_aff_max_dti_percent().as_str()).ok()?
+                / Decimal::from(100),
+            annual_property_tax_rate: Decimal::from_str(ui.get_aff_tax_rate_percent().as_str())
+                .ok()?
                 / Decimal::from(100),
             annual_insurance: Decimal::from_str(ui.get_aff_insurance().as_str()).ok()?,
             monthly_hoa: Decimal::from_str(ui.get_aff_hoa().as_str()).ok()?,
@@ -596,14 +639,21 @@ fn recompute_affordability(ui: &AppWindow) {
 }
 
 fn recompute_refinance(ui: &AppWindow) {
-    ui.set_refi_current_rate_percent_value(parse_rate_value(ui.get_refi_current_rate_percent().as_str()));
+    ui.set_refi_current_rate_percent_value(parse_rate_value(
+        ui.get_refi_current_rate_percent().as_str(),
+    ));
     ui.set_refi_new_rate_percent_value(parse_rate_value(ui.get_refi_new_rate_percent().as_str()));
     let result = (|| {
         let input = RefinanceInput {
             current_balance: Decimal::from_str(ui.get_refi_current_balance().as_str()).ok()?,
-            current_annual_rate: Decimal::from_str(ui.get_refi_current_rate_percent().as_str()).ok()?
+            current_annual_rate: Decimal::from_str(ui.get_refi_current_rate_percent().as_str())
+                .ok()?
                 / Decimal::from(100),
-            remaining_periods: ui.get_refi_remaining_periods().as_str().parse::<u32>().ok()?,
+            remaining_periods: ui
+                .get_refi_remaining_periods()
+                .as_str()
+                .parse::<u32>()
+                .ok()?,
             new_annual_rate: Decimal::from_str(ui.get_refi_new_rate_percent().as_str()).ok()?
                 / Decimal::from(100),
             new_term_years: Decimal::from_str(ui.get_refi_new_term_years().as_str()).ok()?,
@@ -702,11 +752,18 @@ fn decimal_to_f64(d: Decimal) -> f64 {
     d.to_string().parse::<f64>().unwrap_or(0.0)
 }
 
-fn build_chart_path(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, max_periods: usize) -> String {
+fn build_chart_path(
+    rows: &[mortgage_calc::amortization::AmortizationRow],
+    principal: Decimal,
+    max_periods: usize,
+) -> String {
     if rows.is_empty() {
         return String::new();
     }
-    let values: Vec<f64> = rows.iter().map(|r| decimal_to_f64(r.remaining_balance)).collect();
+    let values: Vec<f64> = rows
+        .iter()
+        .map(|r| decimal_to_f64(r.remaining_balance))
+        .collect();
     let mut s = path_from_values(&values, decimal_to_f64(principal), max_periods);
     if rows.len() < max_periods {
         s.push_str(&format!("L {:.2} {:.2} ", CHART_W, CHART_H));
@@ -717,9 +774,15 @@ fn build_chart_path(rows: &[mortgage_calc::amortization::AmortizationRow], princ
 /// Remaining-principal and cumulative-interest-paid curves for the
 /// Amortization tab's equity timeline (single schedule, so no padding tail
 /// like the Compare-tab chart needs).
-fn build_timeline_paths(rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal) -> (String, String) {
+fn build_timeline_paths(
+    rows: &[mortgage_calc::amortization::AmortizationRow],
+    principal: Decimal,
+) -> (String, String) {
     let n = rows.len();
-    let balance_values: Vec<f64> = rows.iter().map(|r| decimal_to_f64(r.remaining_balance)).collect();
+    let balance_values: Vec<f64> = rows
+        .iter()
+        .map(|r| decimal_to_f64(r.remaining_balance))
+        .collect();
 
     let mut cumulative_interest = Decimal::ZERO;
     let interest_values: Vec<f64> = rows
@@ -740,7 +803,12 @@ fn build_timeline_paths(rows: &[mortgage_calc::amortization::AmortizationRow], p
 /// given `fraction` (0..1) along `rows`, or clears it when there's no
 /// schedule. Called both when the user drags the scrub line and whenever
 /// the underlying loan changes, so the summary stays in sync either way.
-fn apply_scrub(ui: &AppWindow, rows: &[mortgage_calc::amortization::AmortizationRow], principal: Decimal, fraction: f32) {
+fn apply_scrub(
+    ui: &AppWindow,
+    rows: &[mortgage_calc::amortization::AmortizationRow],
+    principal: Decimal,
+    fraction: f32,
+) {
     if rows.is_empty() {
         ui.set_amort_scrub_month_label("".into());
         ui.set_amort_scrub_balance_label("".into());
@@ -863,8 +931,10 @@ fn recompute_compare(ui: &AppWindow) {
 
     match (loan_a, loan_b) {
         (Some(loan_a), Some(loan_b)) => {
-            let rows_a = mortgage_calc::amortization::schedule(&loan_a, Decimal::ZERO).unwrap_or_default();
-            let rows_b = mortgage_calc::amortization::schedule(&loan_b, Decimal::ZERO).unwrap_or_default();
+            let rows_a =
+                mortgage_calc::amortization::schedule(&loan_a, Decimal::ZERO).unwrap_or_default();
+            let rows_b =
+                mortgage_calc::amortization::schedule(&loan_b, Decimal::ZERO).unwrap_or_default();
             let max_periods = rows_a.len().max(rows_b.len());
             ui.set_cmp_chart_path_a(build_chart_path(&rows_a, principal, max_periods).into());
             ui.set_cmp_chart_path_b(build_chart_path(&rows_b, principal, max_periods).into());
@@ -943,7 +1013,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     let ui_handle = ui.as_weak();
     ui.on_us_down_payment_changed(move |percent| {
         let ui = ui_handle.unwrap();
-        let home_price = Decimal::from_str(ui.get_us_home_price().as_str()).unwrap_or_default().max(Decimal::ZERO);
+        let home_price = Decimal::from_str(ui.get_us_home_price().as_str())
+            .unwrap_or_default()
+            .max(Decimal::ZERO);
         let percent_dec = Decimal::from_str(&format_rate_value(percent.clamp(0.0, 100.0)))
             .unwrap_or_default()
             / dec!(100);
@@ -1005,7 +1077,8 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let Ok(rows) = mortgage_calc::amortization::schedule(&loan, extra) else {
             return;
         };
-        let principal_d = Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
+        let principal_d =
+            Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
         apply_scrub(&ui, &rows, principal_d, fraction);
     });
 
@@ -1082,7 +1155,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_payment_save_scenario(move |name| {
-            let Some(ui) = ui_handle.upgrade() else { return };
+            let Some(ui) = ui_handle.upgrade() else {
+                return;
+            };
             let inputs = PaymentInputs {
                 principal: ui.get_principal().to_string(),
                 rate_percent: ui.get_rate_percent().to_string(),
@@ -1103,7 +1178,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
                 us_use_tax_deduction: ui.get_us_use_tax_deduction(),
                 us_marginal_tax_rate_percent: ui.get_us_marginal_tax_rate_percent().to_string(),
             };
-            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else {
+                return;
+            };
             do_save(
                 ui_handle.clone(),
                 store_cell.clone(),
@@ -1118,48 +1195,66 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_payment_load_scenario(move |id| {
-            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
-                if let Ok(inputs) = serde_json::from_str::<PaymentInputs>(json) {
-                    ui.set_principal(inputs.principal.into());
-                    ui.set_rate_percent(inputs.rate_percent.into());
-                    ui.set_term_years(inputs.term_years.into());
-                    // Scenarios saved before the region/SG/US panels existed
-                    // deserialize these as empty strings (see `#[serde(default)]`
-                    // on PaymentInputs) — leave the panel's own defaults alone
-                    // in that case rather than blanking them out.
-                    let apply = |value: String, set: &mut dyn FnMut(slint::SharedString)| {
-                        if !value.is_empty() {
-                            set(value.into());
-                        }
-                    };
-                    apply(inputs.region, &mut |v| ui.set_region(v));
-                    apply(inputs.sg_gross_income, &mut |v| ui.set_sg_gross_income(v));
-                    apply(inputs.sg_other_debts, &mut |v| ui.set_sg_other_debts(v));
-                    apply(inputs.sg_loan_type, &mut |v| ui.set_sg_loan_type(v));
-                    apply(inputs.sg_cpf_oa_available, &mut |v| ui.set_sg_cpf_oa_available(v));
-                    apply(inputs.sg_home_price, &mut |v| ui.set_sg_home_price(v));
-                    apply(inputs.sg_residency, &mut |v| ui.set_sg_residency(v));
-                    apply(inputs.sg_property_count, &mut |v| ui.set_sg_property_count(v));
-                    apply(inputs.us_home_price, &mut |v| ui.set_us_home_price(v));
-                    apply(inputs.us_zip, &mut |v| ui.set_us_zip(v));
-                    apply(inputs.us_pmi_rate_percent, &mut |v| ui.set_us_pmi_rate_percent(v));
-                    apply(inputs.us_marginal_tax_rate_percent, &mut |v| ui.set_us_marginal_tax_rate_percent(v));
-                    // Bools default to exactly what a fresh panel already
-                    // shows (sg_is_hdb: true, the rest: false), so applying
-                    // them unconditionally is safe even for old scenarios.
-                    ui.set_sg_is_hdb(inputs.sg_is_hdb);
-                    ui.set_sg_use_cpf(inputs.sg_use_cpf);
-                    ui.set_us_use_tax_deduction(inputs.us_use_tax_deduction);
-                    recompute_payment(ui);
-                }
-            });
+            do_load(
+                ui_handle.clone(),
+                store_cell.clone(),
+                id.to_string(),
+                |ui, json| {
+                    if let Ok(inputs) = serde_json::from_str::<PaymentInputs>(json) {
+                        ui.set_principal(inputs.principal.into());
+                        ui.set_rate_percent(inputs.rate_percent.into());
+                        ui.set_term_years(inputs.term_years.into());
+                        // Scenarios saved before the region/SG/US panels existed
+                        // deserialize these as empty strings (see `#[serde(default)]`
+                        // on PaymentInputs) — leave the panel's own defaults alone
+                        // in that case rather than blanking them out.
+                        let apply = |value: String, set: &mut dyn FnMut(slint::SharedString)| {
+                            if !value.is_empty() {
+                                set(value.into());
+                            }
+                        };
+                        apply(inputs.region, &mut |v| ui.set_region(v));
+                        apply(inputs.sg_gross_income, &mut |v| ui.set_sg_gross_income(v));
+                        apply(inputs.sg_other_debts, &mut |v| ui.set_sg_other_debts(v));
+                        apply(inputs.sg_loan_type, &mut |v| ui.set_sg_loan_type(v));
+                        apply(inputs.sg_cpf_oa_available, &mut |v| {
+                            ui.set_sg_cpf_oa_available(v)
+                        });
+                        apply(inputs.sg_home_price, &mut |v| ui.set_sg_home_price(v));
+                        apply(inputs.sg_residency, &mut |v| ui.set_sg_residency(v));
+                        apply(inputs.sg_property_count, &mut |v| {
+                            ui.set_sg_property_count(v)
+                        });
+                        apply(inputs.us_home_price, &mut |v| ui.set_us_home_price(v));
+                        apply(inputs.us_zip, &mut |v| ui.set_us_zip(v));
+                        apply(inputs.us_pmi_rate_percent, &mut |v| {
+                            ui.set_us_pmi_rate_percent(v)
+                        });
+                        apply(inputs.us_marginal_tax_rate_percent, &mut |v| {
+                            ui.set_us_marginal_tax_rate_percent(v)
+                        });
+                        // Bools default to exactly what a fresh panel already
+                        // shows (sg_is_hdb: true, the rest: false), so applying
+                        // them unconditionally is safe even for old scenarios.
+                        ui.set_sg_is_hdb(inputs.sg_is_hdb);
+                        ui.set_sg_use_cpf(inputs.sg_use_cpf);
+                        ui.set_us_use_tax_deduction(inputs.us_use_tax_deduction);
+                        recompute_payment(ui);
+                    }
+                },
+            );
         });
     }
     {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_payment_delete_scenario(move |id| {
-            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Payment, id.to_string());
+            do_delete(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Payment,
+                id.to_string(),
+            );
         });
     }
 
@@ -1168,14 +1263,18 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_amort_save_scenario(move |name| {
-            let Some(ui) = ui_handle.upgrade() else { return };
+            let Some(ui) = ui_handle.upgrade() else {
+                return;
+            };
             let inputs = AmortInputs {
                 principal: ui.get_amort_principal().to_string(),
                 rate_percent: ui.get_amort_rate_percent().to_string(),
                 term_years: ui.get_amort_term_years().to_string(),
                 extra_payment: ui.get_amort_extra_payment().to_string(),
             };
-            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else {
+                return;
+            };
             do_save(
                 ui_handle.clone(),
                 store_cell.clone(),
@@ -1190,22 +1289,32 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_amort_load_scenario(move |id| {
-            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
-                if let Ok(inputs) = serde_json::from_str::<AmortInputs>(json) {
-                    ui.set_amort_principal(inputs.principal.into());
-                    ui.set_amort_rate_percent(inputs.rate_percent.into());
-                    ui.set_amort_term_years(inputs.term_years.into());
-                    ui.set_amort_extra_payment(inputs.extra_payment.into());
-                    recompute_amortization(ui);
-                }
-            });
+            do_load(
+                ui_handle.clone(),
+                store_cell.clone(),
+                id.to_string(),
+                |ui, json| {
+                    if let Ok(inputs) = serde_json::from_str::<AmortInputs>(json) {
+                        ui.set_amort_principal(inputs.principal.into());
+                        ui.set_amort_rate_percent(inputs.rate_percent.into());
+                        ui.set_amort_term_years(inputs.term_years.into());
+                        ui.set_amort_extra_payment(inputs.extra_payment.into());
+                        recompute_amortization(ui);
+                    }
+                },
+            );
         });
     }
     {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_amort_delete_scenario(move |id| {
-            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Amortization, id.to_string());
+            do_delete(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Amortization,
+                id.to_string(),
+            );
         });
     }
 
@@ -1214,7 +1323,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_aff_save_scenario(move |name| {
-            let Some(ui) = ui_handle.upgrade() else { return };
+            let Some(ui) = ui_handle.upgrade() else {
+                return;
+            };
             let inputs = AffInputs {
                 income: ui.get_aff_income().to_string(),
                 debts: ui.get_aff_debts().to_string(),
@@ -1226,7 +1337,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
                 insurance: ui.get_aff_insurance().to_string(),
                 hoa: ui.get_aff_hoa().to_string(),
             };
-            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else {
+                return;
+            };
             do_save(
                 ui_handle.clone(),
                 store_cell.clone(),
@@ -1241,27 +1354,37 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_aff_load_scenario(move |id| {
-            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
-                if let Ok(inputs) = serde_json::from_str::<AffInputs>(json) {
-                    ui.set_aff_income(inputs.income.into());
-                    ui.set_aff_debts(inputs.debts.into());
-                    ui.set_aff_down_payment(inputs.down_payment.into());
-                    ui.set_aff_rate_percent(inputs.rate_percent.into());
-                    ui.set_aff_term_years(inputs.term_years.into());
-                    ui.set_aff_max_dti_percent(inputs.max_dti_percent.into());
-                    ui.set_aff_tax_rate_percent(inputs.tax_rate_percent.into());
-                    ui.set_aff_insurance(inputs.insurance.into());
-                    ui.set_aff_hoa(inputs.hoa.into());
-                    recompute_affordability(ui);
-                }
-            });
+            do_load(
+                ui_handle.clone(),
+                store_cell.clone(),
+                id.to_string(),
+                |ui, json| {
+                    if let Ok(inputs) = serde_json::from_str::<AffInputs>(json) {
+                        ui.set_aff_income(inputs.income.into());
+                        ui.set_aff_debts(inputs.debts.into());
+                        ui.set_aff_down_payment(inputs.down_payment.into());
+                        ui.set_aff_rate_percent(inputs.rate_percent.into());
+                        ui.set_aff_term_years(inputs.term_years.into());
+                        ui.set_aff_max_dti_percent(inputs.max_dti_percent.into());
+                        ui.set_aff_tax_rate_percent(inputs.tax_rate_percent.into());
+                        ui.set_aff_insurance(inputs.insurance.into());
+                        ui.set_aff_hoa(inputs.hoa.into());
+                        recompute_affordability(ui);
+                    }
+                },
+            );
         });
     }
     {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_aff_delete_scenario(move |id| {
-            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Affordability, id.to_string());
+            do_delete(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Affordability,
+                id.to_string(),
+            );
         });
     }
 
@@ -1270,7 +1393,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_refi_save_scenario(move |name| {
-            let Some(ui) = ui_handle.upgrade() else { return };
+            let Some(ui) = ui_handle.upgrade() else {
+                return;
+            };
             let inputs = RefiInputs {
                 current_balance: ui.get_refi_current_balance().to_string(),
                 current_rate_percent: ui.get_refi_current_rate_percent().to_string(),
@@ -1279,7 +1404,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
                 new_term_years: ui.get_refi_new_term_years().to_string(),
                 closing_costs: ui.get_refi_closing_costs().to_string(),
             };
-            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else {
+                return;
+            };
             do_save(
                 ui_handle.clone(),
                 store_cell.clone(),
@@ -1294,24 +1421,34 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_refi_load_scenario(move |id| {
-            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
-                if let Ok(inputs) = serde_json::from_str::<RefiInputs>(json) {
-                    ui.set_refi_current_balance(inputs.current_balance.into());
-                    ui.set_refi_current_rate_percent(inputs.current_rate_percent.into());
-                    ui.set_refi_remaining_periods(inputs.remaining_periods.into());
-                    ui.set_refi_new_rate_percent(inputs.new_rate_percent.into());
-                    ui.set_refi_new_term_years(inputs.new_term_years.into());
-                    ui.set_refi_closing_costs(inputs.closing_costs.into());
-                    recompute_refinance(ui);
-                }
-            });
+            do_load(
+                ui_handle.clone(),
+                store_cell.clone(),
+                id.to_string(),
+                |ui, json| {
+                    if let Ok(inputs) = serde_json::from_str::<RefiInputs>(json) {
+                        ui.set_refi_current_balance(inputs.current_balance.into());
+                        ui.set_refi_current_rate_percent(inputs.current_rate_percent.into());
+                        ui.set_refi_remaining_periods(inputs.remaining_periods.into());
+                        ui.set_refi_new_rate_percent(inputs.new_rate_percent.into());
+                        ui.set_refi_new_term_years(inputs.new_term_years.into());
+                        ui.set_refi_closing_costs(inputs.closing_costs.into());
+                        recompute_refinance(ui);
+                    }
+                },
+            );
         });
     }
     {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_refi_delete_scenario(move |id| {
-            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Refinance, id.to_string());
+            do_delete(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Refinance,
+                id.to_string(),
+            );
         });
     }
 
@@ -1320,7 +1457,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_cmp_save_scenario(move |name| {
-            let Some(ui) = ui_handle.upgrade() else { return };
+            let Some(ui) = ui_handle.upgrade() else {
+                return;
+            };
             let inputs = CompareInputs {
                 principal: ui.get_cmp_principal().to_string(),
                 a_label: ui.get_cmp_a_label().to_string(),
@@ -1336,7 +1475,9 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
                 b_spread_percent: ui.get_cmp_b_spread_percent().to_string(),
                 b_term_years: ui.get_cmp_b_term_years().to_string(),
             };
-            let Ok(inputs_json) = serde_json::to_string(&inputs) else { return };
+            let Ok(inputs_json) = serde_json::to_string(&inputs) else {
+                return;
+            };
             do_save(
                 ui_handle.clone(),
                 store_cell.clone(),
@@ -1351,31 +1492,41 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_cmp_load_scenario(move |id| {
-            do_load(ui_handle.clone(), store_cell.clone(), id.to_string(), |ui, json| {
-                if let Ok(inputs) = serde_json::from_str::<CompareInputs>(json) {
-                    ui.set_cmp_principal(inputs.principal.into());
-                    ui.set_cmp_a_label(inputs.a_label.into());
-                    ui.set_cmp_a_floating(inputs.a_floating);
-                    ui.set_cmp_a_rate_percent(inputs.a_rate_percent.into());
-                    ui.set_cmp_a_base_rate_percent(inputs.a_base_rate_percent.into());
-                    ui.set_cmp_a_spread_percent(inputs.a_spread_percent.into());
-                    ui.set_cmp_a_term_years(inputs.a_term_years.into());
-                    ui.set_cmp_b_label(inputs.b_label.into());
-                    ui.set_cmp_b_floating(inputs.b_floating);
-                    ui.set_cmp_b_rate_percent(inputs.b_rate_percent.into());
-                    ui.set_cmp_b_base_rate_percent(inputs.b_base_rate_percent.into());
-                    ui.set_cmp_b_spread_percent(inputs.b_spread_percent.into());
-                    ui.set_cmp_b_term_years(inputs.b_term_years.into());
-                    recompute_compare(ui);
-                }
-            });
+            do_load(
+                ui_handle.clone(),
+                store_cell.clone(),
+                id.to_string(),
+                |ui, json| {
+                    if let Ok(inputs) = serde_json::from_str::<CompareInputs>(json) {
+                        ui.set_cmp_principal(inputs.principal.into());
+                        ui.set_cmp_a_label(inputs.a_label.into());
+                        ui.set_cmp_a_floating(inputs.a_floating);
+                        ui.set_cmp_a_rate_percent(inputs.a_rate_percent.into());
+                        ui.set_cmp_a_base_rate_percent(inputs.a_base_rate_percent.into());
+                        ui.set_cmp_a_spread_percent(inputs.a_spread_percent.into());
+                        ui.set_cmp_a_term_years(inputs.a_term_years.into());
+                        ui.set_cmp_b_label(inputs.b_label.into());
+                        ui.set_cmp_b_floating(inputs.b_floating);
+                        ui.set_cmp_b_rate_percent(inputs.b_rate_percent.into());
+                        ui.set_cmp_b_base_rate_percent(inputs.b_base_rate_percent.into());
+                        ui.set_cmp_b_spread_percent(inputs.b_spread_percent.into());
+                        ui.set_cmp_b_term_years(inputs.b_term_years.into());
+                        recompute_compare(ui);
+                    }
+                },
+            );
         });
     }
     {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
         ui.on_cmp_delete_scenario(move |id| {
-            do_delete(ui_handle.clone(), store_cell.clone(), CalculatorKind::Comparison, id.to_string());
+            do_delete(
+                ui_handle.clone(),
+                store_cell.clone(),
+                CalculatorKind::Comparison,
+                id.to_string(),
+            );
         });
     }
 

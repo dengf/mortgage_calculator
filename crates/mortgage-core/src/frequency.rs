@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 /// Bi-weekly payments are the classic "pay it off early" trick: 26
 /// half-sized payments a year add up to 13 monthly payments instead of 12,
 /// without the borrower consciously budgeting an extra payment.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum PaymentFrequency {
+    #[default]
     Monthly,
     BiWeekly,
     Weekly,
@@ -36,11 +37,5 @@ impl PaymentFrequency {
             .round()
             .to_u32()
             .unwrap_or(0)
-    }
-}
-
-impl Default for PaymentFrequency {
-    fn default() -> Self {
-        PaymentFrequency::Monthly
     }
 }

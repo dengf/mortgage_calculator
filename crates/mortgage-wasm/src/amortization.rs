@@ -28,7 +28,12 @@ fn calculate_schedule_impl(params: JsValue) -> AmortizationResult {
 
     let loan = match build_loan(&params.loan) {
         Ok(loan) => loan,
-        Err(e) => return AmortizationResult { error: Some(e), ..Default::default() },
+        Err(e) => {
+            return AmortizationResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
     };
 
     let extra_payment = f64_to_decimal(params.extra_payment).max(Decimal::ZERO);

@@ -79,13 +79,14 @@ pub fn check_tdsr_msr(
     is_hdb_or_ec: bool,
 ) -> MortgageResult<TdsrMsrCheck> {
     if gross_monthly_income <= Decimal::ZERO {
-        return Err(MortgageError::InvalidIncome(gross_monthly_income.to_string()));
+        return Err(MortgageError::InvalidIncome(
+            gross_monthly_income.to_string(),
+        ));
     }
 
     let tdsr_ratio = (monthly_housing_payment + other_monthly_debts) / gross_monthly_income;
-    let msr = is_hdb_or_ec.then(|| {
-        limit_status(monthly_housing_payment / gross_monthly_income, MSR_LIMIT)
-    });
+    let msr = is_hdb_or_ec
+        .then(|| limit_status(monthly_housing_payment / gross_monthly_income, MSR_LIMIT));
 
     Ok(TdsrMsrCheck {
         tdsr: limit_status(tdsr_ratio, TDSR_LIMIT),
@@ -250,15 +251,27 @@ mod tests {
 
     #[test]
     fn absd_foreigner_rate_is_flat_regardless_of_property_count() {
-        let first = additional_buyers_stamp_duty(dec!(1_000_000), Residency::Foreigner, PropertyCount::First);
-        let third = additional_buyers_stamp_duty(dec!(1_000_000), Residency::Foreigner, PropertyCount::ThirdOrMore);
+        let first = additional_buyers_stamp_duty(
+            dec!(1_000_000),
+            Residency::Foreigner,
+            PropertyCount::First,
+        );
+        let third = additional_buyers_stamp_duty(
+            dec!(1_000_000),
+            Residency::Foreigner,
+            PropertyCount::ThirdOrMore,
+        );
         assert_eq!(first, dec!(600_000));
         assert_eq!(first, third);
     }
 
     #[test]
     fn upfront_costs_sums_bsd_and_absd() {
-        let costs = upfront_costs(dec!(1_000_000), Residency::PermanentResident, PropertyCount::Second);
+        let costs = upfront_costs(
+            dec!(1_000_000),
+            Residency::PermanentResident,
+            PropertyCount::Second,
+        );
         assert_eq!(costs.bsd, dec!(24_600));
         assert_eq!(costs.absd, dec!(300_000));
         assert_eq!(costs.total, dec!(324_600));

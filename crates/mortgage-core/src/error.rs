@@ -13,7 +13,10 @@ pub enum MortgageError {
     InvalidTerm(u32),
 
     #[error("down payment {down_payment} cannot exceed home price {home_price}")]
-    DownPaymentExceedsPrice { down_payment: String, home_price: String },
+    DownPaymentExceedsPrice {
+        down_payment: String,
+        home_price: String,
+    },
 
     #[error("monthly income must be positive, got {0}")]
     InvalidIncome(String),
