@@ -136,19 +136,32 @@ component RateField inherits VerticalLayout {
     in property <string> label;
     in-out property <float> rate: 6.5;
     in-out property <string> value <=> input.text;
+    // Off for a rate that's just informational context (e.g. a refinance's
+    // current, already-fixed rate) rather than something the red coloring
+    // should read as a warning about.
+    in property <bool> risk-coloring: true;
+    in property <float> danger-threshold: 7.0;
     callback edited();
     callback rate-changed(float);
 
     spacing: 4px;
     Text { text: root.label; color: #92a0b3; font-size: 12px; }
     input := LineEdit {
+        input-type: InputType.decimal;
         vertical-stretch: 0;
         edited => { root.edited(); }
     }
     RiskSlider {
         vertical-stretch: 0;
         value <=> root.rate;
+        risk-coloring: root.risk-coloring;
+        danger-threshold: root.danger-threshold;
         changed(v) => { root.rate-changed(v); }
+    }
+    if root.risk-coloring && root.rate >= root.danger-threshold: Text {
+        text: "Above typical market rates";
+        color: #eab308;
+        font-size: 10px;
     }
 }
 
@@ -183,15 +196,21 @@ component TabBarButton inherits Rectangle {
     background: active ? #4f8cff : (touch.has-hover ? #202a3c : transparent);
 
     HorizontalLayout {
-        alignment: center;
         padding-top: 9px;
         padding-bottom: 9px;
+        padding-left: 2px;
+        padding-right: 2px;
         Text {
             text: root.text;
             color: active ? white : #92a0b3;
             font-size: 12px;
             font-weight: active ? 700 : 500;
             horizontal-alignment: center;
+            horizontal-stretch: 1;
+            // Falls back to ellipsis instead of raw clipping if a wider
+            // system font (or a narrower phone width) ever leaves less
+            // room than a label needs.
+            overflow: elide;
         }
     }
 
@@ -379,6 +398,19 @@ component SavedScenariosPanel inherits VerticalLayout {
     }
 }
 
+component ScheduleTableRow inherits Rectangle {
+    in property <AmortScheduleRow> data;
+    height: 28px;
+    HorizontalLayout {
+        padding-right: 14px;
+        Text { text: root.data.label; color: #d7dee8; font-size: 11px; width: 46px; vertical-alignment: center; }
+        Text { text: root.data.paid; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+        Text { text: root.data.principal; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+        Text { text: root.data.interest; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+        Text { text: root.data.balance; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
+    }
+}
+
 component ScheduleTable inherits VerticalLayout {
     in property <[AmortScheduleRow]> rows: [];
     in property <bool> show-full: false;
@@ -410,19 +442,20 @@ component ScheduleTable inherits VerticalLayout {
         Text { text: "Balance"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
     }
 
-    ListView {
-        height: 280px;
-        for row in rows: Rectangle {
-            height: 28px;
-            HorizontalLayout {
-                padding-right: 14px;
-                Text { text: row.label; color: #d7dee8; font-size: 11px; width: 46px; vertical-alignment: center; }
-                Text { text: row.paid; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
-                Text { text: row.principal; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
-                Text { text: row.interest; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
-                Text { text: row.balance; color: #d7dee8; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; vertical-alignment: center; }
-            }
-        }
+    // Yearly summary is short (well under 100 rows even at the longest
+    // term we allow) so it renders directly in the page's own scroll flow
+    // instead of a nested Flickable — Slint's Flickable claims a drag
+    // that starts inside it whenever it has any overflow content, with no
+    // scroll-chaining to the parent once it hits its own top/bottom, so a
+    // second scroll region here is a real touch-scroll trap, not just a
+    // visual nit. The full schedule can run to hundreds of rows, where an
+    // unvirtualized list is the worse tradeoff — that one keeps ListView.
+    if !show-full: VerticalLayout {
+        for row in rows: ScheduleTableRow { data: row; }
+    }
+    if show-full: ListView {
+        height: 320px;
+        for row in rows: ScheduleTableRow { data: row; }
     }
 }
 
@@ -517,6 +550,7 @@ component PayoffChart inherits Rectangle {
     in property <string> path-b: "";
     in property <string> label-a: "Scenario A";
     in property <string> label-b: "Scenario B";
+    in property <string> max-label: "";
 
     VerticalLayout {
         spacing: 8px;
@@ -533,7 +567,10 @@ component PayoffChart inherits Rectangle {
         }
 
         Rectangle {
-            height: 120px;
+            // Matches the 300x140 viewbox aspect ratio so the Path below
+            // (which fits-and-centers its viewbox, preserving aspect ratio)
+            // fills the box exactly instead of letterboxing.
+            height: self.width * 140 / 300;
             background: #10161f;
             border-radius: 8px;
             clip: true;
@@ -558,6 +595,14 @@ component PayoffChart inherits Rectangle {
                 fill: transparent;
                 commands: root.path-b;
             }
+
+            Text { x: 6px; y: 4px; text: root.max-label; color: #5c6b80; font-size: 9px; }
+            Text { x: 6px; y: parent.height - self.height - 4px; text: "$0"; color: #5c6b80; font-size: 9px; }
+        }
+
+        HorizontalLayout {
+            Text { text: "Today"; color: #5c6b80; font-size: 10px; horizontal-stretch: 1; }
+            Text { text: "Payoff"; color: #5c6b80; font-size: 10px; horizontal-alignment: right; }
         }
     }
 }
@@ -565,6 +610,7 @@ component PayoffChart inherits Rectangle {
 component EquityTimeline inherits VerticalLayout {
     in property <string> balance-path: "";
     in property <string> interest-path: "";
+    in property <string> axis-max-label: "";
     in property <float> scrub-fraction: 0.0;
     in property <string> month-label: "";
     in property <string> balance-label: "";
@@ -587,7 +633,10 @@ component EquityTimeline inherits VerticalLayout {
     }
 
     chart-area := Rectangle {
-        height: 120px;
+        // See the matching comment in PayoffChart: this keeps the box's
+        // aspect ratio equal to the Path's 300x140 viewbox so it fills the
+        // box instead of letterboxing.
+        height: self.width * 140 / 300;
         background: #10161f;
         border-radius: 8px;
         clip: true;
@@ -613,6 +662,9 @@ component EquityTimeline inherits VerticalLayout {
             commands: root.interest-path;
         }
 
+        Text { x: 6px; y: 4px; text: root.axis-max-label; color: #5c6b80; font-size: 9px; }
+        Text { x: 6px; y: parent.height - self.height - 4px; text: "$0"; color: #5c6b80; font-size: 9px; }
+
         Rectangle {
             x: root.scrub-fraction * (parent.width - 2px);
             width: 2px;
@@ -631,6 +683,11 @@ component EquityTimeline inherits VerticalLayout {
                 }
             }
         }
+    }
+
+    HorizontalLayout {
+        Text { text: "Today"; color: #5c6b80; font-size: 10px; horizontal-stretch: 1; }
+        Text { text: "Payoff"; color: #5c6b80; font-size: 10px; horizontal-alignment: right; }
     }
 
     Text { text: root.month-label; font-weight: 700; font-size: 13px; color: white; }
@@ -727,6 +784,7 @@ export component AppWindow inherits Window {
     in-out property <string> total-paid-result: "";
     in-out property <string> total-interest-result: "";
     in-out property <bool> has-error: false;
+    in-out property <string> error-text: "";
     in-out property <[ScenarioRow]> payment-scenarios: [];
     in-out property <string> payment-scenario-error: "";
     callback recompute();
@@ -789,6 +847,7 @@ export component AppWindow inherits Window {
     in-out property <string> amort-total-paid-result: "";
     in-out property <string> amort-total-interest-result: "";
     in-out property <bool> amort-has-error: false;
+    in-out property <string> amort-error-text: "";
     in-out property <bool> amort-show-impact: false;
     in-out property <string> amort-periods-saved: "";
     in-out property <string> amort-interest-saved: "";
@@ -799,7 +858,11 @@ export component AppWindow inherits Window {
     in-out property <bool> amort-bonus-on: false;
     in-out property <string> amort-timeline-balance-path: "";
     in-out property <string> amort-timeline-interest-path: "";
-    in-out property <float> amort-scrub-fraction: 0.0;
+    in-out property <string> amort-timeline-axis-max-label: "";
+    // Defaults to the midpoint rather than 0.0 so the timeline opens on a
+    // representative mid-loan snapshot instead of looking broken/empty
+    // (Month 1, 0% equity, scrub line flush against the left edge).
+    in-out property <float> amort-scrub-fraction: 0.5;
     in-out property <string> amort-scrub-month-label: "";
     in-out property <string> amort-scrub-balance-label: "";
     in-out property <string> amort-scrub-interest-label: "";
@@ -835,6 +898,7 @@ export component AppWindow inherits Window {
     in-out property <string> aff-front-dti: "";
     in-out property <string> aff-back-dti: "";
     in-out property <bool> aff-has-error: false;
+    in-out property <string> aff-error-text: "";
     in-out property <[ScenarioRow]> aff-scenarios: [];
     in-out property <string> aff-scenario-error: "";
     callback aff-recompute();
@@ -858,6 +922,7 @@ export component AppWindow inherits Window {
     in-out property <string> refi-break-even: "";
     in-out property <string> refi-lifetime-savings: "";
     in-out property <bool> refi-has-error: false;
+    in-out property <string> refi-error-text: "";
     in-out property <[ScenarioRow]> refi-scenarios: [];
     in-out property <string> refi-scenario-error: "";
     callback refi-recompute();
@@ -886,8 +951,11 @@ export component AppWindow inherits Window {
     in-out property <string> cmp-b-term-years: "15";
     in-out property <string> cmp-b-result: "";
     in-out property <bool> cmp-has-error: false;
+    in-out property <string> cmp-error-text: "";
     in-out property <string> cmp-chart-path-a: "";
     in-out property <string> cmp-chart-path-b: "";
+    in-out property <string> cmp-chart-max-label: "";
+    in-out property <string> cmp-summary-text: "";
     in-out property <[ScenarioRow]> cmp-scenarios: [];
     in-out property <string> cmp-scenario-error: "";
     callback cmp-recompute();
@@ -944,6 +1012,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Home loan amount";
                     LineEdit {
+                        input-type: InputType.decimal;
                         text <=> root.principal;
                         edited => { root.recompute(); }
                     }
@@ -958,6 +1027,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Loan term (years)";
                     LineEdit {
+                        input-type: InputType.number;
                         text <=> root.term-years;
                         edited => { root.recompute(); }
                     }
@@ -970,7 +1040,7 @@ export component AppWindow inherits Window {
                 ResultRow { label: "Total interest"; value: root.total-interest-result; }
             }
             if root.has-error: Card {
-                ErrorText { text: "Enter valid loan details."; }
+                ErrorText { text: root.error-text; }
             }
 
             if root.region == "SG": Card {
@@ -978,11 +1048,11 @@ export component AppWindow inherits Window {
 
                 Field {
                     label: "Gross monthly income";
-                    LineEdit { text <=> root.sg-gross-income; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.sg-gross-income; edited => { root.recompute(); } }
                 }
                 Field {
                     label: "Other monthly debts";
-                    LineEdit { text <=> root.sg-other-debts; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.sg-other-debts; edited => { root.recompute(); } }
                 }
                 HorizontalLayout {
                     Text {
@@ -1030,7 +1100,7 @@ export component AppWindow inherits Window {
                 }
                 if root.sg-use-cpf: Field {
                     label: "Monthly CPF OA available";
-                    LineEdit { text <=> root.sg-cpf-oa-available; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.sg-cpf-oa-available; edited => { root.recompute(); } }
                 }
                 if root.sg-use-cpf: ResultRow { label: "CPF OA portion"; value: root.sg-cpf-used-label; }
                 if root.sg-use-cpf: ResultRow { label: "Cash required"; value: root.sg-cash-required-label; emphasize: true; }
@@ -1040,7 +1110,7 @@ export component AppWindow inherits Window {
                 Text { text: "Upfront costs (BSD/ABSD)"; font-weight: 700; font-size: 14px; }
                 Field {
                     label: "Home purchase price";
-                    LineEdit { text <=> root.sg-home-price; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.sg-home-price; edited => { root.recompute(); } }
                 }
                 HorizontalLayout {
                     spacing: 8px;
@@ -1077,7 +1147,7 @@ export component AppWindow inherits Window {
 
                 Field {
                     label: "Home price";
-                    LineEdit { text <=> root.us-home-price; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.us-home-price; edited => { root.recompute(); } }
                 }
                 ResultRow { label: "Loan type"; value: root.us-loan-type-label; }
                 Field {
@@ -1092,7 +1162,7 @@ export component AppWindow inherits Window {
                 }
                 Field {
                     label: "ZIP code";
-                    LineEdit { text <=> root.us-zip; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.number; text <=> root.us-zip; edited => { root.recompute(); } }
                 }
                 ResultRow { label: "Est. property tax rate"; value: root.us-property-tax-rate-label; }
                 ResultRow { label: "Monthly property tax"; value: root.us-monthly-property-tax-label; }
@@ -1116,7 +1186,7 @@ export component AppWindow inherits Window {
                         }
                         Field {
                             label: "PMI rate (annual %, of loan amount)";
-                            LineEdit { text <=> root.us-pmi-rate-percent; edited => { root.recompute(); } }
+                            LineEdit { input-type: InputType.decimal; text <=> root.us-pmi-rate-percent; edited => { root.recompute(); } }
                         }
                     }
                 }
@@ -1135,7 +1205,7 @@ export component AppWindow inherits Window {
                 }
                 if root.us-use-tax-deduction: Field {
                     label: "Marginal federal tax rate (%)";
-                    LineEdit { text <=> root.us-marginal-tax-rate-percent; edited => { root.recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.us-marginal-tax-rate-percent; edited => { root.recompute(); } }
                 }
                 if root.us-use-tax-deduction: ResultRow {
                     label: "Monthly tax savings";
@@ -1165,6 +1235,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Home loan amount";
                     LineEdit {
+                        input-type: InputType.decimal;
                         text <=> root.amort-principal;
                         edited => { root.amort-recompute(); }
                     }
@@ -1179,6 +1250,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Loan term (years)";
                     LineEdit {
+                        input-type: InputType.number;
                         text <=> root.amort-term-years;
                         edited => { root.amort-recompute(); }
                     }
@@ -1186,6 +1258,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Extra payment per month";
                     LineEdit {
+                        input-type: InputType.decimal;
                         text <=> root.amort-extra-payment;
                         edited => { root.amort-recompute(); }
                     }
@@ -1204,13 +1277,14 @@ export component AppWindow inherits Window {
                 }
             }
             if root.amort-has-error: Card {
-                ErrorText { text: "Enter valid loan details."; }
+                ErrorText { text: root.amort-error-text; }
             }
 
             if !root.amort-has-error: Card {
                 EquityTimeline {
                     balance-path: root.amort-timeline-balance-path;
                     interest-path: root.amort-timeline-interest-path;
+                    axis-max-label: root.amort-timeline-axis-max-label;
                     scrub-fraction: root.amort-scrub-fraction;
                     month-label: root.amort-scrub-month-label;
                     balance-label: root.amort-scrub-balance-label;
@@ -1253,18 +1327,23 @@ export component AppWindow inherits Window {
         if current-tab == 2: VerticalLayout {
             spacing: 16px;
             Card {
+                Text { text: "Your finances"; font-weight: 700; font-size: 14px; }
                 Field {
                     label: "Gross monthly income";
-                    LineEdit { text <=> root.aff-income; edited => { root.aff-recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.aff-income; edited => { root.aff-recompute(); } }
                 }
                 Field {
                     label: "Other monthly debts";
-                    LineEdit { text <=> root.aff-debts; edited => { root.aff-recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.aff-debts; edited => { root.aff-recompute(); } }
                 }
                 Field {
                     label: "Down payment";
-                    LineEdit { text <=> root.aff-down-payment; edited => { root.aff-recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.aff-down-payment; edited => { root.aff-recompute(); } }
                 }
+            }
+
+            Card {
+                Text { text: "Loan & property costs"; font-weight: 700; font-size: 14px; }
                 RateField {
                     label: "Interest rate (%)";
                     rate <=> root.aff-rate-percent-value;
@@ -1272,25 +1351,31 @@ export component AppWindow inherits Window {
                     edited => { root.aff-recompute(); }
                     rate-changed(v) => { root.aff-rate-slider-changed(v); }
                 }
-                Field {
-                    label: "Loan term (years)";
-                    LineEdit { text <=> root.aff-term-years; edited => { root.aff-recompute(); } }
+                HorizontalLayout {
+                    spacing: 10px;
+                    Field {
+                        label: "Loan term (years)";
+                        LineEdit { input-type: InputType.number; text <=> root.aff-term-years; edited => { root.aff-recompute(); } }
+                    }
+                    Field {
+                        label: "Max debt-to-income (%)";
+                        LineEdit { input-type: InputType.decimal; text <=> root.aff-max-dti-percent; edited => { root.aff-recompute(); } }
+                    }
                 }
-                Field {
-                    label: "Max debt-to-income (%)";
-                    LineEdit { text <=> root.aff-max-dti-percent; edited => { root.aff-recompute(); } }
-                }
-                Field {
-                    label: "Property tax rate (%/yr)";
-                    LineEdit { text <=> root.aff-tax-rate-percent; edited => { root.aff-recompute(); } }
-                }
-                Field {
-                    label: "Annual insurance";
-                    LineEdit { text <=> root.aff-insurance; edited => { root.aff-recompute(); } }
+                HorizontalLayout {
+                    spacing: 10px;
+                    Field {
+                        label: "Property tax rate (%/yr)";
+                        LineEdit { input-type: InputType.decimal; text <=> root.aff-tax-rate-percent; edited => { root.aff-recompute(); } }
+                    }
+                    Field {
+                        label: "Annual insurance";
+                        LineEdit { input-type: InputType.decimal; text <=> root.aff-insurance; edited => { root.aff-recompute(); } }
+                    }
                 }
                 Field {
                     label: root.region == "SG" ? "Monthly maintenance / condo fees" : "Monthly HOA";
-                    LineEdit { text <=> root.aff-hoa; edited => { root.aff-recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.aff-hoa; edited => { root.aff-recompute(); } }
                 }
             }
 
@@ -1302,7 +1387,7 @@ export component AppWindow inherits Window {
                 ResultRow { label: "Back-end DTI"; value: root.aff-back-dti + "%"; }
             }
             if root.aff-has-error: Card {
-                ErrorText { text: "Enter valid affordability details."; }
+                ErrorText { text: root.aff-error-text; }
             }
 
             Card {
@@ -1321,18 +1406,22 @@ export component AppWindow inherits Window {
             Card {
                 Field {
                     label: "Current balance";
-                    LineEdit { text <=> root.refi-current-balance; edited => { root.refi-recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.refi-current-balance; edited => { root.refi-recompute(); } }
                 }
                 RateField {
                     label: "Current rate (%)";
                     rate <=> root.refi-current-rate-percent-value;
                     value <=> root.refi-current-rate-percent;
+                    // Already-fixed and unchangeable by anything on this
+                    // tab — a "danger" red reads as a warning about an
+                    // input the user can't act on, so this stays plain blue.
+                    risk-coloring: false;
                     edited => { root.refi-recompute(); }
                     rate-changed(v) => { root.refi-current-rate-slider-changed(v); }
                 }
                 Field {
                     label: "Payments remaining";
-                    LineEdit { text <=> root.refi-remaining-periods; edited => { root.refi-recompute(); } }
+                    LineEdit { input-type: InputType.number; text <=> root.refi-remaining-periods; edited => { root.refi-recompute(); } }
                 }
                 RateField {
                     label: "New rate (%)";
@@ -1343,11 +1432,11 @@ export component AppWindow inherits Window {
                 }
                 Field {
                     label: "New term (years)";
-                    LineEdit { text <=> root.refi-new-term-years; edited => { root.refi-recompute(); } }
+                    LineEdit { input-type: InputType.number; text <=> root.refi-new-term-years; edited => { root.refi-recompute(); } }
                 }
                 Field {
                     label: "Closing costs";
-                    LineEdit { text <=> root.refi-closing-costs; edited => { root.refi-recompute(); } }
+                    LineEdit { input-type: InputType.decimal; text <=> root.refi-closing-costs; edited => { root.refi-recompute(); } }
                 }
             }
 
@@ -1359,7 +1448,7 @@ export component AppWindow inherits Window {
                 ResultRow { label: "Lifetime savings"; value: root.refi-lifetime-savings; }
             }
             if root.refi-has-error: Card {
-                ErrorText { text: "Enter valid refinance details."; }
+                ErrorText { text: root.refi-error-text; }
             }
 
             Card {
@@ -1379,6 +1468,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Home loan amount";
                     LineEdit {
+                        input-type: InputType.decimal;
                         text <=> root.cmp-principal;
                         edited => { root.cmp-recompute(); }
                     }
@@ -1391,6 +1481,26 @@ export component AppWindow inherits Window {
                     path-b: root.cmp-chart-path-b;
                     label-a: root.cmp-a-label;
                     label-b: root.cmp-b-label;
+                    max-label: root.cmp-chart-max-label;
+                }
+            }
+
+            if !root.cmp-has-error && root.cmp-summary-text != "": Rectangle {
+                background: #16321f;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: #2a5c3a;
+
+                HorizontalLayout {
+                    padding: 12px;
+                    Text {
+                        text: root.cmp-summary-text;
+                        color: #7ee787;
+                        font-weight: 700;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
                 }
             }
 
@@ -1416,6 +1526,7 @@ export component AppWindow inherits Window {
                     Field {
                         label: "Base (%)";
                         LineEdit {
+                            input-type: InputType.decimal;
                             text <=> root.cmp-a-base-rate-percent;
                             edited => { root.cmp-recompute(); }
                         }
@@ -1423,6 +1534,7 @@ export component AppWindow inherits Window {
                     Field {
                         label: "Spread (%)";
                         LineEdit {
+                            input-type: InputType.decimal;
                             text <=> root.cmp-a-spread-percent;
                             edited => { root.cmp-recompute(); }
                         }
@@ -1431,6 +1543,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Term (years)";
                     LineEdit {
+                        input-type: InputType.number;
                         text <=> root.cmp-a-term-years;
                         edited => { root.cmp-recompute(); }
                     }
@@ -1460,6 +1573,7 @@ export component AppWindow inherits Window {
                     Field {
                         label: "Base (%)";
                         LineEdit {
+                            input-type: InputType.decimal;
                             text <=> root.cmp-b-base-rate-percent;
                             edited => { root.cmp-recompute(); }
                         }
@@ -1467,6 +1581,7 @@ export component AppWindow inherits Window {
                     Field {
                         label: "Spread (%)";
                         LineEdit {
+                            input-type: InputType.decimal;
                             text <=> root.cmp-b-spread-percent;
                             edited => { root.cmp-recompute(); }
                         }
@@ -1475,6 +1590,7 @@ export component AppWindow inherits Window {
                 Field {
                     label: "Term (years)";
                     LineEdit {
+                        input-type: InputType.number;
                         text <=> root.cmp-b-term-years;
                         edited => { root.cmp-recompute(); }
                     }
@@ -1483,7 +1599,7 @@ export component AppWindow inherits Window {
             }
 
             if root.cmp-has-error: Card {
-                ErrorText { text: "Enter valid comparison details."; }
+                ErrorText { text: root.cmp-error-text; }
             }
 
             Card {
