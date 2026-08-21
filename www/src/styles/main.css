@@ -66,9 +66,72 @@ body {
   color: #0f1720;
 }
 
+.app-regions {
+  display: flex;
+  gap: 4px;
+  background: #161e2b;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.app-region {
+  border: none;
+  background: transparent;
+  color: #9fb0c3;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.app-region.active {
+  background: #4f8cff;
+  color: #0f1720;
+}
+
 .app-main {
   flex: 1;
   padding: 24px 0 48px;
+}
+
+/* --- Singapore regulatory panel --- */
+
+.sg-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #131b27;
+  border: 1px solid #2a3546;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.sg-panel-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* The panel supplies its own surrounding card, so the nested form shouldn't
+   paint a second one on top of it. */
+.sg-panel-form {
+  background: transparent;
+  padding: 0;
+}
+
+.sg-ratio {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #7ee787;
+}
+
+/* Within the warning band below a MAS ceiling, but not yet over it. */
+.sg-ratio.near {
+  color: #eab308;
+}
+
+.sg-ratio.breach {
+  color: #ff8a8a;
 }
 
 .app-footer {

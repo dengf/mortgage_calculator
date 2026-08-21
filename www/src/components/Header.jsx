@@ -8,7 +8,12 @@ const TABS = [
   { id: 'compare', label: 'Compare' },
 ];
 
-export default function Header({ activeTab, onTabChange }) {
+const REGIONS = [
+  { id: 'US', label: 'US' },
+  { id: 'SG', label: 'SG' },
+];
+
+export default function Header({ activeTab, onTabChange, region, onRegionChange }) {
   return (
     <header className="app-header">
       <div className="app-title">
@@ -18,6 +23,21 @@ export default function Header({ activeTab, onTabChange }) {
         <img className="app-title-mark" src="icon-192.png" alt="" width="32" height="32" />
         Mortgage Calculator
       </div>
+      {onRegionChange && (
+        <div className="app-regions" role="group" aria-label="Region">
+          {REGIONS.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className={r.id === region ? 'app-region active' : 'app-region'}
+              aria-pressed={r.id === region}
+              onClick={() => onRegionChange(r.id)}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
       <nav className="app-tabs">
         {TABS.map((tab) => (
           <button

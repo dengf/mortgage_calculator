@@ -40,6 +40,15 @@ function createMockModule() {
   };
 
   return {
+    // Deliberately not reimplemented here. The MAS/CPF/IRAS rules live in
+    // exactly one place (mortgage-calc/src/singapore.rs); mirroring the
+    // TDSR/MSR ceilings, BSD tiers and ABSD matrix in JavaScript would let
+    // the two drift apart and give a wrong answer that looks right. Report
+    // the real reason instead — the panel renders it as an error.
+    calculate_singapore: () => ({
+      warnings: [],
+      error: 'Singapore rules need the WASM module — run `npm run build:wasm`.',
+    }),
     calculate_payment: (params) => {
       const payment = monthlyPayment(params.principal, params.annual_rate_percent, params.term_years);
       const totalPeriods = params.term_years * 12;
