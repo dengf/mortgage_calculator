@@ -36,15 +36,10 @@ body {
 }
 
 .app-title-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #7ee787;
-  color: #0f1720;
-  font-weight: 800;
+  flex: none;
 }
 
 .app-tabs {
@@ -127,6 +122,20 @@ body {
   width: 100%;
   font-size: 0.95rem;
   outline: none;
+}
+
+/* Every numeric field pairs the input with its own unit suffix ($, %, years).
+   The browser's native number spinners sit in that same corner and collide
+   with it on hover, so suppress them and let the suffix own the space. */
+.field-input input[type='number']::-webkit-outer-spin-button,
+.field-input input[type='number']::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.field-input input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 .field-suffix {
@@ -400,4 +409,126 @@ body {
 
 .comparison-entry-field .unit {
   color: #5c6b7d;
+}
+
+/* --- Responsive ---------------------------------------------------------
+   Everything above is the desktop layout; these narrow it down.
+
+   The tab strip is the critical one. At its natural width it needs ~548px
+   and it neither wrapped nor scrolled, so on a phone the last two tabs
+   (Refinance and Compare) were clipped off-screen with no way to reach
+   them — two of the five calculators were simply unavailable on mobile. */
+
+@media (max-width: 720px) {
+  .app {
+    padding: 0 16px;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 20px 0 12px;
+  }
+
+  .app-title {
+    font-size: 1.15rem;
+  }
+
+  /* Wrap onto as many rows as it takes: every tab stays visible and
+     tappable, which a horizontally scrolling strip would not guarantee. */
+  .app-tabs {
+    flex-wrap: wrap;
+  }
+
+  .app-tab {
+    flex: 1 1 auto;
+    /* 44px is the minimum comfortable touch target. */
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .app-main {
+    padding: 20px 0 40px;
+  }
+
+  .panel {
+    gap: 16px;
+  }
+
+  .panel-form {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  /* 16px is the threshold below which iOS Safari zooms the whole page in
+     when a field takes focus, which then leaves the layout scrolled
+     sideways. Keep every text entry at or above it. */
+  .field-input input,
+  .field-select,
+  .save-form input,
+  .comparison-entry-label,
+  .comparison-entry-field input {
+    font-size: 16px;
+  }
+
+  /* Flex items default to min-width:auto, which lets a long value push the
+     suffix out past the rounded border instead of shrinking. */
+  .field-input input,
+  .save-form input {
+    min-width: 0;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+  }
+
+  .saved-scenarios,
+  .comparison-presets,
+  .comparison-entry {
+    padding: 14px 16px;
+  }
+
+  .save-form {
+    flex-wrap: wrap;
+  }
+
+  .save-form input {
+    flex: 1 1 140px;
+  }
+
+  /* Give the scenario name its own row; the rate/term controls beside it
+     are too cramped to share one on a phone. */
+  .comparison-entry-label {
+    flex-basis: 100%;
+  }
+
+  .comparison-entry-field input {
+    width: 64px;
+  }
+}
+
+@media (max-width: 420px) {
+  .app {
+    padding: 0 12px;
+  }
+
+  .app-tab {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+
+  .stat-value {
+    font-size: 1.15rem;
+  }
+
+  .schedule-table {
+    font-size: 0.8rem;
+  }
+
+  .schedule-table th,
+  .schedule-table td {
+    padding: 8px 6px;
+  }
 }

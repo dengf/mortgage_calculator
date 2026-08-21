@@ -12,7 +12,10 @@ export default function Header({ activeTab, onTabChange }) {
   return (
     <header className="app-header">
       <div className="app-title">
-        <span className="app-title-mark">$</span>
+        {/* Relative, not root-absolute, so it still resolves when the app is
+            served from a subpath (e.g. a GitHub Pages project site).
+            Decorative: the adjacent text already names the app. */}
+        <img className="app-title-mark" src="icon-192.png" alt="" width="32" height="32" />
         Mortgage Calculator
       </div>
       <nav className="app-tabs">
