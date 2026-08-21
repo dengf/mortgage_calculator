@@ -108,6 +108,13 @@ objc2 = { version = "0.6", features = ["disable-encoding-assertions"] }
 [build-dependencies]
 slint-build = "1.16"
 
+# Headless testing platform: lets tests instantiate AppWindow and drive its
+# properties/callbacks without a real window/GPU. dev-dependencies aren't
+# compiled into the shipped binary, so this doesn't affect the careful
+# per-platform feature trimming above.
+[dev-dependencies]
+i-slint-backend-testing = "1.16"
+
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = [
     "-O",
