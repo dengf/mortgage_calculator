@@ -46,11 +46,14 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        {
-          from: 'pkg/*.wasm',
-          to: '[name][ext]',
-          noErrorOnMissing: true,
-        },
+        // NOTE: the .wasm binary is deliberately NOT copied here. The glue in
+        // pkg/mortgage_wasm.js resolves it with
+        // `new URL('mortgage_wasm_bg.wasm', import.meta.url)`, a pattern
+        // webpack recognises and rewrites — it emits its own content-hashed
+        // copy and points the bundle at that. Copying it as well shipped the
+        // binary twice (~858 KB of dead weight in dist/), since nothing ever
+        // requested the unhashed name.
+        //
         // Favicons and the web app manifest, referenced by name from
         // index.html — so they must land in dist/ with their names intact
         // rather than being hashed like bundled assets.

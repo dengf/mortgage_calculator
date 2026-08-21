@@ -1,0 +1,91 @@
+name: Deploy web app
+
+# Publishes the React + wasm app to GitHub Pages. Only fires for pushes to
+# main that actually touch the web app or the Rust it compiles from, so
+# unrelated commits (docs, the Slint app, iOS/Android packaging) don't
+# redeploy an identical site.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'www/**'
+      - 'crates/mortgage-wasm/**'
+      - 'crates/mortgage-calc/**'
+      - 'crates/mortgage-core/**'
+      - 'crates/mortgage-ports/**'
+      - 'crates/mortgage-ext-redb/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/deploy-web.yml'
+  # Lets a deploy be re-run by hand without an empty commit, e.g. after
+  # enabling Pages for the first time.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Both required by actions/deploy-pages.
+  pages: write
+  id-token: write
+
+# Let an in-flight deploy finish rather than cancelling it: a half-applied
+# Pages deployment would leave the live site in an inconsistent state.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
+        with:
+          shared-key: www-build
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: www/package-lock.json
+
+      - run: npm ci
+        working-directory: www
+
+      # `deploy` runs build:wasm first, then the production webpack build.
+      - run: npm run deploy
+        working-directory: www
+
+      # Pages serves 404.html for any unknown path. The app is a single page
+      # with no client-side router, so this just returns people to it rather
+      # than showing GitHub's default 404.
+      - name: Add 404 fallback
+        run: cp www/dist/index.html www/dist/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: www/dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

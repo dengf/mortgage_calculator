@@ -42,7 +42,11 @@ export default function App({ wasmModule }) {
       </main>
       <footer className="app-footer">
         Calculations run entirely client-side, compiled from Rust to WebAssembly.
-        Your numbers never leave your device.
+        Your numbers never leave your device.{' '}
+        {/* Relative so it resolves under a GitHub Pages project subpath. */}
+        <a href="privacy.html">Privacy</a>
+        {' · '}
+        <a href="https://github.com/dengf/mortgage_calculator">Source</a>
       </footer>
     </div>
   );
