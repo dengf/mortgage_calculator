@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dengf.github.io/mortgage_calculator/sitemap.xml
+Sitemap: https://dengf.xyz/mortgage_calculator/sitemap.xml
