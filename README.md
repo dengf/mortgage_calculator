@@ -102,6 +102,13 @@ usable before you've built the wasm module.
 # Desktop (native window)
 cargo run -p mortgage-ui-slint
 
+# macOS: package it as a .app so it gets the real Dock/Finder icon.
+# macOS reads the icon from the bundle, ignoring Slint's `Window.icon`, so
+# a bare `cargo run` always shows a generic executable icon. The bundle is
+# unsigned -- right-click -> Open to bypass Gatekeeper locally.
+./scripts/bundle-macos.sh            # add --debug to skip the release build
+open "target/macos/Mortgage Calculator.app"
+
 # Web (compiles to a wasm canvas, separate from the React app above)
 cd crates/mortgage-ui-slint
 wasm-pack build --target web --out-dir pkg
@@ -155,6 +162,9 @@ Two platform quirks the script handles, both easy to get wrong by hand:
   separate foreground/background layers. Launchers therefore apply their own
   mask to the square, so that variant is rendered with a safe-zone inset —
   without it a circular mask clips the eaves of the house.
+- **macOS** takes the icon from the `.app` bundle and ignores the window
+  icon entirely, so the generated `.icns` only shows up once the binary is
+  bundled — see `scripts/bundle-macos.sh` above.
 
 ## A note on the `--target web` + webpack combination
 
