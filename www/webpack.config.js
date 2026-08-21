@@ -51,6 +51,13 @@ module.exports = {
           to: '[name][ext]',
           noErrorOnMissing: true,
         },
+        // Favicons and the web app manifest, referenced by name from
+        // index.html — so they must land in dist/ with their names intact
+        // rather than being hashed like bundled assets.
+        {
+          from: 'static',
+          to: '.',
+        },
       ],
     }),
   ],

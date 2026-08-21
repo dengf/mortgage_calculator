@@ -127,6 +127,35 @@ x build --manifest-path crates/mortgage-ui-slint/Cargo.toml --platform android -
 # `x run` instead of `build` installs + launches on a connected device/emulator.
 ```
 
+## App icon
+
+Every platform's icon is generated from one script, so the artwork has a
+single source of truth:
+
+```bash
+python3 assets/icon/generate.py    # needs Pillow; .icns step needs macOS
+```
+
+It writes the iOS asset catalog, the Android launcher PNG, the Slint window
+icon, `.icns`/`.ico` for desktop packaging, and the web favicons plus PWA
+manifest icons. All of its output is committed — rerun it only when the
+artwork itself changes.
+
+The mark is a house with a mortgage's remaining-balance curve carved through
+it. The curve is the real B(t) for a level-payment loan rather than a
+decorative swoosh, which is why it stays high through the first half of the
+term and only breaks late.
+
+Two platform quirks the script handles, both easy to get wrong by hand:
+
+- **iOS** rejects App Store icons that carry an alpha channel, so the 1024px
+  entry is written as opaque RGB.
+- **Android** icons here go through `xbuild`, which scales a single PNG into
+  the legacy mipmap densities and does *not* emit an adaptive icon with
+  separate foreground/background layers. Launchers therefore apply their own
+  mask to the square, so that variant is rendered with a safe-zone inset —
+  without it a circular mask clips the eaves of the house.
+
 ## A note on the `--target web` + webpack combination
 
 `mortgage-wasm` is built with `wasm-pack build --target web`, whose
