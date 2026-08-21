@@ -22,6 +22,7 @@ use redb::{Builder, StorageBackend};
 use rexie::{ObjectStore, Rexie, TransactionMode};
 use wasm_bindgen::JsValue;
 
+use crate::buffer::InMemoryBuffer;
 use crate::RedbScenarioStore;
 
 const DB_NAME: &str = "mortgage_calculator";
@@ -44,7 +45,7 @@ impl RedbScenarioStore {
         let bytes = load_blob().await.map_err(StoreError::Backend)?;
 
         let backend = IndexedDbBackend {
-            buffer: RefCell::new(bytes),
+            buffer: RefCell::new(InMemoryBuffer::new(bytes)),
             writer: Rc::new(PersistState::default()),
         };
         let db = Builder::new()
@@ -58,7 +59,7 @@ impl RedbScenarioStore {
 
 #[derive(Debug)]
 struct IndexedDbBackend {
-    buffer: RefCell<Vec<u8>>,
+    buffer: RefCell<InMemoryBuffer>,
     writer: Rc<PersistState>,
 }
 
@@ -85,45 +86,24 @@ unsafe impl Sync for IndexedDbBackend {}
 
 impl StorageBackend for IndexedDbBackend {
     fn len(&self) -> Result<u64, io::Error> {
-        Ok(self.buffer.borrow().len() as u64)
+        Ok(self.buffer.borrow().len())
     }
 
     fn read(&self, offset: u64, out: &mut [u8]) -> Result<(), io::Error> {
-        let buffer = self.buffer.borrow();
-        let start = offset as usize;
-        let end = start
-            .checked_add(out.len())
-            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "offset overflow"))?;
-        if end > buffer.len() {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "read past end of in-memory database",
-            ));
-        }
-        out.copy_from_slice(&buffer[start..end]);
-        Ok(())
+        self.buffer.borrow().read(offset, out)
     }
 
     fn write(&self, offset: u64, data: &[u8]) -> Result<(), io::Error> {
-        let mut buffer = self.buffer.borrow_mut();
-        let start = offset as usize;
-        let end = start
-            .checked_add(data.len())
-            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "offset overflow"))?;
-        if end > buffer.len() {
-            buffer.resize(end, 0);
-        }
-        buffer[start..end].copy_from_slice(data);
-        Ok(())
+        self.buffer.borrow_mut().write(offset, data)
     }
 
     fn set_len(&self, len: u64) -> Result<(), io::Error> {
-        self.buffer.borrow_mut().resize(len as usize, 0);
+        self.buffer.borrow_mut().set_len(len);
         Ok(())
     }
 
     fn sync_data(&self) -> Result<(), io::Error> {
-        let snapshot = self.buffer.borrow().clone();
+        let snapshot = self.buffer.borrow().snapshot();
 
         if *self.writer.flushing.borrow() {
             *self.writer.pending.borrow_mut() = Some(snapshot);

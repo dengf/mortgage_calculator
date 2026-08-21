@@ -18,6 +18,11 @@ pub mod native;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
+// Compiled for tests on every target (not just wasm32) so its unit tests
+// run under a plain `cargo test` — see the module doc comment for why.
+#[cfg(any(test, target_arch = "wasm32"))]
+mod buffer;
+
 use async_trait::async_trait;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 
