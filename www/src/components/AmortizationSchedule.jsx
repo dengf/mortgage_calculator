@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
+import { BalanceChart } from './Charts';
 
 const formatMoney = (n) =>
   n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -88,6 +89,15 @@ export default function AmortizationSchedule({ wasmModule }) {
       )}
 
       {schedule?.error && <div className="error">{schedule.error}</div>}
+
+      {schedule?.rows?.length > 0 && (
+        <BalanceChart
+          rows={schedule.rows}
+          principal={principal}
+          termYears={termYears}
+          formatMoney={formatMoney}
+        />
+      )}
 
       {yearlyRows.length > 0 && (
         <div className="schedule-table-wrap">
