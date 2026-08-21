@@ -14,7 +14,3 @@ crates/mortgage-wasm/target/
 # XcodeGen-generated project + build output (regenerate with `xcodegen generate`)
 crates/mortgage-ui-slint/ios/*.xcodeproj/
 crates/mortgage-ui-slint/ios/build/
-
-# Python bytecode cache (assets/icon/generate.py)
-__pycache__/
-*.pyc
