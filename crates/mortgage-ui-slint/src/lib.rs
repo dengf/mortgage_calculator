@@ -1775,6 +1775,175 @@ mod tests {
     use super::*;
     use rust_decimal_macros::dec;
 
+    /// Every test in this module that touches Slint properties needs the
+    /// headless testing platform installed first; Slint only allows the
+    /// platform to be set once per process, so this is idempotent (safe to
+    /// call from every test, even running in parallel).
+    fn new_test_window() -> AppWindow {
+        i_slint_backend_testing::init_no_event_loop();
+        AppWindow::new().expect("AppWindow::new() should succeed under the testing backend")
+    }
+
+    #[test]
+    fn smoke_test_appwindow_instantiates_headlessly() {
+        let ui = new_test_window();
+        ui.set_principal("500000".into());
+        assert_eq!(ui.get_principal(), "500000");
+    }
+
+    mod singapore_payment_panel {
+        use super::*;
+
+        fn sg_window() -> AppWindow {
+            let ui = new_test_window();
+            ui.set_region("SG".into());
+            ui.set_principal("800000".into());
+            ui.set_rate_percent("3.0".into());
+            ui.set_term_years("25".into());
+            ui.set_sg_gross_income("8000".into());
+            ui.set_sg_other_debts("0".into());
+            ui.set_sg_is_hdb(true);
+            ui.set_sg_loan_type("HDB Loan".into());
+            ui.set_sg_home_price("850000".into());
+            ui
+        }
+
+        #[test]
+        fn flags_tdsr_exceeded_when_the_payment_is_too_large_a_share_of_income() {
+            let ui = sg_window();
+            // At 7% over 25 years, an $800k loan's payment is well past
+            // the 55% TDSR ceiling against $8k/mo income.
+            ui.set_rate_percent("7.0".into());
+            recompute_payment(&ui);
+            assert!(ui.get_sg_tdsr_exceeded());
+            assert!(ui.get_sg_limit_warning().contains("TDSR"));
+        }
+
+        #[test]
+        fn does_not_flag_tdsr_for_an_affordable_loan() {
+            let ui = sg_window();
+            ui.set_sg_gross_income("20000".into());
+            recompute_payment(&ui);
+            assert!(!ui.get_sg_tdsr_exceeded());
+        }
+
+        #[test]
+        fn msr_only_applies_to_hdb_flats_not_private_property() {
+            let ui = sg_window();
+            ui.set_sg_gross_income("20000".into());
+            recompute_payment(&ui);
+            assert!(!ui.get_sg_msr_label().is_empty());
+
+            ui.set_sg_is_hdb(false);
+            recompute_payment(&ui);
+            assert!(ui.get_sg_msr_label().is_empty());
+        }
+
+        #[test]
+        fn warns_when_hdb_loan_is_selected_for_a_non_hdb_property() {
+            let ui = sg_window();
+            ui.set_sg_is_hdb(false);
+            recompute_payment(&ui);
+            assert!(!ui.get_sg_loan_type_warning().is_empty());
+        }
+
+        #[test]
+        fn computes_bsd_and_absd_for_a_first_property_citizen_purchase() {
+            let ui = sg_window();
+            ui.set_sg_residency("Citizen".into());
+            ui.set_sg_property_count("1st".into());
+            recompute_payment(&ui);
+            // A citizen's first property owes BSD but no ABSD.
+            assert!(!ui.get_sg_bsd_label().is_empty());
+            assert_eq!(ui.get_sg_absd_label(), "$0.00");
+        }
+
+        #[test]
+        fn absd_applies_to_a_second_property() {
+            let ui = sg_window();
+            ui.set_sg_residency("Citizen".into());
+            ui.set_sg_property_count("2nd".into());
+            recompute_payment(&ui);
+            assert_ne!(ui.get_sg_absd_label(), "$0.00");
+        }
+    }
+
+    mod united_states_payment_panel {
+        use super::*;
+
+        fn us_window() -> AppWindow {
+            let ui = new_test_window();
+            ui.set_region("US".into());
+            ui.set_principal("400000".into());
+            ui.set_rate_percent("6.5".into());
+            ui.set_term_years("30".into());
+            ui.set_us_home_price("500000".into());
+            ui.set_us_zip("90210".into());
+            ui
+        }
+
+        #[test]
+        fn requires_pmi_below_twenty_percent_down() {
+            let ui = us_window();
+            // $500k home, $400k loan => 20% down exactly — not below it.
+            recompute_payment(&ui);
+            assert!(!ui.get_us_pmi_required());
+
+            ui.set_principal("450000".into()); // 10% down
+            recompute_payment(&ui);
+            assert!(ui.get_us_pmi_required());
+            assert_ne!(ui.get_us_monthly_pmi_label(), "$0.00");
+        }
+
+        #[test]
+        fn does_not_require_pmi_at_or_above_twenty_percent_down() {
+            let ui = us_window();
+            ui.set_principal("350000".into()); // 30% down
+            recompute_payment(&ui);
+            assert!(!ui.get_us_pmi_required());
+            assert_eq!(ui.get_us_monthly_pmi_label(), "$0.00");
+        }
+
+        #[test]
+        fn looks_up_property_tax_rate_from_a_recognized_zip() {
+            let ui = us_window();
+            recompute_payment(&ui);
+            assert!(!ui.get_us_property_tax_rate_label().contains("Unrecognized"));
+            assert_ne!(ui.get_us_monthly_property_tax_label(), "$0.00");
+        }
+
+        #[test]
+        fn reports_an_unrecognized_zip_instead_of_silently_defaulting_the_tax_rate() {
+            let ui = us_window();
+            ui.set_us_zip("00000".into());
+            recompute_payment(&ui);
+            assert!(ui.get_us_property_tax_rate_label().contains("Unrecognized"));
+            assert_eq!(ui.get_us_monthly_property_tax_label(), "$0.00");
+        }
+
+        #[test]
+        fn tax_deduction_toggle_reduces_the_net_monthly_cost_below_piti() {
+            let ui = us_window();
+            ui.set_us_use_tax_deduction(true);
+            ui.set_us_marginal_tax_rate_percent("22".into());
+            recompute_payment(&ui);
+
+            let piti: f64 = ui
+                .get_us_monthly_piti_label()
+                .trim_start_matches('$')
+                .replace(',', "")
+                .parse()
+                .unwrap();
+            let net: f64 = ui
+                .get_us_net_monthly_cost_label()
+                .trim_start_matches('$')
+                .replace(',', "")
+                .parse()
+                .unwrap();
+            assert!(net < piti, "net cost {net} should be below PITI {piti}");
+        }
+    }
+
     #[test]
     fn format_money_groups_thousands() {
         assert_eq!(format_money(dec!(910177.20)), "910,177.20");

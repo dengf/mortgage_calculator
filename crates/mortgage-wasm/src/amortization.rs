@@ -16,16 +16,18 @@ pub fn calculate_amortization_schedule(params: JsValue) -> JsValue {
 }
 
 fn calculate_schedule_impl(params: JsValue) -> AmortizationResult {
-    let params: AmortizationParams = match serde_wasm_bindgen::from_value(params) {
-        Ok(p) => p,
-        Err(e) => {
-            return AmortizationResult {
-                error: Some(format!("Failed to parse amortization parameters: {e:?}")),
-                ..Default::default()
-            }
-        }
-    };
+    match serde_wasm_bindgen::from_value(params) {
+        Ok(params) => schedule_from_params(params),
+        Err(e) => AmortizationResult {
+            error: Some(format!("Failed to parse amortization parameters: {e:?}")),
+            ..Default::default()
+        },
+    }
+}
 
+/// JsValue-free core of [`calculate_schedule_impl`] — see the matching
+/// comment on `payment::payment_from_params`.
+fn schedule_from_params(params: AmortizationParams) -> AmortizationResult {
     let loan = match build_loan(&params.loan) {
         Ok(loan) => loan,
         Err(e) => {
@@ -68,16 +70,18 @@ pub fn calculate_extra_payment_impact(params: JsValue) -> JsValue {
 }
 
 fn calculate_extra_payment_impact_impl(params: JsValue) -> ExtraPaymentImpactResult {
-    let params: AmortizationParams = match serde_wasm_bindgen::from_value(params) {
-        Ok(p) => p,
-        Err(e) => {
-            return ExtraPaymentImpactResult {
-                error: Some(format!("Failed to parse amortization parameters: {e:?}")),
-                ..Default::default()
-            }
-        }
-    };
+    match serde_wasm_bindgen::from_value(params) {
+        Ok(params) => extra_payment_impact_from_params(params),
+        Err(e) => ExtraPaymentImpactResult {
+            error: Some(format!("Failed to parse amortization parameters: {e:?}")),
+            ..Default::default()
+        },
+    }
+}
 
+/// JsValue-free core of [`calculate_extra_payment_impact_impl`] — see the
+/// matching comment on `payment::payment_from_params`.
+fn extra_payment_impact_from_params(params: AmortizationParams) -> ExtraPaymentImpactResult {
     let loan = match build_loan(&params.loan) {
         Ok(loan) => loan,
         Err(e) => {
@@ -104,5 +108,71 @@ fn calculate_extra_payment_impact_impl(params: JsValue) -> ExtraPaymentImpactRes
             error: Some(e.to_string()),
             ..Default::default()
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dto::LoanParams;
+
+    fn valid_loan() -> LoanParams {
+        LoanParams {
+            principal: 400_000.0,
+            annual_rate_percent: 6.5,
+            term_years: 30.0,
+            frequency: None,
+        }
+    }
+
+    #[test]
+    fn schedule_has_one_row_per_period_and_pays_off_to_zero() {
+        let result = schedule_from_params(AmortizationParams {
+            loan: valid_loan(),
+            extra_payment: 0.0,
+        });
+        assert!(result.error.is_none());
+        assert_eq!(result.rows.len(), 360);
+        assert_eq!(result.rows.last().unwrap().remaining_balance, 0.0);
+    }
+
+    #[test]
+    fn schedule_rejects_a_loan_term_long_enough_to_have_forced_a_huge_allocation() {
+        // Regression check for the round-3 security fix: this used to
+        // reach amortization::schedule()'s Vec::with_capacity with an
+        // effectively unbounded period count.
+        let result = schedule_from_params(AmortizationParams {
+            loan: LoanParams {
+                term_years: 1_000_000.0,
+                ..valid_loan()
+            },
+            extra_payment: 0.0,
+        });
+        assert!(result.rows.is_empty());
+        assert!(result.error.unwrap().contains("unreasonably long"));
+    }
+
+    #[test]
+    fn extra_payment_impact_reports_periods_and_interest_saved() {
+        let result = extra_payment_impact_from_params(AmortizationParams {
+            loan: valid_loan(),
+            extra_payment: 200.0,
+        });
+        assert!(result.error.is_none());
+        assert!(result.periods_saved.unwrap() > 0);
+        assert!(result.interest_saved.unwrap() > 0.0);
+    }
+
+    #[test]
+    fn negative_extra_payment_is_clamped_to_zero_not_treated_as_a_payoff_reduction() {
+        let with_negative = extra_payment_impact_from_params(AmortizationParams {
+            loan: valid_loan(),
+            extra_payment: -500.0,
+        });
+        let with_zero = extra_payment_impact_from_params(AmortizationParams {
+            loan: valid_loan(),
+            extra_payment: 0.0,
+        });
+        assert_eq!(with_negative.periods_saved, with_zero.periods_saved);
     }
 }

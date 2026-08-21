@@ -16,16 +16,18 @@ pub fn calculate_comparison(params: JsValue) -> JsValue {
 }
 
 fn calculate_comparison_impl(params: JsValue) -> ComparisonResult {
-    let params: ComparisonParams = match serde_wasm_bindgen::from_value(params) {
-        Ok(p) => p,
-        Err(e) => {
-            return ComparisonResult {
-                error: Some(format!("Failed to parse comparison parameters: {e:?}")),
-                ..Default::default()
-            }
-        }
-    };
+    match serde_wasm_bindgen::from_value(params) {
+        Ok(params) => comparison_from_params(params),
+        Err(e) => ComparisonResult {
+            error: Some(format!("Failed to parse comparison parameters: {e:?}")),
+            ..Default::default()
+        },
+    }
+}
 
+/// JsValue-free core of [`calculate_comparison_impl`] — see the matching
+/// comment on `payment::payment_from_params`.
+fn comparison_from_params(params: ComparisonParams) -> ComparisonResult {
     let input = ComparisonInput {
         principal: f64_to_decimal(params.principal),
         frequency: parse_frequency(params.frequency.as_deref()),
@@ -87,4 +89,45 @@ pub fn get_common_rate_presets() -> JsValue {
         .collect();
 
     serde_wasm_bindgen::to_value(&presets).unwrap_or(JsValue::NULL)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dto::{ComparisonEntryParams, RateTypeDto};
+
+    fn entry(label: &str, rate_percent: f64, term_years: f64) -> ComparisonEntryParams {
+        ComparisonEntryParams {
+            label: label.to_string(),
+            rate_type: RateTypeDto::Fixed { rate_percent },
+            term_years,
+        }
+    }
+
+    #[test]
+    fn compares_two_entries_against_the_same_principal() {
+        let result = comparison_from_params(ComparisonParams {
+            principal: 400_000.0,
+            frequency: None,
+            entries: vec![
+                entry("30-Year Fixed", 6.5, 30.0),
+                entry("15-Year Fixed", 6.0, 15.0),
+            ],
+        });
+        assert!(result.error.is_none());
+        assert_eq!(result.rows.len(), 2);
+        // Shorter term at a similar rate pays off with less total interest.
+        assert!(result.rows[1].total_interest < result.rows[0].total_interest);
+    }
+
+    #[test]
+    fn rejects_an_entry_with_a_non_finite_rate() {
+        let result = comparison_from_params(ComparisonParams {
+            principal: 400_000.0,
+            frequency: None,
+            entries: vec![entry("Bad", f64::NAN, 30.0)],
+        });
+        assert!(result.rows.is_empty());
+        assert!(result.error.is_some());
+    }
 }
