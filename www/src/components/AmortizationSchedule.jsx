@@ -2,9 +2,8 @@ import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import { BalanceChart } from './Charts';
+import { currencySymbol, makeFormatMoney } from '../currency';
 
-const formatMoney = (n) =>
-  n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
 
@@ -23,7 +22,9 @@ function summarizeByYear(rows, periodsPerYear) {
   return years;
 }
 
-export default function AmortizationSchedule({ wasmModule }) {
+export default function AmortizationSchedule({ wasmModule, region }) {
+  const formatMoney = makeFormatMoney(region);
+  const money = currencySymbol(region);
   const [principal, setPrincipal] = useState(400000);
   const [rate, setRate] = useState(6.5);
   const [termYears, setTermYears] = useState(30);
@@ -51,7 +52,7 @@ export default function AmortizationSchedule({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix="$" min={0} />
+        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix={money} min={0} />
         <NumberField label="Interest rate" value={rate} onChange={setRate} suffix="%" min={0} />
         <NumberField label="Loan term" value={termYears} onChange={setTermYears} suffix="years" min={1} />
         <label className="field">
@@ -66,7 +67,7 @@ export default function AmortizationSchedule({ wasmModule }) {
           label="Extra payment per period"
           value={extraPayment}
           onChange={setExtraPayment}
-          suffix="$"
+          suffix={money}
           min={0}
         />
       </div>

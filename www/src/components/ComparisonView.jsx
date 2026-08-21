@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import ComparisonEntryRow from './ComparisonEntryRow';
 import SavedScenarios from './SavedScenarios';
+import { currencySymbol, makeFormatMoney } from '../currency';
 
-const formatMoney = (n) =>
-  n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 let nextId = 0;
 const newId = () => `entry-${nextId++}`;
@@ -42,7 +41,9 @@ function toWasmEntry(entry) {
   return { label: entry.label, rate_type, term_years: entry.termYears };
 }
 
-export default function ComparisonView({ wasmModule }) {
+export default function ComparisonView({ wasmModule, region }) {
+  const formatMoney = makeFormatMoney(region);
+  const money = currencySymbol(region);
   const [principal, setPrincipal] = useState(400000);
   const [frequency, setFrequency] = useState('monthly');
   const [presets, setPresets] = useState([]);
@@ -50,10 +51,15 @@ export default function ComparisonView({ wasmModule }) {
 
   useEffect(() => {
     if (!wasmModule) return;
-    const loaded = wasmModule.get_common_rate_presets();
+    const loaded = wasmModule.get_common_rate_presets?.() ?? [];
     setPresets(loaded);
-    if (entries.length === 0) {
-      setEntries([presetToEntry(loaded[0]), presetToEntry(loaded[2])]);
+    if (entries.length === 0 && loaded.length > 0) {
+      // Seed with two contrasting terms when the list is long enough, but
+      // index defensively: reaching straight into [0] and [2] threw a
+      // TypeError and took down the whole tab if the preset list was ever
+      // shorter than three, or absent from a stale cached wasm build.
+      const seed = [loaded[0], loaded[2] ?? loaded[1]].filter(Boolean);
+      setEntries(seed.map(presetToEntry));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule]);
@@ -78,7 +84,7 @@ export default function ComparisonView({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix="$" min={0} />
+        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix={money} min={0} />
         <label className="field">
           <span className="field-label">Payment frequency</span>
           <select className="field-select" value={frequency} onChange={(e) => setFrequency(e.target.value)}>

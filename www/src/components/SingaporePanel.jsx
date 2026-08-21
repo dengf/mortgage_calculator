@@ -1,13 +1,10 @@
 import React from 'react';
 import NumberField from './NumberField';
+import { makeFormatMoney } from '../currency';
 
-// Intl renders SGD in en-SG as a bare "$", which is indistinguishable from
-// USD in a calculator that switches between the two regions. Prefix the
-// symbol explicitly instead.
-const formatSgd = (n) =>
-  n == null
-    ? '—'
-    : `S$${n.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// This panel only ever renders under the SG region, so its currency is
+// fixed rather than passed in.
+const formatSgd = makeFormatMoney('SG');
 
 const formatPercent = (n) => (n == null ? '—' : `${n.toFixed(1)}%`);
 

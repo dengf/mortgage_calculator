@@ -4,10 +4,8 @@ import SavedScenarios from './SavedScenarios';
 import SingaporePanel from './SingaporePanel';
 import UnitedStatesPanel from './UnitedStatesPanel';
 import { PrincipalInterestSplit } from './Charts';
+import { currencySymbol, makeFormatMoney } from '../currency';
 
-// Symbols are spelled out rather than left to Intl: it renders SGD in en-SG
-// as a bare "$", indistinguishable from USD once the region toggle exists.
-const CURRENCY = { US: ['en-US', '$'], SG: ['en-SG', 'S$'] };
 
 const US_DEFAULTS = {
   home_price: 500000,
@@ -36,14 +34,8 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   const [sgInputs, setSgInputs] = useState(SG_DEFAULTS);
   const [usInputs, setUsInputs] = useState(US_DEFAULTS);
 
-  const [locale, symbol] = CURRENCY[region] ?? CURRENCY.US;
-  const formatMoney = (n) =>
-    n == null
-      ? '—'
-      : `${symbol}${n.toLocaleString(locale, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`;
+  const formatMoney = makeFormatMoney(region);
+  const money = currencySymbol(region);
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
@@ -90,7 +82,7 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix="$" min={0} />
+        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix={money} min={0} />
         <NumberField label="Interest rate" value={rate} onChange={setRate} suffix="%" min={0} />
         <NumberField label="Loan term" value={termYears} onChange={setTermYears} suffix="years" min={1} />
         <label className="field">

@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
+import { currencySymbol, makeFormatMoney } from '../currency';
 
-const formatMoney = (n) =>
-  n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-export default function RefinanceCalculator({ wasmModule }) {
+export default function RefinanceCalculator({ wasmModule, region }) {
+  const formatMoney = makeFormatMoney(region);
+  const money = currencySymbol(region);
   const [currentBalance, setCurrentBalance] = useState(300000);
   const [currentRate, setCurrentRate] = useState(7.5);
   const [remainingPeriods, setRemainingPeriods] = useState(300);
@@ -29,7 +30,7 @@ export default function RefinanceCalculator({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Current balance" value={currentBalance} onChange={setCurrentBalance} suffix="$" min={0} />
+        <NumberField label="Current balance" value={currentBalance} onChange={setCurrentBalance} suffix={money} min={0} />
         <NumberField label="Current rate" value={currentRate} onChange={setCurrentRate} suffix="%" min={0} />
         <NumberField
           label="Payments remaining"
@@ -41,7 +42,7 @@ export default function RefinanceCalculator({ wasmModule }) {
         />
         <NumberField label="New rate" value={newRate} onChange={setNewRate} suffix="%" min={0} />
         <NumberField label="New term" value={newTermYears} onChange={setNewTermYears} suffix="years" min={1} />
-        <NumberField label="Closing costs" value={closingCosts} onChange={setClosingCosts} suffix="$" min={0} />
+        <NumberField label="Closing costs" value={closingCosts} onChange={setClosingCosts} suffix={money} min={0} />
       </div>
 
       <div className="panel-results">
