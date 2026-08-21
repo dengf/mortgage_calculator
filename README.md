@@ -102,6 +102,13 @@ usable before you've built the wasm module.
 # Desktop (native window)
 cargo run -p mortgage-ui-slint
 
+# macOS: package it as a .app so it gets the real Dock/Finder icon.
+# macOS reads the icon from the bundle, ignoring Slint's `Window.icon`, so
+# a bare `cargo run` always shows a generic executable icon. The bundle is
+# unsigned -- right-click -> Open to bypass Gatekeeper locally.
+./scripts/bundle-macos.sh            # add --debug to skip the release build
+open "target/macos/Mortgage Calculator.app"
+
 # Web (compiles to a wasm canvas, separate from the React app above)
 cd crates/mortgage-ui-slint
 wasm-pack build --target web --out-dir pkg
@@ -126,6 +133,38 @@ export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin:$PATH"
 x build --manifest-path crates/mortgage-ui-slint/Cargo.toml --platform android --arch arm64 --format apk
 # `x run` instead of `build` installs + launches on a connected device/emulator.
 ```
+
+## App icon
+
+Every platform's icon is generated from one script, so the artwork has a
+single source of truth:
+
+```bash
+python3 assets/icon/generate.py    # needs Pillow; .icns step needs macOS
+```
+
+It writes the iOS asset catalog, the Android launcher PNG, the Slint window
+icon, `.icns`/`.ico` for desktop packaging, and the web favicons plus PWA
+manifest icons. All of its output is committed — rerun it only when the
+artwork itself changes.
+
+The mark is a house with a mortgage's remaining-balance curve carved through
+it. The curve is the real B(t) for a level-payment loan rather than a
+decorative swoosh, which is why it stays high through the first half of the
+term and only breaks late.
+
+Two platform quirks the script handles, both easy to get wrong by hand:
+
+- **iOS** rejects App Store icons that carry an alpha channel, so the 1024px
+  entry is written as opaque RGB.
+- **Android** icons here go through `xbuild`, which scales a single PNG into
+  the legacy mipmap densities and does *not* emit an adaptive icon with
+  separate foreground/background layers. Launchers therefore apply their own
+  mask to the square, so that variant is rendered with a safe-zone inset —
+  without it a circular mask clips the eaves of the house.
+- **macOS** takes the icon from the `.app` bundle and ignores the window
+  icon entirely, so the generated `.icns` only shows up once the binary is
+  bundled — see `scripts/bundle-macos.sh` above.
 
 ## A note on the `--target web` + webpack combination
 

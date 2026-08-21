@@ -762,6 +762,10 @@ component EquityTimeline inherits VerticalLayout {
 
 export component AppWindow inherits Window {
     title: "Mortgage Calculator";
+    // Title bar and taskbar entry on desktop. iOS and Android take their
+    // icons from the app bundle instead, and macOS from the .app -- so this
+    // only actually shows up on Linux, Windows, and `cargo run`.
+    icon: @image-url("app-icon.png");
     preferred-width: 520px;
     preferred-height: 840px;
     background: #0b1119;
