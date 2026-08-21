@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::error::Error;
+use std::fmt::Write as _;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -743,15 +744,15 @@ fn path_from_values(values: &[f64], max_value: f64, max_periods: usize) -> Strin
     // fraction=1.0 as index len-1) and the .slint scrub line (which
     // treats fraction=1.0 as the true right edge).
     let last_index = max_periods.saturating_sub(1).max(1);
-    let mut s = String::new();
+    // ~20 bytes per point ("L 123.45 678.90 ") covers the common case
+    // without under-shooting into repeated reallocation on longer
+    // (up to 360-row) schedules.
+    let mut s = String::with_capacity(values.len() * 20);
     for (i, &v) in values.iter().enumerate() {
         let x = (i as f64 / last_index as f64) * CHART_W;
         let y = CHART_H - (v / max_value).clamp(0.0, 1.0) * CHART_H;
-        if i == 0 {
-            s.push_str(&format!("M {:.2} {:.2} ", x, y));
-        } else {
-            s.push_str(&format!("L {:.2} {:.2} ", x, y));
-        }
+        let command = if i == 0 { 'M' } else { 'L' };
+        let _ = write!(s, "{command} {x:.2} {y:.2} ");
     }
     s
 }
@@ -774,7 +775,7 @@ fn build_chart_path(
         .collect();
     let mut s = path_from_values(&values, decimal_to_f64(principal), max_periods);
     if rows.len() < max_periods {
-        s.push_str(&format!("L {:.2} {:.2} ", CHART_W, CHART_H));
+        let _ = write!(s, "L {CHART_W:.2} {CHART_H:.2} ");
     }
     s
 }
