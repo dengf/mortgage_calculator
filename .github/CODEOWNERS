@@ -1,0 +1,4 @@
+# Default owner for everything in the repo, unless a more specific
+# pattern below overrides it. See:
+# https://docs.github.com/articles/about-code-owners
+* @dengf
