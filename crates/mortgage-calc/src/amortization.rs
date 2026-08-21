@@ -1,6 +1,6 @@
 //! Payment-by-payment amortization schedule and extra-payment payoff impact.
 
-use mortgage_core::{round_currency, MortgageResult};
+use mortgage_core::{round_currency, MortgageError, MortgageResult};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -25,6 +25,10 @@ pub struct AmortizationRow {
 /// reaches zero, which — with a nonzero extra payment — is before the
 /// loan's nominal term.
 pub fn schedule(loan: &Loan, extra_payment: Decimal) -> MortgageResult<Vec<AmortizationRow>> {
+    if extra_payment < Decimal::ZERO {
+        return Err(MortgageError::InvalidExtraPayment(extra_payment.to_string()));
+    }
+
     let periodic_rate = loan.periodic_rate();
     let regular_payment = payment_amount(loan);
     let max_periods = loan.total_periods();
@@ -150,5 +154,18 @@ mod tests {
         let impact = extra_payment_impact(&loan, Decimal::ZERO).unwrap();
         assert_eq!(impact.periods_saved, 0);
         assert_eq!(impact.interest_saved, Decimal::ZERO);
+    }
+
+    #[test]
+    fn rejects_negative_extra_payment_instead_of_corrupting_the_schedule() {
+        let loan = thirty_year_loan();
+        assert!(matches!(
+            schedule(&loan, dec!(-100)),
+            Err(MortgageError::InvalidExtraPayment(_))
+        ));
+        assert!(matches!(
+            extra_payment_impact(&loan, dec!(-100)),
+            Err(MortgageError::InvalidExtraPayment(_))
+        ));
     }
 }
