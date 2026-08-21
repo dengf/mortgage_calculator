@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import SingaporePanel from './SingaporePanel';
+import { PrincipalInterestSplit } from './Charts';
 
 // Symbols are spelled out rather than left to Intl: it renders SGD in en-SG
 // as a bare "$", indistinguishable from USD once the region toggle exists.
@@ -93,6 +94,14 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
           </div>
         )}
       </div>
+
+      {result && !result.error && (
+        <PrincipalInterestSplit
+          principal={principal}
+          totalInterest={result.total_interest}
+          formatMoney={formatMoney}
+        />
+      )}
 
       {region === 'SG' && (
         <SingaporePanel inputs={sgInputs} onChange={setSgInputs} result={sgResult} />
