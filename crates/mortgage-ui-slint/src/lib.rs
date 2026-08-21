@@ -1580,6 +1580,9 @@ pub fn run_wasm() {
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
 fn android_main(app: slint::android::AndroidApp) {
+    if let Some(path) = app.internal_data_path() {
+        storage::set_android_data_dir(path);
+    }
     slint::android::init(app).unwrap();
     run_app().expect("failed to start mortgage-ui-slint");
 }
