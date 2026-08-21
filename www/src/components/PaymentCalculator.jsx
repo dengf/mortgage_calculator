@@ -1,15 +1,38 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
+import SingaporePanel from './SingaporePanel';
 
-const formatMoney = (n) =>
-  n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+// Symbols are spelled out rather than left to Intl: it renders SGD in en-SG
+// as a bare "$", indistinguishable from USD once the region toggle exists.
+const CURRENCY = { US: ['en-US', '$'], SG: ['en-SG', 'S$'] };
 
-export default function PaymentCalculator({ wasmModule }) {
+const SG_DEFAULTS = {
+  home_price: 1000000,
+  gross_monthly_income: 12000,
+  other_monthly_debts: 0,
+  cpf_oa_available: 1500,
+  residency: 'Citizen',
+  property_count: '1st',
+  is_hdb_or_ec: false,
+  loan_type: 'Bank Loan',
+};
+
+export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   const [principal, setPrincipal] = useState(400000);
   const [rate, setRate] = useState(6.5);
   const [termYears, setTermYears] = useState(30);
   const [frequency, setFrequency] = useState('monthly');
+  const [sgInputs, setSgInputs] = useState(SG_DEFAULTS);
+
+  const [locale, symbol] = CURRENCY[region] ?? CURRENCY.US;
+  const formatMoney = (n) =>
+    n == null
+      ? '—'
+      : `${symbol}${n.toLocaleString(locale, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
@@ -20,6 +43,20 @@ export default function PaymentCalculator({ wasmModule }) {
       frequency,
     });
   }, [wasmModule, principal, rate, termYears, frequency]);
+
+  // TDSR/MSR and the CPF split are monthly ceilings, so a non-monthly
+  // schedule has no meaningful payment to test against them. Stamp duty
+  // still computes either way, since it prices off the property alone.
+  const sgResult = useMemo(() => {
+    if (!wasmModule || region !== 'SG') return null;
+    const monthlyPayment =
+      result && !result.error && frequency === 'monthly' ? result.payment : null;
+    return wasmModule.calculate_singapore({
+      ...sgInputs,
+      monthly_payment: monthlyPayment,
+      principal,
+    });
+  }, [wasmModule, region, sgInputs, result, frequency, principal]);
 
   return (
     <section className="panel">
@@ -56,6 +93,10 @@ export default function PaymentCalculator({ wasmModule }) {
           </div>
         )}
       </div>
+
+      {region === 'SG' && (
+        <SingaporePanel inputs={sgInputs} onChange={setSgInputs} result={sgResult} />
+      )}
 
       <SavedScenarios
         wasmModule={wasmModule}

@@ -211,3 +211,55 @@ pub struct DeleteScenarioResult {
     pub success: bool,
     pub error: Option<String>,
 }
+
+/// Inputs for the Singapore regulatory panel.
+///
+/// `monthly_payment` comes from whichever calculator the panel is attached
+/// to. It's `None` when those inputs don't currently form a valid loan —
+/// the TDSR/MSR and CPF figures then have nothing to work from, but the
+/// BSD/ABSD stamp duties are priced off `home_price` alone and still
+/// compute.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SingaporeParams {
+    pub monthly_payment: Option<f64>,
+    /// The loan amount, used with `home_price` to derive the down payment.
+    pub principal: f64,
+    pub home_price: f64,
+    pub gross_monthly_income: f64,
+    pub other_monthly_debts: f64,
+    pub cpf_oa_available: f64,
+    /// `"Citizen" | "PR" | "Foreigner"`, defaults to Citizen.
+    pub residency: String,
+    /// `"1st" | "2nd" | "3rd+"`, defaults to 1st.
+    pub property_count: String,
+    /// HDB flats and Executive Condominiums are subject to MSR on top of
+    /// TDSR, and are the only properties eligible for an HDB loan.
+    pub is_hdb_or_ec: bool,
+    /// `"HDB Loan" | "Bank Loan"`.
+    pub loan_type: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SingaporeResult {
+    /// TDSR as a percentage, e.g. `48.2`. `None` when no valid payment or
+    /// income was supplied.
+    pub tdsr_ratio_percent: Option<f64>,
+    pub tdsr_exceeded: bool,
+    pub tdsr_near_limit: bool,
+    /// `None` when the property isn't an HDB flat/EC, since MSR doesn't apply.
+    pub msr_ratio_percent: Option<f64>,
+    pub msr_exceeded: bool,
+    pub msr_near_limit: bool,
+    pub cpf_used: Option<f64>,
+    pub cash_required: Option<f64>,
+    pub bsd: f64,
+    pub absd: f64,
+    pub upfront_total: f64,
+    pub down_payment: f64,
+    pub total_cash_required: f64,
+    /// Set when an HDB loan is selected for a property that can't have one.
+    pub loan_type_warning: Option<String>,
+    /// Human-readable breaches of the MAS ceilings, in display order.
+    pub warnings: Vec<String>,
+    pub error: Option<String>,
+}

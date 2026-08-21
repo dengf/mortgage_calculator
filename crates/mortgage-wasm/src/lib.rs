@@ -33,6 +33,7 @@ pub mod dto;
 pub mod loan;
 pub mod payment;
 pub mod refinance;
+pub mod singapore;
 #[cfg(target_arch = "wasm32")]
 pub mod storage;
 
@@ -45,9 +46,11 @@ pub use dto::{
     ComparisonRowDto, DeleteScenarioResult, ExtraPaymentImpactResult, LoanParams,
     PaymentSummaryResult, RatePresetDto, RateTypeDto, RefinanceParams, RefinanceResultDto,
     SaveScenarioParams, SaveScenarioResult, ScenarioDto, ScenarioListResult, ScenarioResult,
+    SingaporeParams, SingaporeResult,
 };
 pub use payment::calculate_payment;
 pub use refinance::calculate_refinance;
+pub use singapore::calculate_singapore;
 #[cfg(target_arch = "wasm32")]
 pub use storage::{delete_scenario, init_storage, list_scenarios, load_scenario, save_scenario};
 
