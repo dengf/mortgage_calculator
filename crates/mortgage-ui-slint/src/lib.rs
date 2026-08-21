@@ -735,9 +735,17 @@ fn path_from_values(values: &[f64], max_value: f64, max_periods: usize) -> Strin
         return String::new();
     }
     let max_value = max_value.max(1.0);
+    // max_periods - 1 is the index of the *last* period in the full
+    // reference timeline, which is where x should reach CHART_W — using
+    // max_periods itself here would leave every curve's last point short
+    // of the right edge by one period-width, out of step with
+    // apply_scrub's fraction-to-index mapping (which already treats
+    // fraction=1.0 as index len-1) and the .slint scrub line (which
+    // treats fraction=1.0 as the true right edge).
+    let last_index = max_periods.saturating_sub(1).max(1);
     let mut s = String::new();
     for (i, &v) in values.iter().enumerate() {
-        let x = (i as f64 / max_periods.max(1) as f64) * CHART_W;
+        let x = (i as f64 / last_index as f64) * CHART_W;
         let y = CHART_H - (v / max_value).clamp(0.0, 1.0) * CHART_H;
         if i == 0 {
             s.push_str(&format!("M {:.2} {:.2} ", x, y));
