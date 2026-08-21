@@ -1,0 +1,11 @@
+# Read by `x build`/`x run` (the xbuild tool — https://github.com/rust-mobile/xbuild),
+# the build tool Slint's own docs recommend for packaging a Rust app for
+# Android: https://docs.slint.dev/latest/docs/slint/guide/platforms/mobile/android/
+#
+# Without this file, xbuild defaults the Android package id to
+# `com.example.mortgage_ui_slint` (a placeholder, from the crate name) —
+# set here to match the iOS bundle identifier
+# (crates/mortgage-ui-slint/ios/Info.plist) instead.
+android:
+  manifest:
+    package: io.github.dengf.mortgagecalculator

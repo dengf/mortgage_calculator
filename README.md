@@ -112,9 +112,19 @@ python3 -m http.server 4173   # then open index.html
 cd crates/mortgage-ui-slint/ios
 xcodegen generate
 
-# Android (via `xbuild`, which cross-compiles and packages the
-# slint/backend-android-activity binary into an APK)
-x run --manifest-path crates/mortgage-ui-slint/Cargo.toml --platform android
+# Android (via `xbuild` — https://github.com/rust-mobile/xbuild — which
+# cross-compiles and packages the slint/backend-android-activity binary
+# into an APK; package identity comes from crates/mortgage-ui-slint/manifest.yaml).
+# Needs the Android SDK + NDK and `cargo install --git https://github.com/rust-mobile/xbuild.git xbuild`.
+export ANDROID_HOME=/path/to/android-sdk       # must contain ndk/<version>/
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/<version>"
+# The system clang (Xcode's, on macOS) resolves `-fuse-ld=lld` by searching
+# PATH, not by asking the NDK — without this, linking fails with
+# "invalid linker name in argument '-fuse-ld=lld'" even though the NDK
+# ships its own copy.
+export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin:$PATH"
+x build --manifest-path crates/mortgage-ui-slint/Cargo.toml --platform android --arch arm64 --format apk
+# `x run` instead of `build` installs + launches on a connected device/emulator.
 ```
 
 ## A note on the `--target web` + webpack combination
