@@ -1,6 +1,6 @@
 //! Refinance break-even and lifetime interest comparison.
 
-use mortgage_core::{round_currency, MortgageResult, PaymentFrequency};
+use mortgage_core::{round_currency, MortgageError, MortgageResult, PaymentFrequency};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,10 @@ pub struct RefinanceResult {
 
 /// Compares staying on the current loan against refinancing into a new one.
 pub fn analyze_refinance(input: &RefinanceInput) -> MortgageResult<RefinanceResult> {
+    if input.remaining_periods == 0 {
+        return Err(MortgageError::InvalidTerm(0));
+    }
+
     let current_periodic_rate = input.frequency.periodic_rate(input.current_annual_rate);
     let current_factor = payment_factor(current_periodic_rate, input.remaining_periods);
     let current_payment = round_currency(input.current_balance * current_factor);
@@ -123,5 +127,23 @@ mod tests {
         let result = analyze_refinance(&input).unwrap();
         assert!(result.payment_savings < Decimal::ZERO);
         assert_eq!(result.break_even_periods, None);
+    }
+
+    #[test]
+    fn rejects_zero_remaining_periods_instead_of_panicking() {
+        let input = RefinanceInput {
+            current_balance: dec!(300000),
+            current_annual_rate: dec!(0.06),
+            remaining_periods: 0,
+            new_annual_rate: dec!(0.05),
+            new_term_years: dec!(30),
+            closing_costs: dec!(6000),
+            frequency: PaymentFrequency::Monthly,
+        };
+
+        assert!(matches!(
+            analyze_refinance(&input),
+            Err(MortgageError::InvalidTerm(0))
+        ));
     }
 }
