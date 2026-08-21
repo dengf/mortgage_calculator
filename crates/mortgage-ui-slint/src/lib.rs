@@ -25,6 +25,12 @@ slint::include_modules!();
 
 type StoreCell = Rc<RefCell<Option<Rc<RedbScenarioStore>>>>;
 
+/// The Amortization tab's last-computed schedule, shared between
+/// `recompute_amortization` (which fills it) and the scrub-drag callback
+/// (which reads it) so dragging the scrub handle doesn't rebuild the full
+/// O(term-in-months) schedule on every drag frame.
+type AmortScheduleCache = Rc<RefCell<Vec<mortgage_calc::amortization::AmortizationRow>>>;
+
 fn default_true() -> bool {
     true
 }
@@ -483,6 +489,15 @@ fn recompute_payment(ui: &AppWindow) {
         ui.get_term_years().as_str(),
     );
 
+    // Only the active region's panel is ever visible (each is gated behind
+    // `if root.region == "..."` in app-window.slint), so only that one
+    // needs recomputing here — otherwise every Payment-tab keystroke does
+    // a full TDSR/MSR/CPF/BSD-ABSD (or ZIP-tax/PMI/tax-deduction) pass for
+    // a panel the user can't see.
+    let region = ui.get_region();
+    let is_sg = region == "SG";
+    let is_us = region == "US";
+
     match loan {
         Some(loan) => {
             let summary = mortgage_calc::payment::summarize(&loan);
@@ -490,24 +505,32 @@ fn recompute_payment(ui: &AppWindow) {
             ui.set_payment_result(format!("${}", summary.payment).into());
             ui.set_total_paid_result(format!("${}", summary.total_paid).into());
             ui.set_total_interest_result(format!("${}", summary.total_interest).into());
-            recompute_payment_sg(ui, loan.principal(), Some(summary.payment));
-            let first_period_interest = loan.principal() * loan.periodic_rate();
-            recompute_payment_us(
-                ui,
-                loan.principal(),
-                Some(summary.payment),
-                Some(first_period_interest),
-            );
+            if is_sg {
+                recompute_payment_sg(ui, loan.principal(), Some(summary.payment));
+            }
+            if is_us {
+                let first_period_interest = loan.principal() * loan.periodic_rate();
+                recompute_payment_us(
+                    ui,
+                    loan.principal(),
+                    Some(summary.payment),
+                    Some(first_period_interest),
+                );
+            }
         }
         None => {
             ui.set_has_error(true);
-            recompute_payment_sg(ui, Decimal::ZERO, None);
-            recompute_payment_us(ui, Decimal::ZERO, None, None);
+            if is_sg {
+                recompute_payment_sg(ui, Decimal::ZERO, None);
+            }
+            if is_us {
+                recompute_payment_us(ui, Decimal::ZERO, None, None);
+            }
         }
     }
 }
 
-fn recompute_amortization(ui: &AppWindow) {
+fn recompute_amortization(ui: &AppWindow, schedule_cache: &AmortScheduleCache) {
     ui.set_amort_rate_percent_value(parse_rate_value(ui.get_amort_rate_percent().as_str()));
     let loan = build_loan(
         ui.get_amort_principal().as_str(),
@@ -550,6 +573,8 @@ fn recompute_amortization(ui: &AppWindow) {
 
     match mortgage_calc::amortization::schedule(&loan, extra) {
         Ok(rows) => {
+            *schedule_cache.borrow_mut() = rows;
+            let rows = schedule_cache.borrow();
             ui.set_amort_schedule_rows(build_schedule_rows(&rows, ui.get_amort_show_full()));
             let (balance_path, interest_path) = build_timeline_paths(&rows, principal_d);
             ui.set_amort_timeline_balance_path(balance_path.into());
@@ -557,6 +582,7 @@ fn recompute_amortization(ui: &AppWindow) {
             apply_scrub(ui, &rows, principal_d, ui.get_amort_scrub_fraction());
         }
         Err(_) => {
+            schedule_cache.borrow_mut().clear();
             ui.set_amort_schedule_rows(ModelRc::new(
                 VecModel::from(Vec::<AmortScheduleRow>::new()),
             ));
@@ -985,6 +1011,7 @@ fn detect_region() -> Region {
 /// [`run_wasm`] on wasm32.
 pub fn run_app() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
+    let amort_schedule_cache: AmortScheduleCache = Rc::new(RefCell::new(Vec::new()));
 
     ui.set_region(detect_region().as_str().into());
 
@@ -999,7 +1026,7 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     recompute_payment(&ui);
-    recompute_amortization(&ui);
+    recompute_amortization(&ui, &amort_schedule_cache);
     recompute_affordability(&ui);
     recompute_refinance(&ui);
     recompute_compare(&ui);
@@ -1034,19 +1061,22 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     });
 
     let ui_handle = ui.as_weak();
+    let schedule_cache = amort_schedule_cache.clone();
     ui.on_amort_recompute(move || {
         let ui = ui_handle.unwrap();
-        recompute_amortization(&ui);
+        recompute_amortization(&ui, &schedule_cache);
     });
 
     let ui_handle = ui.as_weak();
+    let schedule_cache = amort_schedule_cache.clone();
     ui.on_amort_rate_slider_changed(move |v| {
         let ui = ui_handle.unwrap();
         ui.set_amort_rate_percent(format_rate_value(v).into());
-        recompute_amortization(&ui);
+        recompute_amortization(&ui, &schedule_cache);
     });
 
     let ui_handle = ui.as_weak();
+    let schedule_cache = amort_schedule_cache.clone();
     ui.on_amort_whatif_toggled(move || {
         let ui = ui_handle.unwrap();
         let mut extra = Decimal::ZERO;
@@ -1060,32 +1090,27 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
             extra += Decimal::from(83);
         }
         ui.set_amort_extra_payment(extra.to_string().into());
-        recompute_amortization(&ui);
+        recompute_amortization(&ui, &schedule_cache);
     });
 
     let ui_handle = ui.as_weak();
+    let schedule_cache = amort_schedule_cache.clone();
     ui.on_amort_toggle_full(move || {
         let ui = ui_handle.unwrap();
         ui.set_amort_show_full(!ui.get_amort_show_full());
-        recompute_amortization(&ui);
+        recompute_amortization(&ui, &schedule_cache);
     });
 
+    // Reads the schedule recompute_amortization already computed instead
+    // of rebuilding it from scratch — this fires on every drag frame while
+    // the scrub handle is being dragged, and a full schedule rebuild
+    // (O(term-in-months) Decimal arithmetic) on every frame is real,
+    // avoidable per-frame cost on a mobile CPU.
     let ui_handle = ui.as_weak();
+    let schedule_cache = amort_schedule_cache.clone();
     ui.on_amort_scrub(move |fraction| {
         let ui = ui_handle.unwrap();
-        let Some(loan) = build_loan(
-            ui.get_amort_principal().as_str(),
-            ui.get_amort_rate_percent().as_str(),
-            ui.get_amort_term_years().as_str(),
-        ) else {
-            return;
-        };
-        let extra = Decimal::from_str(ui.get_amort_extra_payment().as_str())
-            .unwrap_or(Decimal::ZERO)
-            .max(Decimal::ZERO);
-        let Ok(rows) = mortgage_calc::amortization::schedule(&loan, extra) else {
-            return;
-        };
+        let rows = schedule_cache.borrow();
         let principal_d =
             Decimal::from_str(ui.get_amort_principal().as_str()).unwrap_or(Decimal::ZERO);
         apply_scrub(&ui, &rows, principal_d, fraction);
@@ -1297,18 +1322,20 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     {
         let store_cell = store_cell.clone();
         let ui_handle = ui.as_weak();
+        let schedule_cache = amort_schedule_cache.clone();
         ui.on_amort_load_scenario(move |id| {
+            let schedule_cache = schedule_cache.clone();
             do_load(
                 ui_handle.clone(),
                 store_cell.clone(),
                 id.to_string(),
-                |ui, json| {
+                move |ui, json| {
                     if let Ok(inputs) = serde_json::from_str::<AmortInputs>(json) {
                         ui.set_amort_principal(inputs.principal.into());
                         ui.set_amort_rate_percent(inputs.rate_percent.into());
                         ui.set_amort_term_years(inputs.term_years.into());
                         ui.set_amort_extra_payment(inputs.extra_payment.into());
-                        recompute_amortization(ui);
+                        recompute_amortization(ui, &schedule_cache);
                     }
                 },
             );
