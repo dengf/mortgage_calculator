@@ -30,7 +30,33 @@ rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-slint = "1.16"
+# No unconditional `slint = "..."` entry here on purpose: Cargo unions
+# feature sets across every dependency declaration for the same crate, so
+# an unconditional entry here would silently defeat the
+# `default-features = false` + explicit feature lists below on every
+# platform (verified: before this, the `target_os = "android"` override
+# below only *added* backend-android-activity-06 on top of full defaults,
+# it never actually trimmed anything). Slint's own `default` feature pulls
+# in both renderer-femtovg AND renderer-software plus system-tray and
+# backend auto-detection — none of which this app needs — which measured
+# 16MB for the wasm release build alone before this trim.
+#
+# Every platform gets renderer-femtovg (the officially-documented choice
+# for winit-backed targets, including wasm) and accessibility (worth its
+# size cost — screen readers matter more on mobile/web, not less) plus the
+# minimal no-op-in-1.17.1 compat-1-2 marker feature; only the backend
+# selection differs (winit everywhere except Android's dedicated
+# backend-android-activity-06).
+
+# Desktop (macOS/Linux/Windows via `cargo run`).
+[target.'cfg(not(any(target_os = "android", target_os = "ios", target_family = "wasm")))'.dependencies]
+slint = { version = "1.16", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "accessibility",
+    "backend-winit",
+    "renderer-femtovg",
+] }
 
 # Native-only: reads the OS locale (desktop/iOS/Android) for region
 # detection. On wasm we read `navigator.language` directly instead (see
@@ -42,11 +68,36 @@ sys-locale = "0.3"
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
+# Slint's own docs: wasm cross-compiles use the winit backend with the
+# femtovg (WebGL) renderer — there's no separate wasm-specific backend
+# feature.
+slint = { version = "1.16", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "accessibility",
+    "backend-winit",
+    "renderer-femtovg",
+] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-slint = { version = "1.16", features = ["backend-android-activity-06"] }
+slint = { version = "1.16", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "accessibility",
+    "backend-android-activity-06",
+    "renderer-femtovg",
+] }
 
 [target.'cfg(target_os = "ios")'.dependencies]
+# No dedicated iOS backend feature exists in Slint 1.17 — winit covers iOS
+# natively, same as desktop.
+slint = { version = "1.16", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "accessibility",
+    "backend-winit",
+    "renderer-femtovg",
+] }
 # Simulator SDKs report a different MTLResourceID struct encoding than objc2-metal
 # expects, causing a spurious runtime panic. Slint's own fix (upstream PR #9739)
 # only disables the assertion for the arm64 simulator slice; disable it here for
@@ -58,4 +109,12 @@ objc2 = { version = "0.6", features = ["disable-encoding-assertions"] }
 slint-build = "1.16"
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+wasm-opt = [
+    "-O",
+    "--enable-bulk-memory",
+    "--enable-nontrapping-float-to-int",
+    "--enable-sign-ext",
+    "--enable-mutable-globals",
+    "--enable-reference-types",
+    "--enable-multivalue",
+]
