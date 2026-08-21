@@ -28,6 +28,13 @@ const DB_NAME: &str = "mortgage_calculator";
 const STORE_NAME: &str = "redb_backend";
 const BLOB_KEY: &str = "db";
 
+/// redb defaults to a 1 GiB cache ceiling, sized for large server-side
+/// databases. Saved scenarios here are small JSON blobs (a few hundred
+/// bytes to a couple KB each) — a few MiB is generous headroom for this
+/// app's realistic data scale and a more predictable ceiling on
+/// memory-constrained mobile/wasm targets.
+const CACHE_SIZE_BYTES: usize = 4 * 1024 * 1024;
+
 impl RedbScenarioStore {
     /// Loads any previously-persisted database bytes from IndexedDB, then
     /// opens (or initializes) redb against an in-memory-backed
@@ -41,6 +48,7 @@ impl RedbScenarioStore {
             writer: Rc::new(PersistState::default()),
         };
         let db = Builder::new()
+            .set_cache_size(CACHE_SIZE_BYTES)
             .create_with_backend(backend)
             .map_err(|e| StoreError::Backend(e.to_string()))?;
 

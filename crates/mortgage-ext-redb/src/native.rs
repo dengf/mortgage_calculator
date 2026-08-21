@@ -7,10 +7,18 @@ use redb::Builder;
 
 use crate::RedbScenarioStore;
 
+/// redb defaults to a 1 GiB cache ceiling, sized for large server-side
+/// databases. Saved scenarios here are small JSON blobs (a few hundred
+/// bytes to a couple KB each) — a few MiB is generous headroom for this
+/// app's realistic data scale and a more predictable ceiling on
+/// memory-constrained mobile targets.
+const CACHE_SIZE_BYTES: usize = 4 * 1024 * 1024;
+
 impl RedbScenarioStore {
     /// Opens (or creates) a redb file at `path`.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, StoreError> {
         let db = Builder::new()
+            .set_cache_size(CACHE_SIZE_BYTES)
             .create(path.as_ref())
             .map_err(|e| StoreError::Backend(e.to_string()))?;
         Ok(Self::from_database(db))
