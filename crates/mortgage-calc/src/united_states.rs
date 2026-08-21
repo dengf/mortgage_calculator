@@ -86,7 +86,10 @@ pub fn monthly_pmi(loan_amount: Decimal, annual_pmi_rate: Decimal) -> Decimal {
 /// Monthly tax savings from deducting mortgage interest at the borrower's
 /// marginal federal rate — a simplified "itemizing helps this much" figure,
 /// not a full tax return simulation.
-pub fn monthly_tax_savings(deductible_monthly_interest: Decimal, marginal_tax_rate: Decimal) -> Decimal {
+pub fn monthly_tax_savings(
+    deductible_monthly_interest: Decimal,
+    marginal_tax_rate: Decimal,
+) -> Decimal {
     round_currency(deductible_monthly_interest.max(Decimal::ZERO) * marginal_tax_rate)
 }
 
@@ -147,7 +150,10 @@ mod tests {
 
     #[test]
     fn estimate_property_tax_rate_chains_zip_to_state() {
-        assert_eq!(estimate_property_tax_rate("90210"), property_tax_rate_for_state("CA"));
+        assert_eq!(
+            estimate_property_tax_rate("90210"),
+            property_tax_rate_for_state("CA")
+        );
     }
 
     #[test]
@@ -171,12 +177,18 @@ mod tests {
 
     #[test]
     fn loans_at_or_below_the_limit_are_conforming() {
-        assert_eq!(classify_loan(CONFORMING_LOAN_LIMIT), LoanConformance::Conforming);
+        assert_eq!(
+            classify_loan(CONFORMING_LOAN_LIMIT),
+            LoanConformance::Conforming
+        );
         assert_eq!(classify_loan(dec!(400_000)), LoanConformance::Conforming);
     }
 
     #[test]
     fn loans_above_the_limit_are_jumbo() {
-        assert_eq!(classify_loan(CONFORMING_LOAN_LIMIT + dec!(1)), LoanConformance::Jumbo);
+        assert_eq!(
+            classify_loan(CONFORMING_LOAN_LIMIT + dec!(1)),
+            LoanConformance::Jumbo
+        );
     }
 }

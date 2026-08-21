@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 ///
 /// New regions are added here and then wired into each calculator/UI layer
 /// that needs region-specific behavior; this type is just the shared tag.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Region {
     /// United States: PITI/escrow, PMI below 20% down, ZIP-code property tax.
+    #[default]
     US,
     /// Singapore: CPF OA, MAS TDSR/MSR limits, BSD/ABSD stamp duty.
     SG,
@@ -31,11 +32,5 @@ impl Region {
         } else {
             Region::US
         }
-    }
-}
-
-impl Default for Region {
-    fn default() -> Self {
-        Region::US
     }
 }

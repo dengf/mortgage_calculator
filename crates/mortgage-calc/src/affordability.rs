@@ -82,7 +82,8 @@ pub fn max_affordable(input: &AffordabilityInput) -> MortgageResult<Affordabilit
         - input.monthly_hoa
         - input.down_payment * monthly_tax_rate;
 
-    let max_loan_amount = round_currency((budget_for_loan_and_tax / (k + monthly_tax_rate)).max(Decimal::ZERO));
+    let max_loan_amount =
+        round_currency((budget_for_loan_and_tax / (k + monthly_tax_rate)).max(Decimal::ZERO));
     let max_home_price = round_currency(max_loan_amount + input.down_payment);
     let max_principal_and_interest = round_currency(max_loan_amount * k);
 

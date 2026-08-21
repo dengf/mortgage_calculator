@@ -80,12 +80,22 @@ async fn save_scenario_impl(params: JsValue) -> SaveScenarioResult {
 
     let calculator = match parse_calculator_kind(&params.calculator) {
         Ok(c) => c,
-        Err(e) => return SaveScenarioResult { error: Some(e), ..Default::default() },
+        Err(e) => {
+            return SaveScenarioResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
     };
 
     let store = match get_store() {
         Ok(s) => s,
-        Err(e) => return SaveScenarioResult { error: Some(e), ..Default::default() },
+        Err(e) => {
+            return SaveScenarioResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
     };
 
     let id = params.id.unwrap_or_else(new_scenario_id);
@@ -118,13 +128,23 @@ pub async fn list_scenarios(calculator: Option<String>) -> JsValue {
 async fn list_scenarios_impl(calculator: Option<String>) -> ScenarioListResult {
     let filter: Option<CalculatorKind> = match calculator.as_deref().map(parse_calculator_kind) {
         Some(Ok(kind)) => Some(kind),
-        Some(Err(e)) => return ScenarioListResult { error: Some(e), ..Default::default() },
+        Some(Err(e)) => {
+            return ScenarioListResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
         None => None,
     };
 
     let store = match get_store() {
         Ok(s) => s,
-        Err(e) => return ScenarioListResult { error: Some(e), ..Default::default() },
+        Err(e) => {
+            return ScenarioListResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
     };
 
     match store.list(filter).await {
@@ -148,7 +168,12 @@ pub async fn load_scenario(id: String) -> JsValue {
 async fn load_scenario_impl(id: String) -> ScenarioResult {
     let store = match get_store() {
         Ok(s) => s,
-        Err(e) => return ScenarioResult { error: Some(e), ..Default::default() },
+        Err(e) => {
+            return ScenarioResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
     };
 
     match store.load(&id).await {
@@ -172,7 +197,12 @@ pub async fn delete_scenario(id: String) -> JsValue {
 async fn delete_scenario_impl(id: String) -> DeleteScenarioResult {
     let store = match get_store() {
         Ok(s) => s,
-        Err(e) => return DeleteScenarioResult { error: Some(e), success: false },
+        Err(e) => {
+            return DeleteScenarioResult {
+                error: Some(e),
+                success: false,
+            }
+        }
     };
 
     match store.delete(&id).await {

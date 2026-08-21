@@ -89,11 +89,13 @@ pub fn extra_payment_impact(
     let baseline = schedule(loan, Decimal::ZERO)?;
     let with_extra = schedule(loan, extra_payment)?;
 
-    let baseline_total_interest = round_currency(
-        baseline.iter().map(|r| r.interest_portion).sum::<Decimal>(),
-    );
+    let baseline_total_interest =
+        round_currency(baseline.iter().map(|r| r.interest_portion).sum::<Decimal>());
     let total_interest_with_extra = round_currency(
-        with_extra.iter().map(|r| r.interest_portion).sum::<Decimal>(),
+        with_extra
+            .iter()
+            .map(|r| r.interest_portion)
+            .sum::<Decimal>(),
     );
 
     let baseline_periods = baseline.len() as u32;

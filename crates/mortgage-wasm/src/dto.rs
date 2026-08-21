@@ -119,7 +119,9 @@ pub struct RefinanceResultDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum RateTypeDto {
-    Fixed { rate_percent: f64 },
+    Fixed {
+        rate_percent: f64,
+    },
     Floating {
         base_rate_percent: f64,
         spread_percent: f64,

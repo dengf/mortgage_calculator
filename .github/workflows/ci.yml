@@ -6,6 +6,26 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: cargo fmt + clippy
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
   test:
     name: cargo test --workspace
     runs-on: macos-latest
@@ -24,6 +44,25 @@ jobs:
       - name: cargo test --workspace
         run: cargo test --workspace
 
+  slint-wasm-check:
+    name: mortgage-ui-slint (wasm32 check)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: slint-wasm-check
+
+      - name: cargo check (wasm32)
+        run: cargo check -p mortgage-ui-slint --target wasm32-unknown-unknown
+
   www-build:
     name: www/ (React + wasm) production build
     runs-on: macos-latest
@@ -37,6 +76,8 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: www-build
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
