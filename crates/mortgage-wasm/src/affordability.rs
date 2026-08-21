@@ -23,14 +23,28 @@ fn calculate_affordability_impl(params: JsValue) -> AffordabilityResultDto {
         }
     };
 
+    let (annual_rate, max_dti, annual_property_tax_rate) = match (
+        percent_to_rate(params.annual_rate_percent),
+        percent_to_rate(params.max_dti_percent),
+        percent_to_rate(params.annual_property_tax_rate_percent),
+    ) {
+        (Some(rate), Some(dti), Some(tax)) => (rate, dti, tax),
+        _ => {
+            return AffordabilityResultDto {
+                error: Some("rate percentages must be finite numbers".to_string()),
+                ..Default::default()
+            }
+        }
+    };
+
     let input = AffordabilityInput {
         gross_monthly_income: f64_to_decimal(params.gross_monthly_income),
         monthly_debts: f64_to_decimal(params.monthly_debts),
         down_payment: f64_to_decimal(params.down_payment),
-        annual_rate: percent_to_rate(params.annual_rate_percent),
+        annual_rate,
         term_years: f64_to_decimal(params.term_years),
-        max_dti: percent_to_rate(params.max_dti_percent),
-        annual_property_tax_rate: percent_to_rate(params.annual_property_tax_rate_percent),
+        max_dti,
+        annual_property_tax_rate,
         annual_insurance: f64_to_decimal(params.annual_insurance),
         monthly_hoa: f64_to_decimal(params.monthly_hoa),
     };

@@ -26,7 +26,9 @@ pub struct AmortizationRow {
 /// loan's nominal term.
 pub fn schedule(loan: &Loan, extra_payment: Decimal) -> MortgageResult<Vec<AmortizationRow>> {
     if extra_payment < Decimal::ZERO {
-        return Err(MortgageError::InvalidExtraPayment(extra_payment.to_string()));
+        return Err(MortgageError::InvalidExtraPayment(
+            extra_payment.to_string(),
+        ));
     }
 
     let periodic_rate = loan.periodic_rate();

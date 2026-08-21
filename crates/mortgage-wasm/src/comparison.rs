@@ -31,15 +31,26 @@ fn calculate_comparison_impl(params: JsValue) -> ComparisonResult {
         frequency: parse_frequency(params.frequency.as_deref()),
     };
 
-    let entries: Vec<ComparisonEntry> = params
+    let entries: Vec<ComparisonEntry> = match params
         .entries
         .iter()
-        .map(|entry| ComparisonEntry {
-            label: entry.label.clone(),
-            rate_type: rate_type_from_dto(&entry.rate_type),
-            term_years: f64_to_decimal(entry.term_years),
+        .map(|entry| {
+            Ok(ComparisonEntry {
+                label: entry.label.clone(),
+                rate_type: rate_type_from_dto(&entry.rate_type)?,
+                term_years: f64_to_decimal(entry.term_years),
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, String>>()
+    {
+        Ok(entries) => entries,
+        Err(e) => {
+            return ComparisonResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
+    };
 
     match mortgage_calc::comparison::compare(&input, &entries) {
         Ok(rows) => ComparisonResult {
