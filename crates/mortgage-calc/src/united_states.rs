@@ -78,19 +78,26 @@ pub fn requires_pmi(down_payment_percent: Decimal) -> bool {
     down_payment_percent < PMI_DOWN_PAYMENT_THRESHOLD
 }
 
-/// Monthly PMI premium: an annual rate applied to the loan amount, billed monthly.
+/// Monthly PMI premium: an annual rate applied to the loan amount, billed
+/// monthly. Both operands are clamped to zero — a negative rate would
+/// otherwise produce a negative "premium" that reduces the PITI total
+/// instead of adding to it.
 pub fn monthly_pmi(loan_amount: Decimal, annual_pmi_rate: Decimal) -> Decimal {
-    round_currency(loan_amount.max(Decimal::ZERO) * annual_pmi_rate / dec!(12))
+    round_currency(loan_amount.max(Decimal::ZERO) * annual_pmi_rate.max(Decimal::ZERO) / dec!(12))
 }
 
 /// Monthly tax savings from deducting mortgage interest at the borrower's
 /// marginal federal rate — a simplified "itemizing helps this much" figure,
-/// not a full tax return simulation.
+/// not a full tax return simulation. Both operands are clamped to zero —
+/// a negative rate would otherwise produce negative "savings" that inflate
+/// the net cost instead of leaving it unchanged.
 pub fn monthly_tax_savings(
     deductible_monthly_interest: Decimal,
     marginal_tax_rate: Decimal,
 ) -> Decimal {
-    round_currency(deductible_monthly_interest.max(Decimal::ZERO) * marginal_tax_rate)
+    round_currency(
+        deductible_monthly_interest.max(Decimal::ZERO) * marginal_tax_rate.max(Decimal::ZERO),
+    )
 }
 
 /// The financing framework a loan falls under, which determines investor
@@ -173,6 +180,18 @@ mod tests {
     fn tax_savings_scales_with_bracket() {
         let savings = monthly_tax_savings(dec!(2000), dec!(0.22));
         assert_eq!(savings, dec!(440.00));
+    }
+
+    #[test]
+    fn monthly_pmi_never_goes_negative_even_with_a_negative_rate() {
+        let pmi = monthly_pmi(dec!(400_000), dec!(-0.05));
+        assert_eq!(pmi, dec!(0));
+    }
+
+    #[test]
+    fn tax_savings_never_goes_negative_even_with_a_negative_rate() {
+        let savings = monthly_tax_savings(dec!(2000), dec!(-0.22));
+        assert_eq!(savings, dec!(0));
     }
 
     #[test]
