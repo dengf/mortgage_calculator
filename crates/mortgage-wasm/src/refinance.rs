@@ -13,16 +13,18 @@ pub fn calculate_refinance(params: JsValue) -> JsValue {
 }
 
 fn calculate_refinance_impl(params: JsValue) -> RefinanceResultDto {
-    let params: RefinanceParams = match serde_wasm_bindgen::from_value(params) {
-        Ok(p) => p,
-        Err(e) => {
-            return RefinanceResultDto {
-                error: Some(format!("Failed to parse refinance parameters: {e:?}")),
-                ..Default::default()
-            }
-        }
-    };
+    match serde_wasm_bindgen::from_value(params) {
+        Ok(params) => refinance_from_params(params),
+        Err(e) => RefinanceResultDto {
+            error: Some(format!("Failed to parse refinance parameters: {e:?}")),
+            ..Default::default()
+        },
+    }
+}
 
+/// JsValue-free core of [`calculate_refinance_impl`] — see the matching
+/// comment on `payment::payment_from_params`.
+fn refinance_from_params(params: RefinanceParams) -> RefinanceResultDto {
     let (current_annual_rate, new_annual_rate) = match (
         percent_to_rate(params.current_annual_rate_percent),
         percent_to_rate(params.new_annual_rate_percent),
@@ -63,5 +65,40 @@ fn calculate_refinance_impl(params: JsValue) -> RefinanceResultDto {
             error: Some(e.to_string()),
             ..Default::default()
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_params() -> RefinanceParams {
+        RefinanceParams {
+            current_balance: 300_000.0,
+            current_annual_rate_percent: 7.5,
+            remaining_periods: 300,
+            new_annual_rate_percent: 6.0,
+            new_term_years: 30.0,
+            closing_costs: 6000.0,
+            frequency: None,
+        }
+    }
+
+    #[test]
+    fn computes_savings_when_the_new_rate_is_lower() {
+        let result = refinance_from_params(valid_params());
+        assert!(result.error.is_none());
+        assert!(result.payment_savings.unwrap() > 0.0);
+        assert!(result.break_even_periods.is_some());
+    }
+
+    #[test]
+    fn rejects_a_non_finite_rate_instead_of_treating_it_as_zero() {
+        let result = refinance_from_params(RefinanceParams {
+            new_annual_rate_percent: f64::INFINITY,
+            ..valid_params()
+        });
+        assert!(result.payment_savings.is_none());
+        assert!(result.error.is_some());
     }
 }
