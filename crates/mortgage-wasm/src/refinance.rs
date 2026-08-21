@@ -23,11 +23,24 @@ fn calculate_refinance_impl(params: JsValue) -> RefinanceResultDto {
         }
     };
 
+    let (current_annual_rate, new_annual_rate) = match (
+        percent_to_rate(params.current_annual_rate_percent),
+        percent_to_rate(params.new_annual_rate_percent),
+    ) {
+        (Some(current), Some(new)) => (current, new),
+        _ => {
+            return RefinanceResultDto {
+                error: Some("rate percentages must be finite numbers".to_string()),
+                ..Default::default()
+            }
+        }
+    };
+
     let input = RefinanceInput {
         current_balance: f64_to_decimal(params.current_balance),
-        current_annual_rate: percent_to_rate(params.current_annual_rate_percent),
+        current_annual_rate,
         remaining_periods: params.remaining_periods,
-        new_annual_rate: percent_to_rate(params.new_annual_rate_percent),
+        new_annual_rate,
         new_term_years: f64_to_decimal(params.new_term_years),
         closing_costs: f64_to_decimal(params.closing_costs),
         frequency: parse_frequency(params.frequency.as_deref()),
