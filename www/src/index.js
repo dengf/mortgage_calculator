@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { startVersionCheck } from './version-check';
 import './styles/main.css';
 
 let wasmModule = null;
@@ -241,6 +242,11 @@ export function getWasmModule() {
 }
 
 async function main() {
+  // Before rendering: if this page is a cached copy from before the last
+  // deploy, it reloads onto the current one rather than quietly running
+  // stale code.
+  startVersionCheck();
+
   const wasm = await initWasm();
   wasmModule = wasm;
 

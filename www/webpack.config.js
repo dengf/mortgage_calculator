@@ -1,6 +1,56 @@
 const path = require('path');
+const crypto = require('crypto');
+const { execSync } = require('child_process');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+// Identifies this build, so a running page can tell whether it is the one
+// currently deployed. GitHub Actions exports GITHUB_SHA; locally fall back
+// to the git HEAD, and to a random value if neither is available (a
+// detached tarball, say) so two builds never collide.
+function buildId() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 12);
+  try {
+    return execSync('git rev-parse --short=12 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return crypto.randomBytes(6).toString('hex');
+  }
+}
+
+const BUILD_ID = buildId();
+
+/**
+ * Writes the build id to a small `version.json` alongside the bundle.
+ *
+ * GitHub Pages serves HTML with `cache-control: max-age=600` and provides
+ * no way to change that — there is no `_headers` file or equivalent. So for
+ * up to ten minutes after a deploy a returning visitor can be running the
+ * previous HTML, and therefore the previous bundle, with no indication
+ * anything is stale. The page fetches this file to notice that itself; see
+ * src/version-check.js.
+ */
+class EmitVersionPlugin {
+  apply(compiler) {
+    const { Compilation, sources } = compiler.webpack;
+    compiler.hooks.thisCompilation.tap('EmitVersionPlugin', (compilation) => {
+      compilation.hooks.processAssets.tap(
+        {
+          name: 'EmitVersionPlugin',
+          stage: Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+        },
+        () => {
+          compilation.emitAsset(
+            'version.json',
+            new sources.RawSource(JSON.stringify({ buildId: BUILD_ID })),
+          );
+        },
+      );
+    });
+  }
+}
 
 module.exports = {
   entry: './src/index.js',
@@ -40,6 +90,11 @@ module.exports = {
     },
   },
   plugins: [
+    new webpack.DefinePlugin({
+      // The page compares this against the deployed version.json.
+      __BUILD_ID__: JSON.stringify(BUILD_ID),
+    }),
+    new EmitVersionPlugin(),
     new HtmlWebpackPlugin({
       template: './index.html',
       favicon: false,
