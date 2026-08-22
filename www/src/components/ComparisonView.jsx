@@ -85,6 +85,28 @@ export default function ComparisonView({
     });
   }, [wasmModule, principal, frequency, entries]);
 
+  const rows = result?.rows ?? [];
+  const lowestBy = (key) =>
+    rows.length ? rows.reduce((best, r) => (r[key] < best[key] ? r : best)) : null;
+  const cheapestPayment = lowestBy('payment');
+  const cheapestInterest = lowestBy('total_interest');
+  const cheapestTotal = lowestBy('total_paid');
+
+  // The classic fixed-term trade-off: the option that costs least overall
+  // usually costs most each month. Say which, and by how much.
+  const tradeoff = (() => {
+    if (rows.length < 2 || !cheapestPayment || !cheapestInterest) return null;
+    if (cheapestPayment === cheapestInterest) {
+      return t('cmp.outright', { label: cheapestInterest.label });
+    }
+    return t('cmp.tradeoff', {
+      cheaper: cheapestInterest.label,
+      lighter: cheapestPayment.label,
+      paymentDelta: formatMoney(cheapestInterest.payment - cheapestPayment.payment),
+      interestDelta: formatMoney(cheapestPayment.total_interest - cheapestInterest.total_interest),
+    });
+  })();
+
   const updateEntry = (id, updated) => {
     setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
   };
@@ -139,8 +161,8 @@ export default function ComparisonView({
             <thead>
               <tr>
                 <th>{t('cmp.scenario')}</th>
-                <th>Rate</th>
-                <th>Term</th>
+                <th>{t('cmp.rate')}</th>
+                <th>{t('cmp.term')}</th>
                 <th>{t('cmp.payment')}</th>
                 <th>{t('cmp.totalPaid')}</th>
                 <th>{t('cmp.totalInterest')}</th>
@@ -151,16 +173,27 @@ export default function ComparisonView({
                 <tr key={row.label}>
                   <td>{row.label}</td>
                   <td>{row.effective_rate_percent.toFixed(3)}%</td>
-                  <td>{row.term_years}yr</td>
-                  <td>{formatMoney(row.payment)}</td>
-                  <td>{formatMoney(row.total_paid)}</td>
-                  <td>{formatMoney(row.total_interest)}</td>
+                  <td>{t('duration.years', { years: row.term_years })}</td>
+                  <td className={row === cheapestPayment ? 'best' : undefined}>
+                    {formatMoney(row.payment)}
+                  </td>
+                  <td className={row === cheapestTotal ? 'best' : undefined}>
+                    {formatMoney(row.total_paid)}
+                  </td>
+                  <td className={row === cheapestInterest ? 'best' : undefined}>
+                    {formatMoney(row.total_interest)}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* The difference is the entire question a comparison is asked to
+          answer, and the table never stated it — two columns of figures and
+          the arithmetic left to the reader. */}
+      {tradeoff && <div className="cmp-tradeoff">{tradeoff}</div>}
 
       <SavedScenarios
         wasmModule={wasmModule}

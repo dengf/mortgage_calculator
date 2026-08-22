@@ -117,7 +117,10 @@ export default function PaymentCalculator({
         formatMoney={formatMoney}
       />
 
-      <div className={stale ? 'panel-results stale' : 'panel-results'}>
+      <div
+        className={stale ? 'panel-results stale' : 'panel-results'}
+        aria-live="polite"
+      >
         {result?.error && (
           <div className="error">
             {result.error_message

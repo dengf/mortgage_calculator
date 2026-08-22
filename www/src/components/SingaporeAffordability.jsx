@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
-import { makeFormatMoney } from './../currency';
+import { makeFormatEstimate, makeFormatMoney } from './../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 
 // This panel only renders under the SG region, so its currency is fixed.
 const formatSgd = makeFormatMoney('SG');
+// Ceilings are estimates, not quotes — see makeFormatEstimate.
+const estimateSgd = makeFormatEstimate('SG');
 
 /**
  * Singapore affordability: how much property a buyer can actually complete on.
@@ -112,7 +114,7 @@ export default function SingaporeAffordability({ wasmModule }) {
         </label>
       </div>
 
-      <div className="panel-results">
+      <div className="panel-results" aria-live="polite">
         {result?.error && (
           <div className="error">
             {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
@@ -124,11 +126,11 @@ export default function SingaporeAffordability({ wasmModule }) {
             <div className="stat-grid">
               <div className="stat stat-primary">
                 <span className="stat-label">{t('sgaff.maxPrice')}</span>
-                <span className="stat-value">{formatSgd(result.max_price)}</span>
+                <span className="stat-value">{estimateSgd(result.max_price)}</span>
               </div>
               <div className="stat">
                 <span className="stat-label">{t('sgaff.maxLoan')}</span>
-                <span className="stat-value">{formatSgd(result.max_loan)}</span>
+                <span className="stat-value">{estimateSgd(result.max_loan)}</span>
                 <span className="stat-note">
                   {t('sgaff.ltvNote', { ltv: result.ltv_percent.toFixed(0) })}
                   {result.extended_tenure ? ` · ${t('sgaff.extendedTenure')}` : ''}

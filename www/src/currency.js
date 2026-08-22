@@ -34,3 +34,19 @@ export function makeFormatMoney(region) {
 export function currencySymbol(region) {
   return (CURRENCY[region] ?? CURRENCY[DEFAULT_REGION]).symbol;
 }
+
+/**
+ * Formats an estimate, rounded to the nearest thousand and without cents.
+ *
+ * "Max home price S$458,187.04" implies a precision the model doesn't have —
+ * it's derived from an assumed ratio, not a quote. Cents belong on payment
+ * amounts, which are real.
+ */
+export function makeFormatEstimate(region) {
+  const money = makeFormatMoney(region);
+  return (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return money(value);
+    return money(Math.round(n / 1000) * 1000).replace(/[.,]00$/, '');
+  };
+}
