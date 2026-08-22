@@ -187,6 +187,17 @@ pub enum RateTypeDto {
     },
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct DescribeRateParams {
+    pub rate_type: RateTypeDto,
+    #[serde(default)]
+    pub term_years: f64,
+    /// The published benchmark the row was seeded with. A row built from
+    /// scratch has none, and keeps whatever name the user gave it.
+    #[serde(default)]
+    pub index: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct RatePresetDto {
     /// English rendering, kept as the entry's identity and as a fallback for
@@ -195,6 +206,9 @@ pub struct RatePresetDto {
     /// The same name as a code plus its values, so the UI can compose it in
     /// the reader's language -- the convention already used for errors.
     pub label_message: Message,
+    /// The benchmark this preset names, so a row seeded from it can be
+    /// renamed from its own figures as they are edited.
+    pub index: Option<String>,
     pub rate_type: RateTypeDto,
     pub term_years: f64,
 }

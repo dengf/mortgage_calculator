@@ -396,3 +396,93 @@ describe('ComparisonView saved reverting rows', () => {
     }
   });
 });
+
+// A row seeded from a preset is named from its own figures. Editing them used
+// to leave the name behind, so a row could read "then + 0.60%" while
+// computing 1.50% -- the label contradicting the numbers beside it.
+describe('ComparisonView row names follow their figures', () => {
+  const preset = {
+    label: 'Floating: 3M SORA + 0.30% for 2 yr, then + 0.60%',
+    label_message: {
+      code: 'preset.reverting',
+      params: { index: '3M SORA', initial: '0.30', years: '2', thereafter: '0.60' },
+      text: '3M SORA + 0.30% for 2 yr, then + 0.60%',
+    },
+    index: '3M SORA',
+    rate_type: {
+      kind: 'reverting',
+      base_rate_percent: 1.12,
+      initial_spread_percent: 0.3,
+      initial_years: 2,
+      thereafter_spread_percent: 0.6,
+    },
+    term_years: 25,
+  };
+
+  const wasmWith = (describe_rate) => ({
+    ...scenarioBindings(),
+    get_common_rate_presets: vi.fn(() => [preset]),
+    calculate_comparison: vi.fn(() => ({ rows: [], verdict: null, error: null })),
+    list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+    describe_rate,
+  });
+
+  const thereafterInput = () =>
+    [...document.querySelectorAll('.comparison-entry-field')]
+      .find((f) => /Thereafter/.test(f.textContent))
+      .querySelector('input');
+
+  it('renames the row when a spread changes', async () => {
+    const user = userEvent.setup();
+    const describe_rate = vi.fn(({ rate_type }) => ({
+      code: 'preset.reverting',
+      params: {
+        index: '3M SORA',
+        initial: rate_type.initial_spread_percent.toFixed(2),
+        years: String(rate_type.initial_years),
+        thereafter: rate_type.thereafter_spread_percent.toFixed(2),
+      },
+      text: 'ignored',
+    }));
+
+    render(
+      <I18nProvider initialLocale="en">
+        <ComparisonView wasmModule={wasmWith(describe_rate)} region="SG" />
+      </I18nProvider>,
+    );
+
+    await screen.findByDisplayValue(/then \+ 0\.60%/);
+    const field = thereafterInput();
+    await user.clear(field);
+    await user.type(field, '1.5');
+
+    expect(await screen.findByDisplayValue(/then \+ 1\.50%/)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue(/then \+ 0\.60%/)).not.toBeInTheDocument();
+  });
+
+  it('leaves a name the user typed alone', async () => {
+    const user = userEvent.setup();
+    const describe_rate = vi.fn(() => ({
+      code: 'preset.reverting',
+      params: { index: '3M SORA', initial: '0.30', years: '2', thereafter: '9.99' },
+      text: 'ignored',
+    }));
+
+    render(
+      <I18nProvider initialLocale="en">
+        <ComparisonView wasmModule={wasmWith(describe_rate)} region="SG" />
+      </I18nProvider>,
+    );
+
+    const name = await screen.findByDisplayValue(/then \+ 0\.60%/);
+    await user.clear(name);
+    await user.type(name, 'DBS quote');
+
+    const field = thereafterInput();
+    await user.clear(field);
+    await user.type(field, '1.5');
+
+    // Their name, not ours.
+    expect(screen.getByDisplayValue('DBS quote')).toBeInTheDocument();
+  });
+});

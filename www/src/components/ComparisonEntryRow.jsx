@@ -10,7 +10,9 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
       <input
         className="comparison-entry-label"
         value={entry.label}
-        onChange={(e) => set({ label: e.target.value })}
+        // Typing a name claims it: the row stops being renamed from its
+        // own figures from here on.
+        onChange={(e) => set({ label: e.target.value, labelEdited: true })}
         placeholder={t('cmp.scenarioLabel')}
       />
 

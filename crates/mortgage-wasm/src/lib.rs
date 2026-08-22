@@ -8,7 +8,7 @@
 //! - [`amortization`] — `calculate_amortization_schedule`, `calculate_extra_payment_impact`
 //! - [`affordability`] — `calculate_affordability`
 //! - [`refinance`] — `calculate_refinance`
-//! - [`comparison`] — `calculate_comparison`, `get_common_rate_presets`
+//! - [`comparison`] — `calculate_comparison`, `get_common_rate_presets`, `describe_rate`
 //! - [`singapore`] — `calculate_singapore`
 //! - [`united_states`] — `calculate_united_states`
 //! - [`region`] — `detect_region`

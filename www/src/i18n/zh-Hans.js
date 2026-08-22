@@ -140,7 +140,7 @@ export default {
   'preset.hdbConcessionary': '建屋局优惠利率',
   'cmp.reverting': '分段利率',
   'cmp.initialSpread': '首期利差',
-  'cmp.lockIn': '锁定',
+  'cmp.lockIn': '锁定期',
   'cmp.thereafterSpread': '之后利差',
   'cmp.thenRate': '之后 {rate}%',
   'cmp.thenPayment': '之后 {payment}',
