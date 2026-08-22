@@ -72,6 +72,8 @@ fn comparison_from_params(params: ComparisonParams) -> ComparisonResult {
                 .map(|row| ComparisonRowDto {
                     label: row.label,
                     effective_rate_percent: rate_to_percent(row.effective_rate),
+                    thereafter_rate_percent: row.thereafter_rate.map(rate_to_percent),
+                    payment_after_reversion: row.payment_after_reversion.map(decimal_to_f64),
                     term_years: decimal_to_f64(row.term_years),
                     payment: decimal_to_f64(row.payment),
                     total_periods: row.total_periods,
@@ -145,6 +147,27 @@ fn label_message(label: PresetLabel) -> Message {
                     ("spread".to_string(), spread.clone()),
                 ],
                 format!("Floating: {index} + {spread}%"),
+            )
+        }
+        PresetLabel::Reverting {
+            index,
+            initial_spread,
+            initial_years,
+            thereafter_spread,
+        } => {
+            let index = index.as_str().to_string();
+            let initial = spread_percent(initial_spread);
+            let thereafter = spread_percent(thereafter_spread);
+            let years = initial_years.normalize().to_string();
+            Message::with_params(
+                "preset.reverting",
+                [
+                    ("index".to_string(), index.clone()),
+                    ("initial".to_string(), initial.clone()),
+                    ("years".to_string(), years.clone()),
+                    ("thereafter".to_string(), thereafter.clone()),
+                ],
+                format!("{index} + {initial}% for {years} yr, then + {thereafter}%"),
             )
         }
         PresetLabel::HdbConcessionary => {

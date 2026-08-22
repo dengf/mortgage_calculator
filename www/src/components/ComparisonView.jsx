@@ -19,43 +19,65 @@ function presetName(preset, t) {
     : preset.label;
 }
 
+// A row carries every field of every rate shape, so switching kind keeps
+// what was typed rather than discarding it. Only the fields the active kind
+// uses are sent across.
+const EMPTY_ENTRY = {
+  kind: 'fixed',
+  ratePercent: 6.5,
+  baseRatePercent: 4.3,
+  spreadPercent: 2,
+  initialSpreadPercent: 0.3,
+  initialYears: 2,
+  thereafterSpreadPercent: 0.6,
+  termYears: 30,
+};
+
 function presetToEntry(preset, t) {
-  const isFixed = preset.rate_type.kind === 'fixed';
+  const rate = preset.rate_type;
   return {
+    ...EMPTY_ENTRY,
     id: newId(),
     // Named in the reader's language at the moment it is added. The label is
     // an editable field on the row from then on, so it belongs to the user
     // rather than re-translating under them on a language switch.
     label: presetName(preset, t),
-    kind: isFixed ? 'fixed' : 'floating',
-    ratePercent: isFixed ? preset.rate_type.rate_percent : 6.5,
-    baseRatePercent: isFixed ? 4.3 : preset.rate_type.base_rate_percent,
-    spreadPercent: isFixed ? 2 : preset.rate_type.spread_percent,
+    kind: rate.kind,
     termYears: preset.term_years,
+    ...(rate.kind === 'fixed' && { ratePercent: rate.rate_percent }),
+    ...(rate.kind === 'floating' && {
+      baseRatePercent: rate.base_rate_percent,
+      spreadPercent: rate.spread_percent,
+    }),
+    ...(rate.kind === 'reverting' && {
+      baseRatePercent: rate.base_rate_percent,
+      initialSpreadPercent: rate.initial_spread_percent,
+      initialYears: rate.initial_years,
+      thereafterSpreadPercent: rate.thereafter_spread_percent,
+    }),
   };
 }
 
 function blankEntry(t) {
-  return {
-    id: newId(),
-    label: t('cmp.customScenario'),
-    kind: 'fixed',
-    ratePercent: 6.5,
-    baseRatePercent: 4.3,
-    spreadPercent: 2,
-    termYears: 30,
-  };
+  return { ...EMPTY_ENTRY, id: newId(), label: t('cmp.customScenario') };
 }
 
 function toWasmEntry(entry) {
-  const rate_type =
-    entry.kind === 'fixed'
-      ? { kind: 'fixed', rate_percent: entry.ratePercent }
-      : {
-          kind: 'floating',
-          base_rate_percent: entry.baseRatePercent,
-          spread_percent: entry.spreadPercent,
-        };
+  const rate_type = {
+    fixed: () => ({ kind: 'fixed', rate_percent: entry.ratePercent }),
+    floating: () => ({
+      kind: 'floating',
+      base_rate_percent: entry.baseRatePercent,
+      spread_percent: entry.spreadPercent,
+    }),
+    reverting: () => ({
+      kind: 'reverting',
+      base_rate_percent: entry.baseRatePercent,
+      initial_spread_percent: entry.initialSpreadPercent,
+      initial_years: entry.initialYears,
+      thereafter_spread_percent: entry.thereafterSpreadPercent,
+    }),
+  }[entry.kind]();
   return { label: entry.label, rate_type, term_years: entry.termYears };
 }
 
@@ -205,10 +227,29 @@ export default function ComparisonView({
               {result.rows.map((row, index) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
-                  <td>{row.effective_rate_percent.toFixed(3)}%</td>
+                  <td>
+                    {row.effective_rate_percent.toFixed(3)}%
+                    {row.thereafter_rate_percent != null && (
+                      <span className="cmp-thereafter">
+                        {t('cmp.thenRate', {
+                          rate: row.thereafter_rate_percent.toFixed(3),
+                        })}
+                      </span>
+                    )}
+                  </td>
                   <td>{t('duration.years', { years: row.term_years })}</td>
                   <td className={index === verdict?.cheapest_payment ? 'best' : undefined}>
                     {formatMoney(row.payment)}
+                    {/* The promotional instalment on its own is the number a
+                        buyer decides on and the one that changes. Showing
+                        only it is how a package gets compared on its teaser. */}
+                    {row.payment_after_reversion != null && (
+                      <span className="cmp-thereafter">
+                        {t('cmp.thenPayment', {
+                          payment: formatMoney(row.payment_after_reversion),
+                        })}
+                      </span>
+                    )}
                   </td>
                   <td className={index === verdict?.cheapest_total_paid ? 'best' : undefined}>
                     {formatMoney(row.total_paid)}
@@ -250,7 +291,12 @@ export default function ComparisonView({
             downPayment: legacy ? 0 : inputs.downPayment,
             frequency: inputs.frequency ?? scenario.frequency,
           });
-          setEntries((inputs.entries ?? []).map((e) => ({ ...e, id: newId() })));
+          // Merged over the defaults, so a row saved before a rate shape
+          // existed still has every field that shape needs. Without this a
+          // record from before reverting rates would restore with undefined
+          // spreads the moment its kind was switched, and undefined crosses
+          // the wasm boundary as a calculation, not an error.
+          setEntries((inputs.entries ?? []).map((e) => ({ ...EMPTY_ENTRY, ...e, id: newId() })));
         }}
       />
     </section>

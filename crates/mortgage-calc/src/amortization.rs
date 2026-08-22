@@ -4,7 +4,7 @@ use mortgage_core::{round_currency, MortgageError, MortgageResult};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::payment::payment_amount;
+use crate::payment::{payment_amount, payment_factor};
 use crate::Loan;
 
 /// One row of an amortization schedule.
@@ -77,16 +77,30 @@ pub fn schedule(loan: &Loan, extra_payment: Decimal) -> MortgageResult<Vec<Amort
         ));
     }
 
-    let periodic_rate = loan.periodic_rate();
-    let regular_payment = payment_amount(loan);
     let max_periods = loan.total_periods();
 
+    let mut periodic_rate = loan.periodic_rate();
+    let mut regular_payment = payment_amount(loan);
     let mut balance = loan.principal();
     let mut rows = Vec::with_capacity(max_periods as usize);
 
     for period in 1..=max_periods {
         if balance <= Decimal::ZERO {
             break;
+        }
+
+        // At a reversion the bank re-amortizes: the new instalment is what
+        // clears the balance actually outstanding over the periods actually
+        // left, at the new rate. It is not the original payment with a
+        // different rate applied, and it is not a fresh loan over a fresh
+        // term -- both would misstate what the borrower starts paying.
+        if let Some(r) = loan.reversion() {
+            if period == r.after_periods + 1 {
+                periodic_rate = loan.periodic_rate_at(period);
+                let remaining = max_periods - r.after_periods;
+                regular_payment =
+                    round_currency(balance * payment_factor(periodic_rate, remaining));
+            }
         }
 
         let interest_portion = round_currency(balance * periodic_rate);

@@ -79,6 +79,22 @@ pub fn rate_type_from_dto(dto: &RateTypeDto) -> Result<RateType, String> {
             base_rate: percent_to_rate(base_rate_percent).ok_or(NOT_FINITE)?,
             spread: percent_to_rate(spread_percent).ok_or(NOT_FINITE)?,
         }),
+        RateTypeDto::Reverting {
+            base_rate_percent,
+            initial_spread_percent,
+            initial_years,
+            thereafter_spread_percent,
+        } => {
+            if !initial_years.is_finite() {
+                return Err("the lock-in length must be a finite number".to_string());
+            }
+            Ok(RateType::Reverting {
+                base_rate: percent_to_rate(base_rate_percent).ok_or(NOT_FINITE)?,
+                initial_spread: percent_to_rate(initial_spread_percent).ok_or(NOT_FINITE)?,
+                initial_years: f64_to_decimal(initial_years.max(0.0)),
+                thereafter_spread: percent_to_rate(thereafter_spread_percent).ok_or(NOT_FINITE)?,
+            })
+        }
     }
 }
 
@@ -90,6 +106,17 @@ pub fn rate_type_to_dto(rate_type: &RateType) -> RateTypeDto {
         RateType::Floating { base_rate, spread } => RateTypeDto::Floating {
             base_rate_percent: rate_to_percent(base_rate),
             spread_percent: rate_to_percent(spread),
+        },
+        RateType::Reverting {
+            base_rate,
+            initial_spread,
+            initial_years,
+            thereafter_spread,
+        } => RateTypeDto::Reverting {
+            base_rate_percent: rate_to_percent(base_rate),
+            initial_spread_percent: rate_to_percent(initial_spread),
+            initial_years: decimal_to_f64(initial_years),
+            thereafter_spread_percent: rate_to_percent(thereafter_spread),
         },
     }
 }

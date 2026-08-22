@@ -2164,6 +2164,8 @@ mod tests {
     fn build_compare_summary_names_the_cheaper_scenario_and_its_tradeoffs() {
         let a = ComparisonResult {
             label: String::new(),
+            thereafter_rate: None,
+            payment_after_reversion: None,
             effective_rate: dec!(0.065),
             term_years: dec!(30),
             payment: dec!(2528.27),
@@ -2173,6 +2175,8 @@ mod tests {
         };
         let b = ComparisonResult {
             label: String::new(),
+            thereafter_rate: None,
+            payment_after_reversion: None,
             effective_rate: dec!(0.06),
             term_years: dec!(15),
             payment: dec!(3376.06),

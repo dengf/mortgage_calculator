@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ComparisonView from './ComparisonView';
 import { I18nProvider } from '../i18n';
 import { renderControlled } from '../test/controlled';
+import { scenarioBindings } from '../test/wasm';
 
 const preset = (label, rate, term) => ({
   label,
@@ -309,5 +310,89 @@ describe('ComparisonView rate presets', () => {
     // the market rate.
     expect(await screen.findByDisplayValue('Floating: 3M SORA + 0.50%')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('30-Year Fixed')).not.toBeInTheDocument();
+  });
+});
+
+// Saved comparisons store their rows verbatim, so a record written before a
+// rate shape existed comes back missing that shape's fields.
+describe('ComparisonView saved reverting rows', () => {
+  const savedWasm = (inputs) => ({
+    ...scenarioBindings(),
+    get_common_rate_presets: vi.fn(() => []),
+    calculate_comparison: vi.fn(() => ({ rows: [], verdict: null, error: null })),
+    list_scenarios: vi.fn(async () => ({
+      scenarios: [{ id: 's1', name: 'Saved run', created_at: Date.now() }],
+      error: null,
+    })),
+    load_scenario: vi.fn(async () => ({
+      scenario: { inputs_json: JSON.stringify(inputs) },
+      error: null,
+    })),
+  });
+
+  it('round-trips a reverting row', async () => {
+    const user = userEvent.setup();
+    const wasm = savedWasm({
+      homePrice: 500000,
+      downPayment: 100000,
+      frequency: 'monthly',
+      entries: [
+        {
+          label: 'My package',
+          kind: 'reverting',
+          baseRatePercent: 1.12,
+          initialSpreadPercent: 0.35,
+          initialYears: 3,
+          thereafterSpreadPercent: 0.75,
+          termYears: 25,
+        },
+      ],
+    });
+    renderControlled(ComparisonView, { wasmModule: wasm, region: 'SG' });
+
+    await user.click(await screen.findByRole('button', { name: 'Load' }));
+
+    expect(await screen.findByDisplayValue('My package')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0.35')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0.75')).toBeInTheDocument();
+    expect(wasm.calculate_comparison).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        entries: [
+          expect.objectContaining({
+            rate_type: {
+              kind: 'reverting',
+              base_rate_percent: 1.12,
+              initial_spread_percent: 0.35,
+              initial_years: 3,
+              thereafter_spread_percent: 0.75,
+            },
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('gives a row saved before reverting rates the fields it now needs', async () => {
+    const user = userEvent.setup();
+    const wasm = savedWasm({
+      homePrice: 500000,
+      downPayment: 100000,
+      entries: [{ label: 'Old row', kind: 'fixed', ratePercent: 6.5, termYears: 30 }],
+    });
+    renderControlled(ComparisonView, { wasmModule: wasm, region: 'SG' });
+
+    await user.click(await screen.findByRole('button', { name: 'Load' }));
+    await screen.findByDisplayValue('Old row');
+
+    // Switching an old row to the new shape must not send undefined spreads
+    // across the boundary -- undefined arrives as a calculation, not an error.
+    const toggles = document.querySelectorAll('.comparison-entry .kind-toggle');
+    await user.click(toggles[1]);
+
+    const sent = wasm.calculate_comparison.mock.lastCall[0].entries[0].rate_type;
+    expect(sent.kind).toBe('reverting');
+    for (const value of Object.values(sent)) {
+      expect(value).toBeDefined();
+    }
   });
 });

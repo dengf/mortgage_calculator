@@ -46,6 +46,7 @@ fn payment_from_params(loan_params: LoanParams) -> PaymentSummaryResult {
 
     PaymentSummaryResult {
         payment: Some(decimal_to_f64(summary.payment)),
+        payment_after_reversion: summary.payment_after_reversion.map(decimal_to_f64),
         total_periods: Some(summary.total_periods),
         total_paid: Some(decimal_to_f64(summary.total_paid)),
         total_interest: Some(decimal_to_f64(summary.total_interest)),

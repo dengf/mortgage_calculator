@@ -28,7 +28,14 @@ pub struct ComparisonEntry {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ComparisonResult {
     pub label: String,
+    /// The rate charged at the start. For a package that steps up this is
+    /// the promotional one, and comparing on it alone is the mistake the
+    /// structure invites.
     pub effective_rate: Decimal,
+    /// The rate after the lock-in, and the instalment it produces. Both
+    /// `None` for a rate that holds for the whole term.
+    pub thereafter_rate: Option<Decimal>,
+    pub payment_after_reversion: Option<Decimal>,
     pub term_years: Decimal,
     pub payment: Decimal,
     pub total_periods: u32,
@@ -147,6 +154,8 @@ pub fn compare(
             Ok(ComparisonResult {
                 label: entry.label.clone(),
                 effective_rate: entry.rate_type.effective_rate(),
+                thereafter_rate: entry.rate_type.thereafter_rate(),
+                payment_after_reversion: summary.payment_after_reversion,
                 term_years: entry.term_years,
                 payment: summary.payment,
                 total_periods: summary.total_periods,
@@ -222,6 +231,8 @@ mod tests {
         ComparisonResult {
             label: label.into(),
             effective_rate: dec!(0.065),
+            thereafter_rate: None,
+            payment_after_reversion: None,
             term_years: dec!(30),
             payment: payment.parse().unwrap(),
             total_periods: 360,
