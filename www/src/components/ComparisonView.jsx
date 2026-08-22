@@ -204,11 +204,26 @@ export default function ComparisonView({
       <SavedScenarios
         wasmModule={wasmModule}
         calculatorKind="comparison"
-        getCurrentInputs={() => ({ principal, frequency, entries })}
+        getCurrentInputs={() => ({
+          homePrice: scenario.homePrice,
+          downPayment: scenario.downPayment,
+          frequency,
+          entries,
+        })}
         onLoad={(inputs) => {
-          setPrincipal(inputs.principal);
-          setFrequency(inputs.frequency);
-          setEntries(inputs.entries.map((e) => ({ ...e, id: newId() })));
+          // Records saved before price and deposit moved into the shared
+          // scenario hold only the loan amount. The split they were entered
+          // with was never stored and cannot be recovered, so such a record
+          // restores as a price with nothing down -- the one reading that
+          // invents no figure the user did not type.
+          const legacy = inputs.homePrice == null;
+          onScenarioChange({
+            ...scenario,
+            homePrice: legacy ? inputs.principal : inputs.homePrice,
+            downPayment: legacy ? 0 : inputs.downPayment,
+            frequency: inputs.frequency ?? scenario.frequency,
+          });
+          setEntries((inputs.entries ?? []).map((e) => ({ ...e, id: newId() })));
         }}
       />
     </section>
