@@ -73,6 +73,9 @@ export default {
   'field.paymentFrequency': '還款頻率',
   'field.years': '年',
   'field.percent': '%',
+  'field.percentPerYear': '%/年',
+  'refi.months': '個月',
+  'refi.never': '永不回本',
   'field.percentOfPrice': '佔房價的 {percent}%',
 
   'freq.monthly': '每月',

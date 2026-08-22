@@ -77,6 +77,9 @@ export default {
   'field.paymentFrequency': 'Payment frequency',
   'field.years': 'years',
   'field.percent': '%',
+  'field.percentPerYear': '%/yr',
+  'refi.months': 'months',
+  'refi.never': 'Never',
   'field.percentOfPrice': '{percent}% of price',
 
   'freq.monthly': 'Monthly',

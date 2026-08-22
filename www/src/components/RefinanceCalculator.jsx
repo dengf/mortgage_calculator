@@ -84,7 +84,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
           label={t('refi.remainingPeriods')}
           value={remainingPeriods}
           onChange={setRemainingPeriods}
-          suffix="months"
+          suffix={t('refi.months')}
           min={1}
           step="1"
         />
@@ -136,7 +136,12 @@ export default function RefinanceCalculator({ wasmModule, region }) {
             <div className="stat">
               <span className="stat-label">{t('refi.breakEven')}</span>
               <span className="stat-value">
-                {result.break_even_periods ? `${result.break_even_periods} months` : 'Never'}
+                {result.break_even_periods
+                  ? formatDuration(
+                      describeDuration(wasmModule, result.break_even_periods, 'monthly'),
+                      t,
+                    )
+                  : t('refi.never')}
               </span>
             </div>
             <div className="stat">

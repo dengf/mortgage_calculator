@@ -26,19 +26,47 @@ function sources() {
     }));
 }
 
-/** User-visible English that is not coming from a catalog. */
+/**
+ * A run of letters containing a lowercase one -- a word rather than a code.
+ *
+ * Unit symbols and region codes are the same in every locale we ship: a
+ * suffix of `S$` or `%` is not a translation failure, and the region toggle
+ * genuinely reads "US" and "SG" in Chinese. `months` and `%/yr` are words
+ * and are not.
+ */
+const CARRIES_A_WORD = /[A-Za-z]*[a-z][A-Za-z]/;
+
+/**
+ * User-visible English that is not coming from a catalog.
+ *
+ * Only patterns that are unambiguous from a single line. A string literal
+ * used as a JSX child -- `{n ? \`${n} months\` : 'Never'}` -- is not
+ * detected, because telling it apart from a className or a wire value needs
+ * a parser, and a guard with false positives gets disabled. The template
+ * half of that example is caught; the `'Never'` half is not.
+ */
 function hardcodedEnglish(source) {
   const found = [];
+  const add = (index, text) => {
+    if (CARRIES_A_WORD.test(text)) found.push({ line: index + 1, text });
+  };
+
   source.split('\n').forEach((line, index) => {
     // Text sitting directly between JSX tags, e.g. `<span>Loan amount</span>`.
     for (const m of line.matchAll(/>\s*([A-Za-z][A-Za-z ,.'%-]{4,})\s*</g)) {
-      found.push({ line: index + 1, text: m[1].trim() });
+      add(index, m[1].trim());
     }
-    // Props whose value the user reads.
+    // Props whose value the user reads. `suffix` is one of them: it renders
+    // beside the input, and carried a literal "months" for the refinance
+    // term and "%/yr" for the property-tax rate.
     for (const m of line.matchAll(
-      /\b(?:label|placeholder|title|aria-label)\s*[=:]\s*['"]([^'"]{3,})['"]/g,
+      /\b(?:label|placeholder|title|aria-label|suffix|alt)\s*=\s*['"]([^'"]+)['"]/g,
     )) {
-      found.push({ line: index + 1, text: m[1] });
+      add(index, m[1]);
+    }
+    // A template literal splicing a value into English words.
+    for (const m of line.matchAll(/`[^`]*\$\{[^}]+\}\s*([A-Za-z][A-Za-z ]+)`/g)) {
+      add(index, m[1].trim());
     }
   });
   return found;
