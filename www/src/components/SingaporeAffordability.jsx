@@ -1,0 +1,196 @@
+import React, { useMemo, useState } from 'react';
+import NumberField from './NumberField';
+import SavedScenarios from './SavedScenarios';
+import { makeFormatMoney } from './../currency';
+import { useI18n } from '../i18n';
+import { allFilled } from '../inputs';
+
+// This panel only renders under the SG region, so its currency is fixed.
+const formatSgd = makeFormatMoney('SG');
+
+/**
+ * Singapore affordability: how much property a buyer can actually complete on.
+ *
+ * Deliberately not the US panel with a currency symbol swapped. Singapore has
+ * no debt-to-income convention, no HOA and no flat property-tax rate — it has
+ * MAS's TDSR/MSR servicing ceilings, the Notice 632 LTV limits, and IRAS stamp
+ * duty payable in cash at completion. Every figure below comes from
+ * `mortgage_calc::singapore` through the `calculate_sg_affordability` binding.
+ */
+export default function SingaporeAffordability({ wasmModule }) {
+  const { t } = useI18n();
+  const [income, setIncome] = useState(12000);
+  const [debts, setDebts] = useState(0);
+  const [funds, setFunds] = useState(400000);
+  const [rate, setRate] = useState(4);
+  const [termYears, setTermYears] = useState(25);
+  const [age, setAge] = useState(35);
+  const [isHdb, setIsHdb] = useState(false);
+  const [residency, setResidency] = useState('Citizen');
+  const [propertyCount, setPropertyCount] = useState('1st');
+  const [outstandingLoans, setOutstandingLoans] = useState(0);
+
+  const result = useMemo(() => {
+    if (!wasmModule?.calculate_sg_affordability) return null;
+    if (!allFilled(income, debts, funds, rate, termYears)) return null;
+    return wasmModule.calculate_sg_affordability({
+      gross_monthly_income: income,
+      other_monthly_debts: debts,
+      funds_available: funds,
+      annual_rate_percent: rate,
+      term_years: termYears,
+      borrower_age: allFilled(age) ? age : null,
+      is_hdb_or_ec: isHdb,
+      residency,
+      property_count: propertyCount,
+      outstanding_housing_loans: outstandingLoans,
+    });
+  }, [
+    wasmModule, income, debts, funds, rate, termYears, age,
+    isHdb, residency, propertyCount, outstandingLoans,
+  ]);
+
+  const ok = result && !result.error;
+
+  return (
+    <section className="panel">
+      <div className="panel-form">
+        <NumberField label={t('sg.income')} value={income} onChange={setIncome} suffix="S$" min={0} />
+        <NumberField label={t('sg.otherDebts')} value={debts} onChange={setDebts} suffix="S$" min={0} />
+        <NumberField label={t('sgaff.funds')} value={funds} onChange={setFunds} suffix="S$" min={0} />
+        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
+        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
+        <NumberField label={t('sgaff.age')} value={age} onChange={setAge} suffix={t('sgaff.yearsOld')} min={18} />
+
+        <label className="field">
+          <span className="field-label">{t('sg.propertyType')}</span>
+          <select className="field-select" value={isHdb ? 'hdb' : 'private'} onChange={(e) => setIsHdb(e.target.value === 'hdb')}>
+            <option value="private">{t('sg.private')}</option>
+            <option value="hdb">{t('sg.hdb')}</option>
+          </select>
+        </label>
+
+        <label className="field">
+          <span className="field-label">{t('sg.residency')}</span>
+          <select className="field-select" value={residency} onChange={(e) => setResidency(e.target.value)}>
+            <option value="Citizen">{t('sg.citizen')}</option>
+            <option value="PR">{t('sg.pr')}</option>
+            <option value="Foreigner">{t('sg.foreigner')}</option>
+          </select>
+        </label>
+
+        <label className="field">
+          <span className="field-label">{t('sg.propertyCount')}</span>
+          <select className="field-select" value={propertyCount} onChange={(e) => setPropertyCount(e.target.value)}>
+            <option value="1st">{t('sg.first')}</option>
+            <option value="2nd">{t('sg.second')}</option>
+            <option value="3rd+">{t('sg.thirdPlus')}</option>
+          </select>
+        </label>
+
+        {/* Separate from property count: a buyer can own a flat outright and
+            still be taking their first housing loan, and it is the loan count
+            that sets the LTV row. */}
+        <label className="field">
+          <span className="field-label">{t('sgaff.outstandingLoans')}</span>
+          <select
+            className="field-select"
+            value={String(outstandingLoans)}
+            onChange={(e) => setOutstandingLoans(Number(e.target.value))}
+          >
+            <option value="0">{t('sgaff.loansNone')}</option>
+            <option value="1">{t('sgaff.loansOne')}</option>
+            <option value="2">{t('sgaff.loansTwoPlus')}</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="panel-results">
+        {result?.error && (
+          <div className="error">
+            {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
+          </div>
+        )}
+
+        {ok && (
+          <>
+            <div className="stat-grid">
+              <div className="stat stat-primary">
+                <span className="stat-label">{t('sgaff.maxPrice')}</span>
+                <span className="stat-value">{formatSgd(result.max_price)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">{t('sgaff.maxLoan')}</span>
+                <span className="stat-value">{formatSgd(result.max_loan)}</span>
+                <span className="stat-note">
+                  {t('sgaff.ltvNote', { ltv: result.ltv_percent.toFixed(0) })}
+                  {result.extended_tenure ? ` · ${t('sgaff.extendedTenure')}` : ''}
+                </span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">{t('sgaff.maxInstalment')}</span>
+                <span className="stat-value">{formatSgd(result.max_monthly_instalment)}</span>
+                <span className="stat-note">
+                  {t('sg.assessedAt', {
+                    rate: result.assessment_rate_percent.toFixed(2),
+                    instalment: formatSgd(result.max_monthly_instalment),
+                  })}
+                </span>
+              </div>
+            </div>
+
+            {/* Naming the binding rule is the actionable part: it tells the
+                buyer whether earning more or saving more would move the
+                number. */}
+            <div className="sg-constraint">
+              {t(`sgaff.bound.${result.binding_constraint}`)}
+            </div>
+
+            <div className="stat-grid">
+              <div className="stat">
+                <span className="stat-label">{t('sg.downPayment')}</span>
+                <span className="stat-value">{formatSgd(result.deposit)}</span>
+                <span className="stat-note">
+                  {t('sgaff.minCash', { amount: formatSgd(result.min_cash_required) })}
+                </span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">{t('sg.bsd')}</span>
+                <span className="stat-value">{formatSgd(result.bsd)}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">{t('sg.absd')}</span>
+                <span className="stat-value">{formatSgd(result.absd)}</span>
+              </div>
+              <div className="stat stat-primary">
+                <span className="stat-label">{t('sg.cashAtCompletion')}</span>
+                <span className="stat-value">{formatSgd(result.cash_and_cpf_at_completion)}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <SavedScenarios
+        wasmModule={wasmModule}
+        calculatorKind="affordability"
+        getCurrentInputs={() => ({
+          income, debts, funds, rate, termYears, age,
+          isHdb, residency, propertyCount, outstandingLoans,
+        })}
+        onLoad={(inputs) => {
+          setIncome(inputs.income);
+          setDebts(inputs.debts);
+          setFunds(inputs.funds);
+          setRate(inputs.rate);
+          setTermYears(inputs.termYears);
+          setAge(inputs.age);
+          setIsHdb(inputs.isHdb);
+          setResidency(inputs.residency);
+          setPropertyCount(inputs.propertyCount);
+          setOutstandingLoans(inputs.outstandingLoans);
+        }}
+      />
+    </section>
+  );
+}

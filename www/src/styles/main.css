@@ -705,3 +705,17 @@ body {
   line-height: 1.35;
   color: var(--muted, #8b98a9);
 }
+
+/* Names the rule that actually caps the buyer's budget. Not an error and not
+   a warning — it's the most actionable line on the Singapore affordability
+   panel, so it reads as guidance rather than alarm. */
+.sg-constraint {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent, #4f8cff);
+  background: rgba(79, 140, 255, 0.08);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted, #c2ccd8);
+}

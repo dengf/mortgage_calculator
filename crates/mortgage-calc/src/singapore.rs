@@ -410,3 +410,463 @@ mod tests {
         assert!(!hdb_loan_eligible(false));
     }
 }
+
+// ---------------------------------------------------------------------------
+// Borrowing capacity
+// ---------------------------------------------------------------------------
+
+/// The LTV ceiling and minimum cash share for a purchase, from MAS Notice
+/// 632 (last revised 5 July 2018), the LTV limit table.
+///
+/// The table keys off three things: how many housing loans the borrower
+/// already has outstanding, whether the property is an HDB flat, and whether
+/// the tenure is "extended" — over 30 years (25 for an HDB flat), or running
+/// past the borrower's 65th birthday. Extended tenure drops the ceiling
+/// sharply and raises the cash floor.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LtvLimit {
+    /// Share of the property price that may be financed, e.g. `0.75`.
+    pub ltv: Decimal,
+    /// Share of the price that must be paid in cash rather than CPF.
+    pub min_cash: Decimal,
+    /// Whether the extended-tenure rows applied.
+    pub extended_tenure: bool,
+}
+
+/// Longest tenure that avoids the extended-tenure LTV haircut. Notice 632
+/// rows (4C)/(7A) use 30 years for private property; (4D)/(7B) use 25 for
+/// an HDB flat.
+fn standard_tenure_years(is_hdb_or_ec: bool) -> Decimal {
+    if is_hdb_or_ec {
+        dec!(25)
+    } else {
+        dec!(30)
+    }
+}
+
+/// Age past which a loan is treated as extended-tenure, per the
+/// "tenure + age of the Borrower ... less than or equal to 65 years" test.
+const MAX_AGE_AT_MATURITY: Decimal = dec!(65);
+
+/// The LTV row that applies to a purchase.
+///
+/// `outstanding_housing_loans` counts loans the borrower already services,
+/// so `0` is a first-time buyer. `borrower_age` is optional because the app
+/// doesn't always ask; when absent only the tenure test can be applied, which
+/// is the borrower-friendly reading and is flagged as such by the caller.
+pub fn ltv_limit(
+    outstanding_housing_loans: u32,
+    is_hdb_or_ec: bool,
+    term_years: Decimal,
+    borrower_age: Option<Decimal>,
+) -> LtvLimit {
+    let over_tenure = term_years > standard_tenure_years(is_hdb_or_ec);
+    let past_retirement = borrower_age
+        .map(|age| age + term_years > MAX_AGE_AT_MATURITY)
+        .unwrap_or(false);
+    let extended = over_tenure || past_retirement;
+
+    let (ltv, min_cash) = match (outstanding_housing_loans, extended) {
+        (0, false) => (dec!(0.75), dec!(0.05)), // Notice 632 (4C)/(4D)
+        (0, true) => (dec!(0.55), dec!(0.10)),  // (7A)/(7B)
+        (1, false) => (dec!(0.45), dec!(0.25)), // (11C)/(11D)
+        (1, true) => (dec!(0.25), dec!(0.25)),  // (14A)/(14B)
+        (_, false) => (dec!(0.35), dec!(0.25)), // (17A)/(17B)
+        (_, true) => (dec!(0.15), dec!(0.25)),  // (20A)/(20B)
+    };
+
+    LtvLimit {
+        ltv,
+        min_cash,
+        extended_tenure: extended,
+    }
+}
+
+/// Which rule caps the *loan*. Naming it is the useful part — "you can
+/// afford $X" is far less actionable than knowing whether earning more or
+/// saving more is what would move it.
+///
+/// Note this is deliberately not "what caps the price". A more expensive
+/// property always needs a larger deposit, so the buyer's funds bound the
+/// price in every case; saying so would be true of everyone and tell nobody
+/// anything. The question worth answering is which side of the purchase is
+/// actually tight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BindingConstraint {
+    /// TDSR: what the borrower can service, after existing debts.
+    Tdsr,
+    /// MSR: the tighter housing-only ceiling on an HDB flat or EC.
+    Msr,
+    /// The loan sits on the MAS LTV ceiling, so it is the deposit — not
+    /// income — that limits it. Earning more would not raise this figure;
+    /// a larger deposit would.
+    Ltv,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+pub struct SgAffordabilityInput {
+    pub gross_monthly_income: Decimal,
+    pub other_monthly_debts: Decimal,
+    /// Everything available for the deposit and stamp duty — cash plus any
+    /// CPF OA the buyer can apply to the purchase.
+    pub funds_available: Decimal,
+    /// The borrower's own rate as a fraction. Servicing is assessed at the
+    /// higher of this and [`MEDIUM_TERM_RATE_FLOOR`].
+    pub annual_rate: Decimal,
+    pub term_years: Decimal,
+    pub borrower_age: Option<Decimal>,
+    pub is_hdb_or_ec: bool,
+    pub residency: Residency,
+    /// Properties held *after* this purchase — the ABSD basis.
+    pub property_count: PropertyCount,
+    /// Housing loans already outstanding — the LTV basis. Distinct from
+    /// `property_count`: a buyer can own a property outright and still be
+    /// taking a first housing loan.
+    pub outstanding_housing_loans: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct SgAffordabilityResult {
+    pub max_price: Decimal,
+    pub max_loan: Decimal,
+    pub binding_constraint: BindingConstraint,
+    /// Largest monthly instalment the MAS ceilings allow, at the assessed rate.
+    pub max_monthly_instalment: Decimal,
+    pub assessment_rate: Decimal,
+    pub ltv: Decimal,
+    pub extended_tenure: bool,
+    pub deposit: Decimal,
+    /// The share of `deposit` that must be cash rather than CPF.
+    pub min_cash_required: Decimal,
+    pub bsd: Decimal,
+    pub absd: Decimal,
+    pub cash_and_cpf_at_completion: Decimal,
+}
+
+/// The largest loan whose assessed instalment is `instalment`.
+///
+/// The inverse of [`crate::payment::payment_amount`]: dividing by the payment
+/// factor turns a monthly ceiling back into a principal.
+fn loan_for_instalment(instalment: Decimal, annual_rate: Decimal, term_years: Decimal) -> Decimal {
+    let periods = PaymentFrequency::Monthly.periods_in_years(term_years);
+    if periods == 0 {
+        return Decimal::ZERO;
+    }
+    let factor = crate::payment::payment_factor(
+        PaymentFrequency::Monthly.periodic_rate(annual_rate),
+        periods,
+    );
+    if factor <= Decimal::ZERO {
+        return Decimal::ZERO;
+    }
+    instalment / factor
+}
+
+/// How much of a purchase at `price` the buyer must find up front: the
+/// deposit the LTV leaves uncovered, plus BSD and ABSD.
+fn funds_needed_at(
+    price: Decimal,
+    max_loan_by_income: Decimal,
+    limit: LtvLimit,
+    residency: Residency,
+    count: PropertyCount,
+) -> Decimal {
+    let loan = (price * limit.ltv).min(max_loan_by_income);
+    let costs = upfront_costs(price, residency, count);
+    (price - loan) + costs.total
+}
+
+/// The most a Singapore buyer can pay for a property, given the MAS
+/// servicing ceilings, the Notice 632 LTV limits, and the cash they hold.
+///
+/// Every one of those can bind, and which one does is reported rather than
+/// left implicit. Solved by bisection on price because BSD and ABSD are
+/// progressive in the price they're charged on, so the funds a purchase needs
+/// aren't a linear function of it — but they are monotonic, which is all
+/// bisection requires.
+pub fn max_affordable_sg(input: &SgAffordabilityInput) -> MortgageResult<SgAffordabilityResult> {
+    if input.gross_monthly_income <= Decimal::ZERO {
+        return Err(MortgageError::InvalidIncome(
+            input.gross_monthly_income.to_string(),
+        ));
+    }
+
+    // 1. What the MAS ceilings allow to be spent on this loan each month.
+    let tdsr_capacity = input.gross_monthly_income * TDSR_LIMIT - input.other_monthly_debts;
+    let msr_capacity = input
+        .is_hdb_or_ec
+        .then(|| input.gross_monthly_income * MSR_LIMIT);
+
+    let mut binding = BindingConstraint::Tdsr;
+    let mut max_instalment = tdsr_capacity;
+    if let Some(msr) = msr_capacity {
+        if msr < max_instalment {
+            max_instalment = msr;
+            binding = BindingConstraint::Msr;
+        }
+    }
+    let max_instalment = max_instalment.max(Decimal::ZERO);
+
+    // 2. Turn that into a loan, priced at the assessed rate — the same floor
+    //    a bank must apply, so capacity isn't overstated for a cheap quote.
+    let assessment_rate = assessment_rate(input.annual_rate);
+    let max_loan_by_income = loan_for_instalment(max_instalment, assessment_rate, input.term_years);
+
+    let limit = ltv_limit(
+        input.outstanding_housing_loans,
+        input.is_hdb_or_ec,
+        input.term_years,
+        input.borrower_age,
+    );
+
+    // 3. Largest price the buyer's funds can actually complete on.
+    let funds = input.funds_available.max(Decimal::ZERO);
+    let mut lo = Decimal::ZERO;
+    // Generous ceiling: even at 100% LTV a purchase needs its deposit and
+    // duties covered, so the answer is well inside this.
+    let mut hi = (max_loan_by_income + funds).max(Decimal::ONE) * dec!(2);
+    for _ in 0..60 {
+        let mid = (lo + hi) / dec!(2);
+        let needed = funds_needed_at(
+            mid,
+            max_loan_by_income,
+            limit,
+            input.residency,
+            input.property_count,
+        );
+        if needed <= funds {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    let max_price = round_currency(lo);
+    let max_loan = round_currency((max_price * limit.ltv).min(max_loan_by_income));
+
+    // 4. Name whichever side is tight. If the loan came to rest on the LTV
+    //    ceiling then income had slack and the deposit is what binds;
+    //    otherwise the servicing ceiling chosen in step 1 stands.
+    let costs = upfront_costs(max_price, input.residency, input.property_count);
+    let deposit = round_currency(max_price - max_loan);
+    let needed = deposit + costs.total;
+    if max_loan < max_loan_by_income - dec!(1) {
+        binding = BindingConstraint::Ltv;
+    }
+
+    Ok(SgAffordabilityResult {
+        max_price,
+        max_loan,
+        binding_constraint: binding,
+        max_monthly_instalment: round_currency(max_instalment),
+        assessment_rate,
+        ltv: limit.ltv,
+        extended_tenure: limit.extended_tenure,
+        deposit,
+        min_cash_required: round_currency(max_price * limit.min_cash),
+        bsd: costs.bsd,
+        absd: costs.absd,
+        cash_and_cpf_at_completion: round_currency(needed),
+    })
+}
+
+#[cfg(test)]
+mod capacity_tests {
+    use super::*;
+
+    fn afford() -> SgAffordabilityInput {
+        SgAffordabilityInput {
+            gross_monthly_income: dec!(12_000),
+            other_monthly_debts: dec!(0),
+            funds_available: dec!(500_000),
+            annual_rate: dec!(0.04),
+            term_years: dec!(25),
+            borrower_age: Some(dec!(35)),
+            is_hdb_or_ec: false,
+            residency: Residency::Citizen,
+            property_count: PropertyCount::First,
+            outstanding_housing_loans: 0,
+        }
+    }
+
+    #[test]
+    fn first_timer_within_tenure_gets_the_seventy_five_percent_row() {
+        let limit = ltv_limit(0, false, dec!(30), Some(dec!(35)));
+        assert_eq!(limit.ltv, dec!(0.75));
+        assert_eq!(limit.min_cash, dec!(0.05));
+        assert!(!limit.extended_tenure);
+    }
+
+    #[test]
+    fn tenure_past_thirty_years_drops_to_the_extended_row() {
+        let limit = ltv_limit(0, false, dec!(31), Some(dec!(30)));
+        assert_eq!(limit.ltv, dec!(0.55));
+        assert_eq!(limit.min_cash, dec!(0.10));
+        assert!(limit.extended_tenure);
+    }
+
+    #[test]
+    fn an_hdb_flat_hits_the_extended_row_five_years_earlier() {
+        // Notice 632 (4D)/(7B) use 25 years where private property uses 30.
+        assert_eq!(ltv_limit(0, true, dec!(26), Some(dec!(30))).ltv, dec!(0.55));
+        assert_eq!(
+            ltv_limit(0, false, dec!(26), Some(dec!(30))).ltv,
+            dec!(0.75)
+        );
+    }
+
+    #[test]
+    fn a_loan_running_past_sixty_five_is_extended_even_on_a_short_tenure() {
+        // 20-year tenure is well inside the limit, but the borrower is 50, so
+        // it matures at 70.
+        let limit = ltv_limit(0, false, dec!(20), Some(dec!(50)));
+        assert!(limit.extended_tenure);
+        assert_eq!(limit.ltv, dec!(0.55));
+    }
+
+    #[test]
+    fn second_and_third_loans_step_the_ceiling_down() {
+        assert_eq!(
+            ltv_limit(1, false, dec!(25), Some(dec!(35))).ltv,
+            dec!(0.45)
+        );
+        assert_eq!(
+            ltv_limit(2, false, dec!(25), Some(dec!(35))).ltv,
+            dec!(0.35)
+        );
+        assert_eq!(
+            ltv_limit(5, false, dec!(25), Some(dec!(35))).ltv,
+            dec!(0.35)
+        );
+        // The cash floor jumps to 25% from the second loan onward.
+        assert_eq!(
+            ltv_limit(1, false, dec!(25), Some(dec!(35))).min_cash,
+            dec!(0.25)
+        );
+    }
+
+    #[test]
+    fn affordability_prices_capacity_at_the_mas_floor_not_a_cheap_quote() {
+        let cheap = max_affordable_sg(&SgAffordabilityInput {
+            annual_rate: dec!(0.015),
+            ..afford()
+        })
+        .unwrap();
+        let at_floor = max_affordable_sg(&afford()).unwrap();
+
+        assert_eq!(cheap.assessment_rate, MEDIUM_TERM_RATE_FLOOR);
+        // A 1.5% quote must not buy more house than a 4% one, because the
+        // bank assesses both at 4%.
+        assert_eq!(cheap.max_loan, at_floor.max_loan);
+    }
+
+    #[test]
+    fn a_thin_deposit_puts_the_loan_on_the_ltv_ceiling_not_the_income_ceiling() {
+        // $12k income services far more than $80k of deposit can support, so
+        // the 75% ceiling is what the loan comes to rest on. Earning more
+        // would not raise this figure; saving more would.
+        let result = max_affordable_sg(&SgAffordabilityInput {
+            funds_available: dec!(80_000),
+            ..afford()
+        })
+        .unwrap();
+        assert_eq!(result.binding_constraint, BindingConstraint::Ltv);
+        assert_eq!(
+            result.max_loan,
+            round_currency(result.max_price * dec!(0.75))
+        );
+        // Everything the buyer has goes into the purchase.
+        assert!(result.cash_and_cpf_at_completion <= dec!(80_000));
+        assert!(result.cash_and_cpf_at_completion > dec!(78_000));
+    }
+
+    #[test]
+    fn a_deep_deposit_with_modest_income_lands_on_tdsr_instead() {
+        // Reverse the squeeze: plenty of deposit, ordinary salary. Now it is
+        // servicing capacity that stops the loan growing.
+        let result = max_affordable_sg(&SgAffordabilityInput {
+            funds_available: dec!(4_000_000),
+            ..afford()
+        })
+        .unwrap();
+        assert_eq!(result.binding_constraint, BindingConstraint::Tdsr);
+        assert!(result.max_loan < round_currency(result.max_price * dec!(0.75)));
+        // 55% of $12,000, with no other debts.
+        assert_eq!(result.max_monthly_instalment, dec!(6_600));
+    }
+
+    #[test]
+    fn msr_binds_before_tdsr_on_an_hdb_flat() {
+        let result = max_affordable_sg(&SgAffordabilityInput {
+            is_hdb_or_ec: true,
+            funds_available: dec!(2_000_000),
+            ..afford()
+        })
+        .unwrap();
+        assert_eq!(result.binding_constraint, BindingConstraint::Msr);
+        // 30% of $12,000, not 55%.
+        assert_eq!(result.max_monthly_instalment, dec!(3_600));
+    }
+
+    #[test]
+    fn other_debts_come_straight_off_the_tdsr_ceiling() {
+        let clean = max_affordable_sg(&SgAffordabilityInput {
+            funds_available: dec!(3_000_000),
+            ..afford()
+        })
+        .unwrap();
+        let indebted = max_affordable_sg(&SgAffordabilityInput {
+            funds_available: dec!(3_000_000),
+            other_monthly_debts: dec!(2_000),
+            ..afford()
+        })
+        .unwrap();
+        assert_eq!(
+            clean.max_monthly_instalment - indebted.max_monthly_instalment,
+            dec!(2_000)
+        );
+        assert!(indebted.max_loan < clean.max_loan);
+    }
+
+    #[test]
+    fn absd_eats_into_what_a_foreigner_can_complete_on() {
+        let citizen = max_affordable_sg(&afford()).unwrap();
+        let foreigner = max_affordable_sg(&SgAffordabilityInput {
+            residency: Residency::Foreigner,
+            ..afford()
+        })
+        .unwrap();
+        // 60% ABSD has to come out of the same funds, so the reachable price
+        // collapses.
+        assert!(foreigner.max_price < citizen.max_price);
+        assert!(foreigner.absd > Decimal::ZERO);
+    }
+
+    #[test]
+    fn the_answer_is_actually_completable() {
+        // The headline figure is worthless if the buyer can't fund it: the
+        // deposit plus duties must fit inside what they said they have.
+        for funds in [dec!(80_000), dec!(300_000), dec!(900_000)] {
+            let r = max_affordable_sg(&SgAffordabilityInput {
+                funds_available: funds,
+                ..afford()
+            })
+            .unwrap();
+            assert!(
+                r.cash_and_cpf_at_completion <= funds + dec!(1),
+                "needs {} but only {} available",
+                r.cash_and_cpf_at_completion,
+                funds
+            );
+            assert!(r.max_loan <= round_currency(r.max_price * r.ltv) + dec!(1));
+        }
+    }
+
+    #[test]
+    fn rejects_non_positive_income_for_affordability() {
+        assert!(max_affordable_sg(&SgAffordabilityInput {
+            gross_monthly_income: dec!(0),
+            ..afford()
+        })
+        .is_err());
+    }
+}

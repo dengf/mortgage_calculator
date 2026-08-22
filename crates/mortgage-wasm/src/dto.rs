@@ -352,3 +352,51 @@ pub struct SingaporeResult {
     /// translated UI can compose the sentence itself.
     pub error_message: Option<Message>,
 }
+
+/// Inputs for the Singapore affordability model.
+///
+/// Distinct from [`AffordabilityParams`], which is the US DTI model — the two
+/// regimes share no rules worth abstracting over, so they stay apart rather
+/// than growing a union type with half its fields unused on either side.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SgAffordabilityParams {
+    pub gross_monthly_income: f64,
+    pub other_monthly_debts: f64,
+    /// Cash plus usable CPF OA for the deposit and stamp duty.
+    pub funds_available: f64,
+    /// The borrower's own rate, e.g. `4.5`. Servicing is assessed at the
+    /// higher of this and MAS's 4% floor.
+    pub annual_rate_percent: f64,
+    pub term_years: f64,
+    /// Optional: without it only the tenure half of the extended-tenure test
+    /// can be applied.
+    pub borrower_age: Option<f64>,
+    pub is_hdb_or_ec: bool,
+    /// `"Citizen" | "PR" | "Foreigner"`.
+    pub residency: String,
+    /// `"1st" | "2nd" | "3rd+"` — properties held after this purchase.
+    pub property_count: String,
+    /// Housing loans already outstanding, which sets the LTV row.
+    pub outstanding_housing_loans: u32,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SgAffordabilityResultDto {
+    pub max_price: Option<f64>,
+    pub max_loan: Option<f64>,
+    /// `"tdsr" | "msr" | "ltv"` — which side of the purchase is tight.
+    pub binding_constraint: Option<String>,
+    pub max_monthly_instalment: Option<f64>,
+    pub assessment_rate_percent: Option<f64>,
+    pub ltv_percent: Option<f64>,
+    pub extended_tenure: bool,
+    pub deposit: Option<f64>,
+    pub min_cash_required: Option<f64>,
+    pub bsd: Option<f64>,
+    pub absd: Option<f64>,
+    pub cash_and_cpf_at_completion: Option<f64>,
+    pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
+}
