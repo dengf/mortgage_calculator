@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ScenarioFields from './ScenarioFields';
 import CalcError from './CalcError';
 import ComparisonEntryRow from './ComparisonEntryRow';
@@ -11,11 +11,22 @@ import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 let nextId = 0;
 const newId = () => `entry-${nextId++}`;
 
-function presetToEntry(preset) {
+/** A preset's name in the reader's language, falling back to the English
+ *  rendering the core ships alongside the code. */
+function presetName(preset, t) {
+  return preset.label_message
+    ? t(preset.label_message.code, preset.label_message.params)
+    : preset.label;
+}
+
+function presetToEntry(preset, t) {
   const isFixed = preset.rate_type.kind === 'fixed';
   return {
     id: newId(),
-    label: preset.label,
+    // Named in the reader's language at the moment it is added. The label is
+    // an editable field on the row from then on, so it belongs to the user
+    // rather than re-translating under them on a language switch.
+    label: presetName(preset, t),
     kind: isFixed ? 'fixed' : 'floating',
     ratePercent: isFixed ? preset.rate_type.rate_percent : 6.5,
     baseRatePercent: isFixed ? 4.3 : preset.rate_type.base_rate_percent,
@@ -24,10 +35,10 @@ function presetToEntry(preset) {
   };
 }
 
-function blankEntry() {
+function blankEntry(t) {
   return {
     id: newId(),
-    label: 'Custom scenario',
+    label: t('cmp.customScenario'),
     kind: 'fixed',
     ratePercent: 6.5,
     baseRatePercent: 4.3,
@@ -62,22 +73,35 @@ export default function ComparisonView({
   const { frequency } = scenario;
   const { principal } = useScenarioSummary(wasmModule, scenario);
   const [presets, setPresets] = useState([]);
+  // The market the current rows were seeded for, so a region switch reseeds.
+  const seededFor = useRef(null);
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
     if (!wasmModule) return;
-    const loaded = wasmModule.get_common_rate_presets?.() ?? [];
+    // Which floating index applies is a fact about the market the property
+    // is in, not a preference: SGD loans reference SORA, and have not
+    // referenced SIBOR since MAS discontinued it after 31 December 2024.
+    const loaded = wasmModule.get_common_rate_presets?.(region) ?? [];
     setPresets(loaded);
-    if (entries.length === 0 && loaded.length > 0) {
-      // Seed with two contrasting terms when the list is long enough, but
+    if (loaded.length > 0 && seededFor.current !== region) {
+      // Re-seeded when the market changes, and the rows that were there are
+      // discarded. Carrying them over looks kinder and is worse: a "30-Year
+      // Fixed" at 6.5% is not a Singapore scenario -- that product does not
+      // exist there and the rate is several times the market -- so the rows
+      // would keep computing, relabel themselves S$, and state a quote no
+      // Singapore bank offers. Switching region is a deliberate act meaning
+      // "show me the other market".
+      seededFor.current = region;
+      // Seed with two contrasting options when the list is long enough, but
       // index defensively: reaching straight into [0] and [2] threw a
       // TypeError and took down the whole tab if the preset list was ever
       // shorter than three, or absent from a stale cached wasm build.
       const seed = [loaded[0], loaded[2] ?? loaded[1]].filter(Boolean);
-      setEntries(seed.map(presetToEntry));
+      setEntries(seed.map((p) => presetToEntry(p, t)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wasmModule]);
+  }, [wasmModule, region]);
 
   const result = useMemo(() => {
     if (!wasmModule || entries.length === 0) return null;
@@ -137,14 +161,14 @@ export default function ComparisonView({
           <button
             key={preset.label}
             className="link-button"
-            onClick={() => setEntries((prev) => [...prev, presetToEntry(preset)])}
+            onClick={() => setEntries((prev) => [...prev, presetToEntry(preset, t)])}
           >
-            + {preset.label}
+            + {presetName(preset, t)}
           </button>
         ))}
         <button
           className="link-button"
-          onClick={() => setEntries((prev) => [...prev, blankEntry()])}
+          onClick={() => setEntries((prev) => [...prev, blankEntry(t)])}
         >
           + {t('cmp.custom')}
         </button>

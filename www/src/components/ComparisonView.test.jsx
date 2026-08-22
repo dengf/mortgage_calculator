@@ -219,3 +219,95 @@ describe('ComparisonView saved scenarios', () => {
     expect(screen.getByDisplayValue('0')).toBeInTheDocument();
   });
 });
+
+// Which floating index applies is a fact about the market the property is in.
+// SGD loans reference SORA and have not referenced SIBOR since MAS
+// discontinued it after 31 December 2024, so offering a Singapore buyer a
+// SOFR or Prime quote is the wrong index, not a wording problem.
+describe('ComparisonView rate presets', () => {
+  const soraPreset = {
+    label: 'Floating: 3M SORA + 0.50%',
+    label_message: {
+      code: 'preset.floating',
+      params: { index: '3M SORA', spread: '0.50' },
+      text: 'Floating: 3M SORA + 0.50%',
+    },
+    rate_type: { kind: 'floating', base_rate_percent: 1.12, spread_percent: 0.5 },
+    term_years: 30,
+  };
+
+  const presetWasm = (presets) => ({
+    get_common_rate_presets: vi.fn(() => presets),
+    calculate_comparison: vi.fn(() => ({ rows: [], verdict: null, error: null })),
+    list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+  });
+
+  it('asks for the presets of the region being shopped in', async () => {
+    const wasm = presetWasm([soraPreset]);
+    render(
+      <I18nProvider initialLocale="en">
+        <ComparisonView wasmModule={wasm} region="SG" />
+      </I18nProvider>,
+    );
+
+    await screen.findByDisplayValue('Floating: 3M SORA + 0.50%');
+    expect(wasm.get_common_rate_presets).toHaveBeenCalledWith('SG');
+  });
+
+  it('names a preset in the reader language, not the English the core ships', async () => {
+    render(
+      <I18nProvider initialLocale="zh-Hans">
+        <ComparisonView wasmModule={presetWasm([soraPreset])} region="SG" />
+      </I18nProvider>,
+    );
+
+    // The index itself stays in Latin script -- a Singapore bank's own term
+    // sheet says "3M SORA".
+    expect(await screen.findByDisplayValue('浮动利率：3M SORA + 0.50%')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue(/Floating:/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to the English rendering when there is no code', async () => {
+    const legacy = { ...soraPreset, label_message: undefined };
+    render(
+      <I18nProvider initialLocale="zh-Hans">
+        <ComparisonView wasmModule={presetWasm([legacy])} region="SG" />
+      </I18nProvider>,
+    );
+
+    expect(await screen.findByDisplayValue('Floating: 3M SORA + 0.50%')).toBeInTheDocument();
+  });
+
+  it('reseeds when the market changes, rather than pricing SG rows at US rates', async () => {
+    const usPreset = {
+      label: '30-Year Fixed',
+      label_message: { code: 'preset.fixed', params: { years: '30' }, text: '30-Year Fixed' },
+      rate_type: { kind: 'fixed', rate_percent: 6.5 },
+      term_years: 30,
+    };
+    const wasm = {
+      get_common_rate_presets: vi.fn((region) => (region === 'SG' ? [soraPreset] : [usPreset])),
+      calculate_comparison: vi.fn(() => ({ rows: [], verdict: null, error: null })),
+      list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+    };
+
+    const { rerender } = render(
+      <I18nProvider initialLocale="en">
+        <ComparisonView wasmModule={wasm} region="US" />
+      </I18nProvider>,
+    );
+    expect(await screen.findByDisplayValue('30-Year Fixed')).toBeInTheDocument();
+
+    rerender(
+      <I18nProvider initialLocale="en">
+        <ComparisonView wasmModule={wasm} region="SG" />
+      </I18nProvider>,
+    );
+
+    // Carrying the US row over would keep computing a 6.5% 30-year fixed and
+    // relabel it S$ -- a product Singapore does not offer, at several times
+    // the market rate.
+    expect(await screen.findByDisplayValue('Floating: 3M SORA + 0.50%')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('30-Year Fixed')).not.toBeInTheDocument();
+  });
+});
