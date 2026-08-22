@@ -4,6 +4,7 @@ import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
+import { formatDuration } from '../duration';
 
 
 export default function RefinanceCalculator({ wasmModule, region }) {
@@ -32,6 +33,18 @@ export default function RefinanceCalculator({ wasmModule, region }) {
     });
   }, [wasmModule, currentBalance, currentRate, remainingPeriods, newRate, newTermYears, closingCosts]);
 
+  // Refinancing into a fresh 30-year loan when 25 years remain lowers the
+  // payment and lengthens the debt. Both facts matter.
+  const extraPeriods = Math.round(Number(newTermYears) * 12) - Number(remainingPeriods);
+  const termExtension =
+    Number.isFinite(extraPeriods) && extraPeriods > 0
+      ? t('refi.termWarning', {
+          newTerm: formatDuration(Number(newTermYears) * 12, 12, t),
+          remaining: formatDuration(remainingPeriods, 12, t),
+          extra: formatDuration(extraPeriods, 12, t),
+        })
+      : null;
+
   return (
     <section className="panel">
       <div className="panel-form">
@@ -50,7 +63,12 @@ export default function RefinanceCalculator({ wasmModule, region }) {
         <NumberField label={t('refi.closingCosts')} value={closingCosts} onChange={setClosingCosts} suffix={money} min={0} />
       </div>
 
-      <div className="panel-results">
+      {/* "Lifetime savings" is honest as total cash out the door, but it
+          silently compares the years left on the current loan against a
+          fresh full term. A reader shouldn't have to notice that themselves. */}
+      {termExtension && <div className="refi-term-warning">{termExtension}</div>}
+
+      <div className="panel-results" aria-live="polite">
         {result?.error && <div className="error">{result.error}</div>}
         {result && !result.error && (
           <div className="stat-grid">

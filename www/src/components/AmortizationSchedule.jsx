@@ -6,6 +6,7 @@ import { BalanceChart } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
+import { formatDuration, payoffDate } from '../duration';
 import { DEFAULT_SCENARIO, principalOf } from '../scenario';
 
 
@@ -32,7 +33,7 @@ export default function AmortizationSchedule({
   scenario = DEFAULT_SCENARIO,
   onScenarioChange,
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
   // Extra payment stays local: it's a question about this loan, not part of
@@ -57,10 +58,12 @@ export default function AmortizationSchedule({
     return wasmModule.calculate_extra_payment_impact({ loan, extra_payment: extraPayment });
   }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
 
+  const periodsPerYear = PERIODS_PER_YEAR[frequency] ?? 12;
+
   const yearlyRows = useMemo(() => {
     if (!schedule?.rows?.length) return [];
-    return summarizeByYear(schedule.rows, PERIODS_PER_YEAR[frequency] ?? 12);
-  }, [schedule, frequency]);
+    return summarizeByYear(schedule.rows, periodsPerYear);
+  }, [schedule, periodsPerYear]);
 
   return (
     <section className="panel">
@@ -82,10 +85,15 @@ export default function AmortizationSchedule({
       </div>
 
       {impact && !impact.error && (
-        <div className="stat-grid">
+        <div className="stat-grid" aria-live="polite">
           <div className="stat stat-primary">
             <span className="stat-label">{t('amort.timeSaved')}</span>
-            <span className="stat-value">{t('amort.payments', { count: impact.periods_saved })}</span>
+            <span className="stat-value">
+              {formatDuration(impact.periods_saved, periodsPerYear, t)}
+            </span>
+            <span className="stat-note">
+              {t('amort.payments', { count: impact.periods_saved })}
+            </span>
           </div>
           <div className="stat">
             <span className="stat-label">{t('amort.interestSaved')}</span>
@@ -93,7 +101,14 @@ export default function AmortizationSchedule({
           </div>
           <div className="stat">
             <span className="stat-label">{t('amort.newPayoff')}</span>
-            <span className="stat-value">{t('amort.payments', { count: impact.payoff_periods })}</span>
+            <span className="stat-value">
+              {formatDuration(impact.payoff_periods, periodsPerYear, t)}
+            </span>
+            <span className="stat-note">
+              {t('amort.payoffDate', {
+                date: payoffDate(impact.payoff_periods, periodsPerYear, locale),
+              })}
+            </span>
           </div>
         </div>
       )}
@@ -104,7 +119,7 @@ export default function AmortizationSchedule({
         <BalanceChart
           rows={schedule.rows}
           principal={principal}
-          termYears={termYears}
+          periodsPerYear={periodsPerYear}
           formatMoney={formatMoney}
         />
       )}

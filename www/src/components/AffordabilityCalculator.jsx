@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
-import { currencySymbol, makeFormatMoney } from '../currency';
+import { currencySymbol, makeFormatEstimate, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 
@@ -9,6 +9,8 @@ import { allFilled } from '../inputs';
 export default function AffordabilityCalculator({ wasmModule, region }) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
+  // Ceilings are estimates, not quotes — see makeFormatEstimate.
+  const formatEstimate = makeFormatEstimate(region);
   const money = currencySymbol(region);
   const [income, setIncome] = useState(10000);
   const [debts, setDebts] = useState(500);
@@ -51,17 +53,17 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
         <NumberField label={t('aff.hoa')} value={hoa} onChange={setHoa} suffix={money} min={0} />
       </div>
 
-      <div className="panel-results">
+      <div className="panel-results" aria-live="polite">
         {result?.error && <div className="error">{result.error}</div>}
         {result && !result.error && (
           <div className="stat-grid">
             <div className="stat stat-primary">
               <span className="stat-label">{t('aff.maxHomePrice')}</span>
-              <span className="stat-value">{formatMoney(result.max_home_price)}</span>
+              <span className="stat-value">{formatEstimate(result.max_home_price)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">{t('aff.maxLoan')}</span>
-              <span className="stat-value">{formatMoney(result.max_loan_amount)}</span>
+              <span className="stat-value">{formatEstimate(result.max_loan_amount)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">{t('aff.principalAndInterest')}</span>

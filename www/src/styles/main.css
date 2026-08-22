@@ -851,3 +851,33 @@ body {
   line-height: 1.55;
   color: var(--muted, #8b98a9);
 }
+
+/* Best value in a comparison column. */
+.schedule-table .best {
+  color: var(--good, #7ee787);
+  font-weight: 600;
+}
+
+/* States the difference the comparison exists to show. */
+.cmp-tradeoff {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent, #4f8cff);
+  background: rgba(79, 140, 255, 0.08);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text, #e6ecf3);
+}
+
+/* A refinance that lengthens the debt: worth saying before the savings. */
+.refi-term-warning {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--warn, #e8b45c);
+  background: rgba(232, 180, 92, 0.09);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text, #e6ecf3);
+}
