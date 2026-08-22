@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
+import CalcError from './CalcError';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatEstimate, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
@@ -112,7 +113,7 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
       </div>
 
       <div className="panel-results" aria-live="polite">
-        {result?.error && <div className="error">{result.error}</div>}
+        <CalcError result={result} />
         {result && !result.error && (
           <div className="stat-grid">
             <div className="stat stat-primary">

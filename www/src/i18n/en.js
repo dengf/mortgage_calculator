@@ -291,6 +291,8 @@ export default {
   'err.invalidDti': 'Debt-to-income ratio must be between 0 and 1 (got {value}).',
   'err.invalidExtraPayment': 'Extra payment cannot be negative (got {value}).',
   'err.parse': 'Could not read that input: {value}',
+  'err.engineUnavailable':
+    'The calculator could not start. Reload the page, and if it keeps happening your browser may not support WebAssembly.',
   'err.badRequest': "Some values are missing or aren't valid numbers. Check the fields above.",
   'err.unknown': 'Something went wrong with that calculation.',
 

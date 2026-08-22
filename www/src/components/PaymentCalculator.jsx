@@ -147,6 +147,7 @@ export default function PaymentCalculator({
       {result && !result.error && (
         <div className={stale ? 'stale' : undefined}>
           <PrincipalInterestSplit
+            interestSharePercent={result.interest_share_percent}
             principal={shownPrincipal}
             totalInterest={result.total_interest}
             formatMoney={formatMoney}

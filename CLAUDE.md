@@ -54,17 +54,23 @@ If you catch yourself writing arithmetic in `.jsx`, stop -- that is the
 signal, and it is nearly always a sign the Rust side is missing an export
 rather than a sign JavaScript is the right place.
 
-## Known violations, not yet fixed
+## Keeping it that way
 
-Named so they are not mistaken for precedent:
+The eight JavaScript copies of core rules that this file used to list are all
+gone: the scenario figures, the deposit percentage, the amortization grouping,
+the comparison verdict, the period-to-time conversion, the interest share, the
+region ranking, and the mock module's full second implementation of the
+mortgage math.
 
-- `www/src/components/Charts.jsx` -- interest share of total paid
-- `www/src/index.js` -- `createMockModule` is a **full parallel
-  implementation** of payment, amortization, affordability, refinance and
-  comparison in JavaScript. It already declines to reimplement the Singapore
-  rules, the scenario figures and region detection, and says why; the rest
-  should follow. `npm start` now builds the wasm first, so this fallback only
-  runs on a machine without wasm-pack installed.
+Nothing in `www/` computes a mortgage figure any more. That is worth checking
+before adding one:
+
+- `www/src/index.js` falls back to `createUnavailableModule` when the engine
+  cannot load. It **reports** the failure and computes nothing. Do not grow it
+  back into a calculator -- a browser that silently gets JavaScript answers is
+  worse than one that says it cannot help.
+- `www/src/undefined-setters.test.js` guards a different recurring bug: a
+  handler calling a setter that no longer exists. It shipped twice.
 
 ## Verification traps
 

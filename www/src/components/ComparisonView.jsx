@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ScenarioFields from './ScenarioFields';
+import CalcError from './CalcError';
 import ComparisonEntryRow from './ComparisonEntryRow';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
@@ -161,7 +162,7 @@ export default function ComparisonView({
         {entries.length === 0 && <p className="saved-scenarios-empty">{t('cmp.addScenario')}</p>}
       </div>
 
-      {result?.error && <div className="error">{result.error}</div>}
+      <CalcError result={result} />
 
       {result?.rows?.length > 0 && (
         <div className="schedule-table-wrap">

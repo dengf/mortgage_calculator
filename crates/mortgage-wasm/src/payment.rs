@@ -49,6 +49,7 @@ fn payment_from_params(loan_params: LoanParams) -> PaymentSummaryResult {
         total_periods: Some(summary.total_periods),
         total_paid: Some(decimal_to_f64(summary.total_paid)),
         total_interest: Some(decimal_to_f64(summary.total_interest)),
+        interest_share_percent: summary.interest_share().map(decimal_to_f64),
         error: None,
         error_message: None,
     }

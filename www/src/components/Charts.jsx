@@ -134,11 +134,20 @@ export function BalanceChart({ rows, principal, yearsPlotted, formatMoney }) {
  * borrowing it. A single proportional bar reads faster than a donut and
  * stays legible at any width.
  */
-export function PrincipalInterestSplit({ principal, totalInterest, formatMoney }) {
+export function PrincipalInterestSplit({
+  principal,
+  totalInterest,
+  interestSharePercent,
+  formatMoney,
+}) {
   const { t } = useI18n();
+  // The share is the core's -- see `PaymentSummary::interest_share`. It is
+  // absent rather than zero when nothing is paid at all: a bar drawn at 0%
+  // would assert that none of the money is interest, rather than that there
+  // is no money.
+  if (interestSharePercent == null) return null;
   const total = principal + totalInterest;
-  if (!(total > 0)) return null;
-  const interestShare = (totalInterest / total) * 100;
+  const interestShare = interestSharePercent;
 
   return (
     <figure className="chart">

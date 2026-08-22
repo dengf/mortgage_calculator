@@ -266,6 +266,8 @@ export default {
   'err.invalidDti': '债务收入比须介于 0 与 1 之间（当前为 {value}）。',
   'err.invalidExtraPayment': '额外还款不能为负数（当前为 {value}）。',
   'err.parse': '无法识别该输入：{value}',
+  'err.engineUnavailable':
+    '计算引擎未能启动。请刷新页面；若仍然如此，您的浏览器可能不支持 WebAssembly。',
   'err.badRequest': '有数值缺失或不是有效数字，请检查上方输入项。',
   'err.unknown': '计算时出现问题。',
 

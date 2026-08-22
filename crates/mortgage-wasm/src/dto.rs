@@ -41,6 +41,9 @@ pub struct PaymentSummaryResult {
     pub total_periods: Option<u32>,
     pub total_paid: Option<f64>,
     pub total_interest: Option<f64>,
+    /// Interest as a percentage of everything paid. `null` when nothing is
+    /// paid -- a share of zero is undefined, not zero percent.
+    pub interest_share_percent: Option<f64>,
     pub error: Option<String>,
     /// The same failure as `error`, but as a code plus its values so a
     /// translated UI can compose the sentence itself.
