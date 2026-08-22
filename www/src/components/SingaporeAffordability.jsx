@@ -61,11 +61,11 @@ export default function SingaporeAffordability({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label={t('sgaff.fixedIncome')} value={fixedIncome} onChange={setFixedIncome} suffix="S$" min={0} />
-        <NumberField label={t('sgaff.variableIncome')} value={variableIncome} onChange={setVariableIncome} suffix="S$" min={0} />
-        <NumberField label={t('sg.otherDebts')} value={debts} onChange={setDebts} suffix="S$" min={0} />
-        <NumberField label={t('sgaff.cash')} value={cash} onChange={setCash} suffix="S$" min={0} />
-        <NumberField label={t('sgaff.cpf')} value={cpf} onChange={setCpf} suffix="S$" min={0} />
+        <NumberField label={t('sgaff.fixedIncome')} value={fixedIncome} onChange={setFixedIncome} suffix="S$" min={0} grouped />
+        <NumberField label={t('sgaff.variableIncome')} value={variableIncome} onChange={setVariableIncome} suffix="S$" min={0} grouped />
+        <NumberField label={t('sg.otherDebts')} value={debts} onChange={setDebts} suffix="S$" min={0} grouped />
+        <NumberField label={t('sgaff.cash')} value={cash} onChange={setCash} suffix="S$" min={0} grouped />
+        <NumberField label={t('sgaff.cpf')} value={cpf} onChange={setCpf} suffix="S$" min={0} grouped />
         <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
         <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
         <NumberField label={t('sgaff.age')} value={age} onChange={setAge} suffix={t('sgaff.yearsOld')} min={18} />

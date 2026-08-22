@@ -11,7 +11,15 @@ import { downPaymentPercent } from '../scenario';
  */
 export default function DownPaymentField({ label, scenario, onChange, money }) {
   const [mode, setMode] = useState('amount');
+  const [focused, setFocused] = useState(false);
   const percent = downPaymentPercent(scenario);
+
+  // Same focus-swap as NumberField: separators at rest, plain digits while
+  // typing, so the caret is never repositioned mid-keystroke.
+  const grouped = (v) =>
+    focused || v === '' || v == null || !Number.isFinite(Number(v))
+      ? v
+      : Number(v).toLocaleString('en-US', { maximumFractionDigits: 10 });
 
   const shown =
     mode === 'percent'
@@ -51,12 +59,22 @@ export default function DownPaymentField({ label, scenario, onChange, money }) {
         </span>
       </span>
       <div className="field-input">
+        {/* Amounts are grouped for readability; a percentage is two or three
+            digits and gains nothing from separators. */}
         <input
-          type="number"
-          value={shown}
-          step="any"
-          min={0}
-          onChange={(e) => handle(e.target.value === '' ? '' : Number(e.target.value))}
+          type={mode === 'amount' ? 'text' : 'number'}
+          inputMode="decimal"
+          value={mode === 'amount' ? grouped(shown) : shown}
+          step={mode === 'amount' ? undefined : 'any'}
+          min={mode === 'amount' ? undefined : 0}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw !== '' && !/^-?[\d,]*\.?\d*$/.test(raw)) return;
+            const cleaned = raw.replace(/,/g, '');
+            handle(cleaned === '' ? '' : Number(cleaned));
+          }}
         />
         <span className="field-suffix">{mode === 'amount' ? money : '%'}</span>
       </div>

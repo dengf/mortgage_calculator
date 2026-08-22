@@ -81,6 +81,7 @@ export default function AmortizationSchedule({
           onChange={setExtraPayment}
           suffix={money}
           min={0}
+          grouped
         />
       </div>
 

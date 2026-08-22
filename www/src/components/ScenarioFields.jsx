@@ -31,6 +31,7 @@ export default function ScenarioFields({
           onChange={set('homePrice')}
           suffix={money}
           min={0}
+          grouped
         />
       )}
 

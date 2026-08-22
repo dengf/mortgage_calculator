@@ -48,7 +48,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label={t('refi.currentBalance')} value={currentBalance} onChange={setCurrentBalance} suffix={money} min={0} />
+        <NumberField label={t('refi.currentBalance')} value={currentBalance} onChange={setCurrentBalance} suffix={money} min={0} grouped />
         <NumberField label={t('refi.currentRate')} value={currentRate} onChange={setCurrentRate} suffix="%" min={0} />
         <NumberField
           label={t('refi.remainingPeriods')}
@@ -60,7 +60,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
         />
         <NumberField label={t('refi.newRate')} value={newRate} onChange={setNewRate} suffix="%" min={0} />
         <NumberField label={t('refi.newTerm')} value={newTermYears} onChange={setNewTermYears} suffix={t('field.years')} min={1} />
-        <NumberField label={t('refi.closingCosts')} value={closingCosts} onChange={setClosingCosts} suffix={money} min={0} />
+        <NumberField label={t('refi.closingCosts')} value={closingCosts} onChange={setClosingCosts} suffix={money} min={0} grouped />
       </div>
 
       {/* "Lifetime savings" is honest as total cash out the door, but it

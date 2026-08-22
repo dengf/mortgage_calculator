@@ -42,7 +42,7 @@ describe('PaymentCalculator', () => {
     await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
 
     const callsBefore = wasmModule.calculate_payment.mock.calls.length;
-    await userEvent.clear(screen.getByDisplayValue('500000'));
+    await userEvent.clear(screen.getByDisplayValue('500,000'));
 
     expect(wasmModule.calculate_payment.mock.calls.length).toBe(callsBefore);
   });
@@ -51,7 +51,7 @@ describe('PaymentCalculator', () => {
     renderControlled(PaymentCalculator, { wasmModule: mockWasmModule() });
     expect(await screen.findByText('$2,528.27')).toBeInTheDocument();
 
-    await userEvent.clear(screen.getByDisplayValue('500000'));
+    await userEvent.clear(screen.getByDisplayValue('500,000'));
 
     // Figures stay on screen (dimmed) instead of vanishing or being replaced
     // by an error.

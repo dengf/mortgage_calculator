@@ -33,20 +33,20 @@ describe('shared scenario', () => {
   it('carries an edited loan across tabs instead of reverting to defaults', async () => {
     renderApp();
 
-    const price = await screen.findByDisplayValue('500000');
+    const price = await screen.findByDisplayValue('500,000');
     await userEvent.clear(price);
     await userEvent.type(price, '750000');
 
     await userEvent.click(screen.getByRole('button', { name: 'Amortization' }));
 
     // The whole point of F4: the loan the user just dialled in is still here.
-    await waitFor(() => expect(screen.getByDisplayValue('750000')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue('750,000')).toBeInTheDocument());
 
     await userEvent.click(screen.getByRole('button', { name: 'Compare' }));
-    expect(screen.getByDisplayValue('750000')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('750,000')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Payment' }));
-    expect(screen.getByDisplayValue('750000')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('750,000')).toBeInTheDocument();
   });
 
   it('derives the loan from price and deposit, so the two cannot disagree', async () => {
@@ -58,7 +58,7 @@ describe('shared scenario', () => {
       expect(document.querySelector('.field-derived-value').textContent).toBe('$400,000.00'),
     );
 
-    const down = screen.getByDisplayValue('100000');
+    const down = screen.getByDisplayValue('100,000');
     await userEvent.clear(down);
     await userEvent.type(down, '50000');
 
@@ -69,7 +69,7 @@ describe('shared scenario', () => {
 
   it('never derives a negative loan when the deposit exceeds the price', async () => {
     renderApp();
-    const down = await screen.findByDisplayValue('100000');
+    const down = await screen.findByDisplayValue('100,000');
     await userEvent.clear(down);
     await userEvent.type(down, '900000');
 
