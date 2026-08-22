@@ -38,6 +38,9 @@ pub struct ComparisonVerdictDto {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct PaymentSummaryResult {
     pub payment: Option<f64>,
+    /// What the instalment becomes after the lock-in, for a package that
+    /// steps up. `null` for a rate that holds for the whole term.
+    pub payment_after_reversion: Option<f64>,
     pub total_periods: Option<u32>,
     pub total_paid: Option<f64>,
     pub total_interest: Option<f64>,
@@ -174,6 +177,14 @@ pub enum RateTypeDto {
         base_rate_percent: f64,
         spread_percent: f64,
     },
+    /// A package whose spread steps up after a lock-in: how every Singapore
+    /// bank quotes a home loan.
+    Reverting {
+        base_rate_percent: f64,
+        initial_spread_percent: f64,
+        initial_years: f64,
+        thereafter_spread_percent: f64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -205,7 +216,13 @@ pub struct ComparisonParams {
 #[derive(Debug, Clone, Serialize)]
 pub struct ComparisonRowDto {
     pub label: String,
+    /// The rate charged at the start. For a reverting package this is the
+    /// promotional one -- see `thereafter_rate_percent`.
     pub effective_rate_percent: f64,
+    /// The rate after the lock-in, and the instalment it produces. Both
+    /// `null` for a rate that holds for the term.
+    pub thereafter_rate_percent: Option<f64>,
+    pub payment_after_reversion: Option<f64>,
     pub term_years: f64,
     pub payment: f64,
     pub total_periods: u32,

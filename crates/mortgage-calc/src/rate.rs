@@ -14,16 +14,68 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum RateType {
-    Fixed { rate: Decimal },
-    Floating { base_rate: Decimal, spread: Decimal },
+    Fixed {
+        rate: Decimal,
+    },
+    Floating {
+        base_rate: Decimal,
+        spread: Decimal,
+    },
+    /// A package whose spread steps up partway through: the shape every
+    /// Singapore home loan takes.
+    ///
+    /// A bank quotes a promotional spread over SORA for the first two or
+    /// three years and a higher one for the remaining twenty-odd. Reading
+    /// only the promotional rate is the mistake the structure invites, and
+    /// it is the expensive one -- over a 25-year loan the thereafter spread
+    /// decides most of the interest.
+    Reverting {
+        /// The published index both spreads are quoted over.
+        base_rate: Decimal,
+        /// Spread during the lock-in.
+        initial_spread: Decimal,
+        /// Years the initial spread holds.
+        initial_years: Decimal,
+        /// Spread from then until the end of the term.
+        thereafter_spread: Decimal,
+    },
 }
 
 impl RateType {
-    /// The single annual rate this resolves to for amortization purposes.
+    /// The annual rate charged at the start of the loan.
+    ///
+    /// For a reverting package this is the promotional rate, which is what
+    /// the borrower pays first and the only rate a flat model could use. It
+    /// is not what the loan costs -- see [`Self::thereafter_rate`].
     pub fn effective_rate(&self) -> Decimal {
         match self {
             RateType::Fixed { rate } => *rate,
             RateType::Floating { base_rate, spread } => *base_rate + *spread,
+            RateType::Reverting {
+                base_rate,
+                initial_spread,
+                ..
+            } => *base_rate + *initial_spread,
+        }
+    }
+
+    /// The rate after the lock-in, for a package that has one.
+    pub fn thereafter_rate(&self) -> Option<Decimal> {
+        match self {
+            RateType::Reverting {
+                base_rate,
+                thereafter_spread,
+                ..
+            } => Some(*base_rate + *thereafter_spread),
+            _ => None,
+        }
+    }
+
+    /// How long the initial rate holds, for a package that reverts.
+    pub fn initial_years(&self) -> Option<Decimal> {
+        match self {
+            RateType::Reverting { initial_years, .. } => Some(*initial_years),
+            _ => None,
         }
     }
 }
@@ -72,6 +124,13 @@ pub enum PresetLabel {
     Floating {
         index: RateIndex,
         spread: Decimal,
+    },
+    /// A package that steps up: "3M SORA + 0.30% for 2 yr, then + 0.60%".
+    Reverting {
+        index: RateIndex,
+        initial_spread: Decimal,
+        initial_years: Decimal,
+        thereafter_spread: Decimal,
     },
     /// HDB's concessionary loan, which is a policy rate rather than a market
     /// quote: pegged at 0.1% above the CPF Ordinary Account rate.
@@ -160,44 +219,58 @@ fn us_presets() -> Vec<RatePreset> {
 
 /// Singapore starting points.
 ///
-/// Deliberately no "fixed for the whole term" package. A Singapore fixed-rate
-/// home loan fixes for two or three years and then reverts to a floating
-/// spread, and this module models a single rate for the life of the loan. A
-/// 1.35% teaser stretched across 25 years would produce a payment no bank
-/// would honour, and would contradict the affordability tab in this same app,
-/// which stress-tests at MAS Notice 645's floor of the higher of 4% and the
-/// thereafter rate.
+/// Every bank package here reverts. That is not a refinement -- it is the
+/// shape of the product. A Singapore home loan quotes a promotional spread
+/// over SORA for the first two or three years and a higher one for the
+/// remaining twenty-odd, and the thereafter spread decides most of the
+/// interest over a 25-year loan. Modelling only the promotional rate
+/// understates the cost and overstates what the buyer can carry, which is
+/// the error MAS Notice 645 exists to prevent: its stress floor is the
+/// higher of 4% and the *thereafter* rate, never the teaser.
 ///
-/// 3-month compounded SORA was 1.12% on 6 August 2026; spreads on offer run
-/// roughly 0.50%–1.00%. The HDB concessionary rate is 2.6%, pegged at 0.1%
-/// above the CPF Ordinary Account rate, which sits at its 2.5% floor for
-/// 1 July–30 September 2026 (CPF Board). Unlike the bank packages it really
-/// is fixed for the life of the loan.
+/// 3-month compounded SORA was 1.12% on 6 August 2026. Promotional spreads
+/// run roughly 0.30%-0.50% and step up to around 0.60%-1.00%. Every figure
+/// is editable once added; the structure is the part that matters.
+///
+/// The HDB concessionary loan does not revert. It is a policy rate, pegged
+/// at 0.1% above the CPF Ordinary Account rate, which sits at its 2.5% floor
+/// for 1 July to 30 September 2026 (CPF Board) -- genuinely fixed for the
+/// life of the loan, and the only SGD rate that is.
 fn sg_presets() -> Vec<RatePreset> {
     use rust_decimal_macros::dec;
 
+    const SORA: Decimal = dec!(0.0112);
+
     vec![
         RatePreset {
-            label: PresetLabel::Floating {
+            label: PresetLabel::Reverting {
                 index: RateIndex::Sora,
-                spread: dec!(0.005),
+                initial_spread: dec!(0.003),
+                initial_years: dec!(2),
+                thereafter_spread: dec!(0.006),
             },
-            rate_type: RateType::Floating {
-                base_rate: dec!(0.0112),
-                spread: dec!(0.005),
+            rate_type: RateType::Reverting {
+                base_rate: SORA,
+                initial_spread: dec!(0.003),
+                initial_years: dec!(2),
+                thereafter_spread: dec!(0.006),
             },
-            term_years: dec!(30),
+            term_years: dec!(25),
         },
         RatePreset {
-            label: PresetLabel::Floating {
+            label: PresetLabel::Reverting {
                 index: RateIndex::Sora,
-                spread: dec!(0.01),
+                initial_spread: dec!(0.005),
+                initial_years: dec!(3),
+                thereafter_spread: dec!(0.008),
             },
-            rate_type: RateType::Floating {
-                base_rate: dec!(0.0112),
-                spread: dec!(0.01),
+            rate_type: RateType::Reverting {
+                base_rate: SORA,
+                initial_spread: dec!(0.005),
+                initial_years: dec!(3),
+                thereafter_spread: dec!(0.008),
             },
-            term_years: dec!(30),
+            term_years: dec!(25),
         },
         RatePreset {
             // 25 years, not 30: that is the ceiling on an HDB loan.
@@ -312,5 +385,84 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn every_singapore_bank_package_steps_up() {
+        // The shape of the product, not a refinement. Only HDB's policy rate
+        // is genuinely flat for the term.
+        for preset in common_presets(Region::SG) {
+            match preset.rate_type {
+                RateType::Reverting {
+                    initial_spread,
+                    thereafter_spread,
+                    initial_years,
+                    ..
+                } => {
+                    assert!(
+                        thereafter_spread > initial_spread,
+                        "a promotional spread that does not step up is not a package: {preset:?}"
+                    );
+                    assert!(initial_years > Decimal::ZERO && initial_years < preset.term_years);
+                }
+                RateType::Fixed { .. } => assert_eq!(preset.label, PresetLabel::HdbConcessionary),
+                RateType::Floating { .. } => {
+                    panic!("a flat floating rate misstates a SGD package: {preset:?}")
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_reverting_rate_reports_the_rate_that_actually_lasts() {
+        let rate = RateType::Reverting {
+            base_rate: dec!(0.0112),
+            initial_spread: dec!(0.003),
+            initial_years: dec!(2),
+            thereafter_spread: dec!(0.006),
+        };
+
+        assert_eq!(rate.effective_rate(), dec!(0.0142));
+        assert_eq!(rate.thereafter_rate(), Some(dec!(0.0172)));
+        assert_eq!(rate.initial_years(), Some(dec!(2)));
+    }
+
+    #[test]
+    fn a_flat_rate_has_no_thereafter() {
+        assert_eq!(
+            RateType::Fixed { rate: dec!(0.026) }.thereafter_rate(),
+            None
+        );
+        assert_eq!(
+            RateType::Floating {
+                base_rate: dec!(0.0363),
+                spread: dec!(0.02)
+            }
+            .thereafter_rate(),
+            None
+        );
+    }
+
+    #[test]
+    fn building_a_loan_from_a_reverting_rate_keeps_the_step_up() {
+        // Taking the rate and dropping the reversion would model the
+        // promotional rate as lasting 25 years -- the exact overstatement
+        // this variant exists to prevent.
+        let loan = crate::Loan::builder()
+            .principal(dec!(400000))
+            .rate_type(RateType::Reverting {
+                base_rate: dec!(0.0112),
+                initial_spread: dec!(0.003),
+                initial_years: dec!(2),
+                thereafter_spread: dec!(0.006),
+            })
+            .term_years(dec!(25))
+            .frequency(mortgage_core::PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+
+        let reversion = loan.reversion().expect("the step-up survives the builder");
+        assert_eq!(reversion.after_periods, 24);
+        assert_eq!(reversion.annual_rate, dec!(0.0172));
     }
 }

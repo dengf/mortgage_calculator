@@ -886,3 +886,15 @@ body {
 .intro-privacy-link {
   white-space: nowrap;
 }
+
+/* The reverted rate and instalment, shown under the promotional ones. Muted
+   and on its own line: it is the figure that matters most over a 25-year
+   loan, but it is not what the borrower pays first, and running the two
+   together reads as one number. */
+.cmp-thereafter {
+  display: block;
+  font-size: 0.8em;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

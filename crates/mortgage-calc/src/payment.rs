@@ -30,7 +30,11 @@ pub fn payment_amount(loan: &Loan) -> Decimal {
 /// payments.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PaymentSummary {
+    /// What the borrower pays each period to begin with.
     pub payment: Decimal,
+    /// What it becomes after the rate reverts, if it does. `None` for a loan
+    /// whose rate holds for the whole term.
+    pub payment_after_reversion: Option<Decimal>,
     pub total_periods: u32,
     pub total_paid: Decimal,
     pub total_interest: Decimal,
@@ -59,20 +63,45 @@ impl PaymentSummary {
 pub fn summarize(loan: &Loan) -> PaymentSummary {
     let payment = payment_amount(loan);
     let total_periods = loan.total_periods();
-    let total_paid = round_currency(payment * Decimal::from(total_periods));
-    let total_interest = round_currency((total_paid - loan.principal()).max(Decimal::ZERO));
+
+    // A loan whose rate holds throughout pays the same amount every period,
+    // so the total is a multiplication.
+    if loan.reversion().is_none() {
+        let total_paid = round_currency(payment * Decimal::from(total_periods));
+        return PaymentSummary {
+            payment,
+            payment_after_reversion: None,
+            total_periods,
+            total_paid,
+            total_interest: round_currency((total_paid - loan.principal()).max(Decimal::ZERO)),
+        };
+    }
+
+    // A reverting loan does not, so the total is read off the schedule
+    // rather than derived a second way. Two routes to the same figure is how
+    // a summary ends up disagreeing with the rows it summarizes -- and the
+    // schedule is the one that forces the final payment to clear the balance
+    // exactly.
+    let rows = crate::amortization::schedule(loan, Decimal::ZERO).unwrap_or_default();
+    let total_paid = round_currency(rows.iter().map(|r| r.payment).sum::<Decimal>());
+    let payment_after_reversion = loan
+        .reversion()
+        .and_then(|r| rows.get(r.after_periods as usize))
+        .map(|row| row.payment);
 
     PaymentSummary {
         payment,
-        total_periods,
+        payment_after_reversion,
+        total_periods: rows.len() as u32,
         total_paid,
-        total_interest,
+        total_interest: round_currency(rows.iter().map(|r| r.interest_portion).sum::<Decimal>()),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::loan::Reversion;
     use mortgage_core::PaymentFrequency;
     use rust_decimal_macros::dec;
 
@@ -129,6 +158,7 @@ mod tests {
     fn interest_share_is_the_part_of_the_total_that_is_not_the_house() {
         let summary = PaymentSummary {
             payment: dec!(2528.27),
+            payment_after_reversion: None,
             total_periods: 360,
             total_paid: dec!(910177.20),
             total_interest: dec!(510177.20),
@@ -145,6 +175,7 @@ mod tests {
         // no money.
         let empty = PaymentSummary {
             payment: Decimal::ZERO,
+            payment_after_reversion: None,
             total_periods: 0,
             total_paid: Decimal::ZERO,
             total_interest: Decimal::ZERO,
@@ -156,10 +187,119 @@ mod tests {
     fn an_interest_free_loan_is_a_zero_share_not_an_absent_one() {
         let free = PaymentSummary {
             payment: dec!(1000),
+            payment_after_reversion: None,
             total_periods: 12,
             total_paid: dec!(12000),
             total_interest: Decimal::ZERO,
         };
         assert_eq!(free.interest_share(), Some(Decimal::ZERO));
+    }
+
+    /// S$400,000 over 25 years: 3M SORA at 1.12% plus 0.30% for two years,
+    /// then plus 0.60% -- the shape every Singapore package takes.
+    fn sg_package() -> Loan {
+        Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.0142))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .reversion(Reversion {
+                after_periods: 24,
+                annual_rate: dec!(0.0172),
+            })
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn a_reverting_loan_reports_both_payments() {
+        let summary = summarize(&sg_package());
+
+        // The promotional instalment amortizes the full 25 years at 1.42%.
+        assert_eq!(summary.payment, dec!(1584.75));
+
+        // The reverted one clears what is actually left over the periods
+        // actually remaining, at the higher rate -- so it rises, but by far
+        // less than the teaser-to-thereafter gap would suggest if the loan
+        // were re-quoted from scratch.
+        let after = summary.payment_after_reversion.unwrap();
+        assert!(
+            after > summary.payment,
+            "{after} should exceed {}",
+            summary.payment
+        );
+        assert_eq!(after, dec!(1637.12));
+    }
+
+    #[test]
+    fn a_reverting_loan_costs_more_than_its_teaser_implies() {
+        // The whole point. Quoting only the promotional rate understates the
+        // lifetime cost, and it is the number a buyer decides on.
+        let teaser_only = Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.0142))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+
+        let understated = summarize(&teaser_only).total_paid;
+        let actual = summarize(&sg_package()).total_paid;
+
+        assert!(actual > understated, "{actual} vs {understated}");
+    }
+
+    #[test]
+    fn a_summary_of_a_reverting_loan_matches_its_own_schedule() {
+        // The summary is read off the schedule precisely so these cannot
+        // drift apart.
+        let loan = sg_package();
+        let rows = crate::amortization::schedule(&loan, Decimal::ZERO).unwrap();
+        let summary = summarize(&loan);
+
+        assert_eq!(
+            summary.total_paid,
+            round_currency(rows.iter().map(|r| r.payment).sum::<Decimal>())
+        );
+        assert_eq!(summary.total_periods, rows.len() as u32);
+        assert_eq!(rows.last().unwrap().remaining_balance, Decimal::ZERO);
+    }
+
+    #[test]
+    fn a_loan_with_no_reversion_is_untouched() {
+        let plain = Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.065))
+            .term_years(dec!(30))
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+
+        let summary = summarize(&plain);
+        assert_eq!(summary.payment_after_reversion, None);
+        assert_eq!(
+            summary.total_paid,
+            round_currency(summary.payment * Decimal::from(360))
+        );
+    }
+
+    #[test]
+    fn a_reversion_that_never_arrives_is_dropped() {
+        // Lock-in at or beyond the end of the term. Keeping it would make
+        // every downstream calculation re-check the same boundary.
+        let loan = Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.0142))
+            .term_years(dec!(2))
+            .frequency(PaymentFrequency::Monthly)
+            .reversion(Reversion {
+                after_periods: 24,
+                annual_rate: dec!(0.05),
+            })
+            .build()
+            .unwrap();
+
+        assert_eq!(loan.reversion(), None);
+        assert_eq!(summarize(&loan).payment_after_reversion, None);
     }
 }
