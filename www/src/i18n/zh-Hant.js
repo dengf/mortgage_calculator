@@ -150,6 +150,8 @@ export default {
   'sg.absd': 'Additional Buyer\'s Stamp Duty (ABSD)',
   'sg.downPayment': '頭期款',
   'sg.cashAtCompletion': '成交時所需現金',
+  'sg.assessedAt': '按 {rate}% 評估（{instalment}/月）',
+  'sg.assessedNote': '新加坡金融管理局要求銀行按 4% 與您的利率兩者取高來測算 TDSR 和 MSR，因此以上比率使用 {instalment}/月，而非您的實際月供。',
 
   'us.title': '美國費用與 PMI',
   'us.homePrice': '房價',
@@ -182,6 +184,7 @@ export default {
   'err.invalidDti': '負債收入比須介於 0 與 1 之間（目前為 {value}）。',
   'err.invalidExtraPayment': '額外還款不得為負數（目前為 {value}）。',
   'err.parse': '無法辨識該輸入：{value}',
+  'err.badRequest': '有數值缺失或不是有效數字，請檢查上方輸入項。',
   'err.unknown': '計算時發生問題。',
 
   'warn.tdsrExceeded': '超出 MAS 的 TDSR 55% 上限。',

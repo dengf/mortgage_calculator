@@ -110,7 +110,11 @@ export default function SingaporePanel({ inputs, onChange, result }) {
         </label>
       </div>
 
-      {result?.error && <div className="error">{result.error}</div>}
+      {result?.error && (
+        <div className="error">
+          {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
+        </div>
+      )}
 
       {result?.loan_type_warning && (
         <div className="error">
@@ -134,6 +138,14 @@ export default function SingaporePanel({ inputs, onChange, result }) {
               <span className={ratioClass(result.tdsr_exceeded, result.tdsr_near_limit)}>
                 {formatPercent(result.tdsr_ratio_percent)}
               </span>
+              {result.assessed_monthly_instalment != null && (
+                <span className="stat-note">
+                  {t('sg.assessedAt', {
+                    rate: result.assessment_rate_percent.toFixed(2),
+                    instalment: formatSgd(result.assessed_monthly_instalment),
+                  })}
+                </span>
+              )}
             </div>
             {result.msr_ratio_percent != null && (
               <div className="stat">

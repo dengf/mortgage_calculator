@@ -4,6 +4,7 @@ import ComparisonEntryRow from './ComparisonEntryRow';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
+import { allFilled } from '../inputs';
 
 
 let nextId = 0;
@@ -68,6 +69,7 @@ export default function ComparisonView({ wasmModule, region }) {
 
   const result = useMemo(() => {
     if (!wasmModule || entries.length === 0) return null;
+    if (!allFilled(principal)) return null;
     return wasmModule.calculate_comparison({
       principal,
       frequency,

@@ -212,6 +212,9 @@ pub struct ScenarioDto {
 pub struct SaveScenarioResult {
     pub id: Option<String>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -272,6 +275,9 @@ pub struct UnitedStatesResult {
     pub monthly_tax_savings: Option<f64>,
     pub net_monthly_cost: Option<f64>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 /// Inputs for the Singapore regulatory panel.
@@ -342,4 +348,7 @@ pub struct SingaporeResult {
     /// The same breaches as translation codes, in the same order.
     pub warning_codes: Vec<String>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }

@@ -686,3 +686,22 @@ body {
     padding: 8px 6px;
   }
 }
+
+/* Results held from the last complete set of inputs, shown while a field is
+   mid-edit. Dimmed so a held figure is never read as a live answer — see
+   `useSticky` in src/inputs.js. */
+.panel-results.stale,
+.stale {
+  opacity: 0.45;
+  transition: opacity 120ms ease-out;
+}
+
+/* Secondary line under a stat, e.g. the MAS assessment rate that a TDSR
+   ratio was actually computed from. */
+.stat-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted, #8b98a9);
+}

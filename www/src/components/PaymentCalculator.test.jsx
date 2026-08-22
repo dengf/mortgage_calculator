@@ -31,6 +31,46 @@ describe('PaymentCalculator', () => {
     expect(screen.getByText('$510,177.20')).toBeInTheDocument();
   });
 
+  it('does not call into wasm while a required field is empty', async () => {
+    // Clearing the loan amount is the first thing a visitor does — they have
+    // to remove the default before typing their own. That used to reach
+    // serde as `''` where an f64 was expected, and the resulting parse error
+    // printed a wasm stack trace onto the page.
+    const wasmModule = mockWasmModule();
+    render(<PaymentCalculator wasmModule={wasmModule} />);
+    await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
+
+    const callsBefore = wasmModule.calculate_payment.mock.calls.length;
+    await userEvent.clear(screen.getByDisplayValue('400000'));
+
+    expect(wasmModule.calculate_payment.mock.calls.length).toBe(callsBefore);
+  });
+
+  it('holds the last result rather than erroring when a field is cleared', async () => {
+    render(<PaymentCalculator wasmModule={mockWasmModule()} />);
+    expect(await screen.findByText('$2,528.27')).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByDisplayValue('400000'));
+
+    // Figures stay on screen (dimmed) instead of vanishing or being replaced
+    // by an error.
+    expect(screen.getByText('$2,528.27')).toBeInTheDocument();
+    expect(document.querySelector('.panel-results.stale')).not.toBeNull();
+  });
+
+  it('translates a parse failure instead of printing the raw error', async () => {
+    const wasmModule = mockWasmModule({
+      calculate_payment: vi.fn(() => ({
+        error: "Some values are missing or aren't valid numbers. Check the fields above.",
+        error_message: { code: 'err.badRequest', params: {} },
+      })),
+    });
+    render(<PaymentCalculator wasmModule={wasmModule} />);
+
+    const shown = await screen.findByText(/values are missing/i);
+    expect(shown.textContent).not.toMatch(/wasm-function|JsValue|\.js:/);
+  });
+
   it('passes the current field values to calculate_payment', async () => {
     const wasmModule = mockWasmModule();
     render(<PaymentCalculator wasmModule={wasmModule} />);

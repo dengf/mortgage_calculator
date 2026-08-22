@@ -3,6 +3,7 @@ import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
+import { allFilled } from '../inputs';
 
 
 export default function RefinanceCalculator({ wasmModule, region }) {
@@ -18,6 +19,8 @@ export default function RefinanceCalculator({ wasmModule, region }) {
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
+    if (!allFilled(currentBalance, currentRate, remainingPeriods, newRate, newTermYears, closingCosts))
+      return null;
     return wasmModule.calculate_refinance({
       current_balance: currentBalance,
       current_annual_rate_percent: currentRate,

@@ -20,6 +20,7 @@ use crate::dto::{
     DeleteScenarioResult, SaveScenarioParams, SaveScenarioResult, ScenarioDto, ScenarioListResult,
     ScenarioResult,
 };
+use crate::message::Message;
 
 thread_local! {
     static STORE: RefCell<Option<Rc<mortgage_ext_redb::RedbScenarioStore>>> = const { RefCell::new(None) };
@@ -70,11 +71,13 @@ pub async fn save_scenario(params: JsValue) -> JsValue {
 async fn save_scenario_impl(params: JsValue) -> SaveScenarioResult {
     let params: SaveScenarioParams = match serde_wasm_bindgen::from_value(params) {
         Ok(p) => p,
-        Err(e) => {
+        Err(_) => {
+            let message = Message::bad_request();
             return SaveScenarioResult {
-                error: Some(format!("Failed to parse scenario parameters: {e:?}")),
+                error: Some(message.text.clone()),
+                error_message: Some(message),
                 ..Default::default()
-            }
+            };
         }
     };
 
@@ -111,6 +114,7 @@ async fn save_scenario_impl(params: JsValue) -> SaveScenarioResult {
         Ok(()) => SaveScenarioResult {
             id: Some(id),
             error: None,
+            error_message: None,
         },
         Err(e) => SaveScenarioResult {
             error: Some(e.to_string()),

@@ -8,6 +8,7 @@ use crate::dto::{
     AmortizationParams, AmortizationResult, AmortizationRowDto, ExtraPaymentImpactResult,
 };
 use crate::loan::build_loan;
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_amortization_schedule(params: JsValue) -> JsValue {
@@ -18,10 +19,14 @@ pub fn calculate_amortization_schedule(params: JsValue) -> JsValue {
 fn calculate_schedule_impl(params: JsValue) -> AmortizationResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(params) => schedule_from_params(params),
-        Err(e) => AmortizationResult {
-            error: Some(format!("Failed to parse amortization parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            AmortizationResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 
@@ -74,10 +79,14 @@ pub fn calculate_extra_payment_impact(params: JsValue) -> JsValue {
 fn calculate_extra_payment_impact_impl(params: JsValue) -> ExtraPaymentImpactResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(params) => extra_payment_impact_from_params(params),
-        Err(e) => ExtraPaymentImpactResult {
-            error: Some(format!("Failed to parse amortization parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            ExtraPaymentImpactResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 

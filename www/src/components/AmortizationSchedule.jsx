@@ -4,6 +4,7 @@ import SavedScenarios from './SavedScenarios';
 import { BalanceChart } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
+import { allFilled } from '../inputs';
 
 
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
@@ -38,11 +39,13 @@ export default function AmortizationSchedule({ wasmModule, region }) {
 
   const schedule = useMemo(() => {
     if (!wasmModule) return null;
+    if (!allFilled(principal, rate, termYears)) return null;
     return wasmModule.calculate_amortization_schedule({ loan, extra_payment: extraPayment || 0 });
   }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
 
   const impact = useMemo(() => {
     if (!wasmModule || !extraPayment) return null;
+    if (!allFilled(principal, rate, termYears)) return null;
     return wasmModule.calculate_extra_payment_impact({ loan, extra_payment: extraPayment });
   }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
 

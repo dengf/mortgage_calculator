@@ -3,6 +3,7 @@ import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
+import { allFilled } from '../inputs';
 
 
 export default function AffordabilityCalculator({ wasmModule, region }) {
@@ -21,6 +22,8 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
+    if (!allFilled(income, debts, downPayment, rate, termYears, maxDti, taxRate, insurance, hoa))
+      return null;
     return wasmModule.calculate_affordability({
       gross_monthly_income: income,
       monthly_debts: debts,

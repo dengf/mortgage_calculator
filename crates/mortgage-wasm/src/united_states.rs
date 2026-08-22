@@ -14,6 +14,7 @@ use rust_decimal::Decimal;
 
 use crate::convert::{decimal_to_f64, f64_to_decimal};
 use crate::dto::{UnitedStatesParams, UnitedStatesResult};
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_united_states(params: JsValue) -> JsValue {
@@ -24,10 +25,14 @@ pub fn calculate_united_states(params: JsValue) -> JsValue {
 fn calculate_united_states_impl(params: JsValue) -> UnitedStatesResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(p) => united_states_from_params(p),
-        Err(e) => UnitedStatesResult {
-            error: Some(format!("Failed to parse United States parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            UnitedStatesResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 

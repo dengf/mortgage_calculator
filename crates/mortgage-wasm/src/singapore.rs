@@ -13,6 +13,7 @@ use rust_decimal::Decimal;
 
 use crate::convert::{decimal_to_f64, f64_to_decimal};
 use crate::dto::{SingaporeParams, SingaporeResult};
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_singapore(params: JsValue) -> JsValue {
@@ -23,10 +24,14 @@ pub fn calculate_singapore(params: JsValue) -> JsValue {
 fn calculate_singapore_impl(params: JsValue) -> SingaporeResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(p) => singapore_from_params(p),
-        Err(e) => SingaporeResult {
-            error: Some(format!("Failed to parse Singapore parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            SingaporeResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 

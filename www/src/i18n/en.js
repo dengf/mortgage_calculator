@@ -162,6 +162,8 @@ export default {
   'sg.absd': "Additional Buyer's Stamp Duty",
   'sg.downPayment': 'Down payment',
   'sg.cashAtCompletion': 'Cash needed at completion',
+  'sg.assessedAt': 'Assessed at {rate}% ({instalment}/mo)',
+  'sg.assessedNote': 'MAS requires banks to test TDSR and MSR at the higher of 4% or your rate, so these ratios use {instalment}/mo, not your actual payment.',
 
   // United States panel
   'us.title': 'US costs & PMI',
@@ -197,6 +199,7 @@ export default {
   'err.invalidDti': 'Debt-to-income ratio must be between 0 and 1 (got {value}).',
   'err.invalidExtraPayment': 'Extra payment cannot be negative (got {value}).',
   'err.parse': 'Could not read that input: {value}',
+  'err.badRequest': "Some values are missing or aren't valid numbers. Check the fields above.",
   'err.unknown': 'Something went wrong with that calculation.',
 
   'warn.tdsrExceeded': 'Exceeds the MAS TDSR limit of 55%.',

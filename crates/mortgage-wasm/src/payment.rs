@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 use crate::convert::decimal_to_f64;
 use crate::dto::{LoanParams, PaymentSummaryResult};
 use crate::loan::build_loan;
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_payment(params: JsValue) -> JsValue {
@@ -15,10 +16,14 @@ pub fn calculate_payment(params: JsValue) -> JsValue {
 fn calculate_payment_impl(params: JsValue) -> PaymentSummaryResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(loan_params) => payment_from_params(loan_params),
-        Err(e) => PaymentSummaryResult {
-            error: Some(format!("Failed to parse loan parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            PaymentSummaryResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 
