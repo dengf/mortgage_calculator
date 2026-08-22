@@ -11,6 +11,7 @@
 //! - [`comparison`] — `calculate_comparison`, `get_common_rate_presets`
 //! - [`singapore`] — `calculate_singapore`
 //! - [`united_states`] — `calculate_united_states`
+//! - [`region`] — `detect_region`
 //! - [`storage`] (wasm32 only) — `init_storage`, `save_scenario`,
 //!   `list_scenarios`, `load_scenario`, `delete_scenario`, backed by
 //!   `mortgage-ext-redb`'s wasm/IndexedDB-persisted store. Gated to
@@ -36,6 +37,7 @@ pub mod loan;
 pub mod message;
 pub mod payment;
 pub mod refinance;
+pub mod region;
 pub mod sg_affordability;
 pub mod singapore;
 #[cfg(target_arch = "wasm32")]
@@ -134,8 +136,10 @@ mod bridge_coverage {
 
     #[test]
     fn the_guard_is_quiet_when_everything_is_bridged() {
-        let calc = "pub mod payment;\npub mod refinance;\n";
-        let wasm = "pub mod payment;\npub mod refinance;\npub mod dto;\n";
+        let calc = "pub mod payment;\npub mod refinance;
+pub mod region;\n";
+        let wasm = "pub mod payment;\npub mod refinance;
+pub mod region;\npub mod dto;\n";
 
         assert!(unbridged(calc, wasm).is_empty());
     }

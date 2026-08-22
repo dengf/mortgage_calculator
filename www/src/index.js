@@ -41,6 +41,12 @@ function createMockModule() {
   };
 
   return {
+    // Same reasoning as the Singapore rules below: the ranking between time
+    // zone, language and stored preference lives in
+    // mortgage-core/src/region.rs, and a second copy here could disagree
+    // with it. Without the real module the app just opens in its default
+    // region, which the header toggle fixes in one click.
+    detect_region: () => ({ region: 'US' }),
     // Deliberately not reimplemented here. The MAS/CPF/IRAS rules live in
     // exactly one place (mortgage-calc/src/singapore.rs); mirroring the
     // TDSR/MSR ceilings, BSD tiers and ABSD matrix in JavaScript would let

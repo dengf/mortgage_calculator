@@ -8,7 +8,7 @@ use mortgage_calc::affordability::AffordabilityInput;
 use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput, ComparisonResult};
 use mortgage_calc::refinance::RefinanceInput;
 use mortgage_calc::{singapore, united_states, Loan, PaymentFrequency, RateType};
-use mortgage_core::{round_currency, Region};
+use mortgage_core::{round_currency, Region, RegionSignals};
 use mortgage_ext_redb::RedbScenarioStore;
 use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore};
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -1181,14 +1181,21 @@ fn recompute_compare(ui: &AppWindow) {
     }
 }
 
-/// Best-effort region guess from the device/browser locale (e.g. `en-SG`),
-/// used to preset the region toggle on startup. Falls back to
-/// [`Region::US`] when the locale can't be read or isn't recognized.
+/// Best-effort region guess used to preset the region toggle on startup.
+///
+/// The ranking between the signals below lives in
+/// [`Region::detect`](mortgage_core::Region::detect), shared with the web
+/// app, so the two front ends cannot disagree about where a user is. This
+/// function only reads what the platform can tell it.
 #[cfg(not(target_family = "wasm"))]
 fn detect_region() -> Region {
-    sys_locale::get_locale()
-        .map(|locale| Region::parse(&locale))
-        .unwrap_or_default()
+    let locale = sys_locale::get_locale();
+    let locales: Vec<&str> = locale.as_deref().into_iter().collect();
+    Region::detect(RegionSignals {
+        chosen: None,
+        time_zone: iana_time_zone::get_timezone().ok().as_deref(),
+        locales: &locales,
+    })
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -1207,10 +1214,23 @@ extern "C" {
 }
 
 #[cfg(target_family = "wasm")]
+#[wasm_bindgen(inline_js = "export function browser_time_zone() { \
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } \
+    catch (e) { return null; } \
+}")]
+extern "C" {
+    fn browser_time_zone() -> Option<String>;
+}
+
+#[cfg(target_family = "wasm")]
 fn detect_region() -> Region {
-    navigator_language()
-        .map(|locale| Region::parse(&locale))
-        .unwrap_or_default()
+    let locale = navigator_language();
+    let locales: Vec<&str> = locale.as_deref().into_iter().collect();
+    Region::detect(RegionSignals {
+        chosen: None,
+        time_zone: browser_time_zone().as_deref(),
+        locales: &locales,
+    })
 }
 
 #[cfg(target_family = "wasm")]
