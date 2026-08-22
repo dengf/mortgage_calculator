@@ -111,3 +111,44 @@ describe('SingaporeAffordability', () => {
     expect(() => renderPanel(withoutBinding)).not.toThrow();
   });
 });
+
+// MAS Notice 645 assesses servicing at the higher of 4% and the *thereafter*
+// rate. Every Singapore package steps up after two or three years, so the
+// rate a buyer is quoted is not the one they are qualified on -- and
+// assessing on the promotional rate passes borrowers a bank would decline.
+describe('SingaporeAffordability thereafter rate', () => {
+  it('sends both rates, not just the one the loan opens at', async () => {
+    const wasm = mockWasm();
+    render(
+      <I18nProvider initialLocale="en">
+        <SingaporeAffordability wasmModule={wasm} region="SG" />
+      </I18nProvider>,
+    );
+
+    await waitFor(() => expect(wasm.calculate_sg_affordability).toHaveBeenCalled());
+    expect(wasm.calculate_sg_affordability).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        annual_rate_percent: 1.42,
+        thereafter_annual_rate_percent: 1.72,
+      }),
+    );
+  });
+
+  it('holds its peace rather than assessing on a blank thereafter rate', async () => {
+    const user = userEvent.setup();
+    const wasm = mockWasm();
+    render(
+      <I18nProvider initialLocale="en">
+        <SingaporeAffordability wasmModule={wasm} region="SG" />
+      </I18nProvider>,
+    );
+
+    const field = await screen.findByDisplayValue('1.72');
+    wasm.calculate_sg_affordability.mockClear();
+    await user.clear(field);
+
+    // A cleared field must not reach Rust as a rate of zero, which would
+    // assess at the 4% floor and quietly overstate what the buyer can carry.
+    expect(wasm.calculate_sg_affordability).not.toHaveBeenCalled();
+  });
+});

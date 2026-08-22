@@ -26,7 +26,11 @@ export default function SingaporeAffordability({ wasmModule }) {
   const [debts, setDebts] = useState(0);
   const [cash, setCash] = useState(400000);
   const [cpf, setCpf] = useState(0);
-  const [rate, setRate] = useState(4);
+  // The rate the package opens at, and the one it steps up to. Singapore
+  // packages are quoted this way and MAS assesses servicing on the second --
+  // see mortgage-calc/src/singapore.rs.
+  const [rate, setRate] = useState(1.42);
+  const [thereafterRate, setThereafterRate] = useState(1.72);
   const [termYears, setTermYears] = useState(25);
   const [age, setAge] = useState(35);
   const [isHdb, setIsHdb] = useState(false);
@@ -36,7 +40,8 @@ export default function SingaporeAffordability({ wasmModule }) {
 
   const result = useMemo(() => {
     if (!wasmModule?.calculate_sg_affordability) return null;
-    if (!allFilled(fixedIncome, variableIncome, debts, cash, cpf, rate, termYears)) return null;
+    if (!allFilled(fixedIncome, variableIncome, debts, cash, cpf, rate, thereafterRate, termYears))
+      return null;
     return wasmModule.calculate_sg_affordability({
       fixed_monthly_income: fixedIncome,
       variable_monthly_income: variableIncome,
@@ -44,6 +49,7 @@ export default function SingaporeAffordability({ wasmModule }) {
       cash_available: cash,
       cpf_oa_available: cpf,
       annual_rate_percent: rate,
+      thereafter_annual_rate_percent: thereafterRate,
       term_years: termYears,
       borrower_age: allFilled(age) ? age : null,
       is_hdb_or_ec: isHdb,
@@ -59,6 +65,7 @@ export default function SingaporeAffordability({ wasmModule }) {
     cash,
     cpf,
     rate,
+    thereafterRate,
     termYears,
     age,
     isHdb,
@@ -113,9 +120,16 @@ export default function SingaporeAffordability({ wasmModule }) {
           grouped
         />
         <NumberField
-          label={t('field.interestRate')}
+          label={t('sgaff.initialRate')}
           value={rate}
           onChange={setRate}
+          suffix="%"
+          min={0}
+        />
+        <NumberField
+          label={t('sgaff.thereafterRate')}
+          value={thereafterRate}
+          onChange={setThereafterRate}
           suffix="%"
           min={0}
         />

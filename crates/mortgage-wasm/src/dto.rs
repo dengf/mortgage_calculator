@@ -431,9 +431,16 @@ pub struct SgAffordabilityParams {
     pub cash_available: f64,
     /// CPF OA balance usable for the deposit above the cash floor.
     pub cpf_oa_available: f64,
-    /// The borrower's own rate, e.g. `4.5`. Servicing is assessed at the
-    /// higher of this and MAS's 4% floor.
+    /// The rate the loan opens at, e.g. `1.42`. What the borrower pays first.
     pub annual_rate_percent: f64,
+    /// The rate after the lock-in, for a package that steps up. Omit for a
+    /// rate that holds for the term.
+    ///
+    /// Servicing is assessed at the higher of this and MAS's 4% floor --
+    /// "thereafter" is the Notice's word, and assessing on the promotional
+    /// rate would pass borrowers a bank would decline.
+    #[serde(default)]
+    pub thereafter_annual_rate_percent: Option<f64>,
     pub term_years: f64,
     /// Optional: without it only the tenure half of the extended-tenure test
     /// can be applied.

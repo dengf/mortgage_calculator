@@ -82,6 +82,12 @@ fn sg_affordability_from_params(p: SgAffordabilityParams) -> SgAffordabilityResu
         cash_available: f64_to_decimal(p.cash_available),
         cpf_oa_available: f64_to_decimal(p.cpf_oa_available),
         annual_rate: f64_to_decimal(p.annual_rate_percent) / Decimal::from(100),
+        // Absent or non-finite means a rate that holds for the term, which
+        // is then what servicing is assessed on.
+        thereafter_annual_rate: p
+            .thereafter_annual_rate_percent
+            .filter(|v| v.is_finite() && *v >= 0.0)
+            .map(|v| f64_to_decimal(v) / Decimal::from(100)),
         term_years: f64_to_decimal(p.term_years),
         borrower_age: p
             .borrower_age
@@ -131,6 +137,7 @@ mod tests {
     fn params() -> SgAffordabilityParams {
         SgAffordabilityParams {
             fixed_monthly_income: 12_000.0,
+            thereafter_annual_rate_percent: None,
             variable_monthly_income: 0.0,
             other_monthly_debts: 0.0,
             cash_available: 500_000.0,
@@ -199,6 +206,7 @@ mod tests {
     fn a_zero_income_reports_a_translatable_error_not_a_number() {
         let r = sg_affordability_from_params(SgAffordabilityParams {
             fixed_monthly_income: 0.0,
+            thereafter_annual_rate_percent: None,
             ..params()
         });
         assert!(r.max_price.is_none());
