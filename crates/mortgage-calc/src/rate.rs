@@ -109,6 +109,21 @@ impl RateIndex {
             RateIndex::Sora => "3M SORA",
         }
     }
+
+    /// Reads back what [`Self::as_str`] wrote. `None` for a row that names no
+    /// benchmark, which is every row a user built from scratch.
+    ///
+    /// Deliberately not `FromStr`: that trait's `Err` would have to describe
+    /// a failure, and there is none here -- an unrecognized name means the
+    /// row simply names no index.
+    pub fn parse_name(name: &str) -> Option<RateIndex> {
+        match name {
+            "SOFR" => Some(RateIndex::Sofr),
+            "Prime" => Some(RateIndex::Prime),
+            "3M SORA" => Some(RateIndex::Sora),
+            _ => None,
+        }
+    }
 }
 
 /// What a preset is called, as a structure rather than a sentence.

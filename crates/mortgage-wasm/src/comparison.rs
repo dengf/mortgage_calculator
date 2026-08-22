@@ -1,7 +1,7 @@
 //! `calculate_comparison` and `get_common_rate_presets`.
 
 use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput, Tradeoff};
-use mortgage_calc::PresetLabel;
+use mortgage_calc::{PresetLabel, RateIndex, RateType};
 use mortgage_core::Region;
 use rust_decimal::Decimal;
 use wasm_bindgen::prelude::*;
@@ -11,7 +11,8 @@ use crate::convert::{
     rate_type_to_dto, to_js,
 };
 use crate::dto::{
-    ComparisonParams, ComparisonResult, ComparisonRowDto, ComparisonVerdictDto, RatePresetDto,
+    ComparisonParams, ComparisonResult, ComparisonRowDto, ComparisonVerdictDto, DescribeRateParams,
+    RatePresetDto,
 };
 use crate::message::Message;
 
@@ -176,6 +177,58 @@ fn label_message(label: PresetLabel) -> Message {
     }
 }
 
+/// The benchmark a preset names, if it names one.
+fn preset_index(label: PresetLabel) -> Option<RateIndex> {
+    match label {
+        PresetLabel::Floating { index, .. } | PresetLabel::Reverting { index, .. } => Some(index),
+        PresetLabel::Fixed { .. } | PresetLabel::HdbConcessionary => None,
+    }
+}
+
+/// Names a rate the way its preset would, from the row's current figures.
+///
+/// A preset seeds a row with a name built from its numbers -- "3M SORA +
+/// 0.30% for 2 yr, then + 0.60%". Editing those numbers used to leave the
+/// name behind, so a row could read "then + 0.60%" while computing 1.50%.
+/// The name is regenerated here rather than in the front end so it is built
+/// by the same code, with the same rounding, that produced it originally.
+///
+/// `index` is the published benchmark the row was seeded with; a row the
+/// user built from scratch has none and keeps whatever name they gave it.
+#[wasm_bindgen]
+pub fn describe_rate(params: JsValue) -> JsValue {
+    let result = describe_rate_impl(params);
+    to_js(&result)
+}
+
+fn describe_rate_impl(params: JsValue) -> Option<Message> {
+    let params: DescribeRateParams = serde_wasm_bindgen::from_value(params).ok()?;
+    describe(&params)
+}
+
+/// The JsValue-free core, so this is testable on the native host.
+fn describe(params: &DescribeRateParams) -> Option<Message> {
+    let index = RateIndex::parse_name(params.index.as_deref()?)?;
+    let label = match rate_type_from_dto(&params.rate_type).ok()? {
+        RateType::Fixed { .. } => PresetLabel::Fixed {
+            years: params.term_years.round().max(0.0) as u32,
+        },
+        RateType::Floating { spread, .. } => PresetLabel::Floating { index, spread },
+        RateType::Reverting {
+            initial_spread,
+            initial_years,
+            thereafter_spread,
+            ..
+        } => PresetLabel::Reverting {
+            index,
+            initial_spread,
+            initial_years,
+            thereafter_spread,
+        },
+    };
+    Some(label_message(label))
+}
+
 /// Starting points for the market the buyer is shopping in.
 ///
 /// Takes a region because the floating index is a fact about that market
@@ -194,6 +247,7 @@ pub fn get_common_rate_presets(region: Option<String>) -> JsValue {
             RatePresetDto {
                 label: message.text.clone(),
                 label_message: message,
+                index: preset_index(preset.label).map(|i| i.as_str().to_string()),
                 rate_type: rate_type_to_dto(&preset.rate_type),
                 term_years: decimal_to_f64(preset.term_years),
             }
@@ -241,5 +295,82 @@ mod tests {
         });
         assert!(result.rows.is_empty());
         assert!(result.error.is_some());
+    }
+
+    fn describe_params(
+        rate_type: RateTypeDto,
+        term_years: f64,
+        index: Option<&str>,
+    ) -> DescribeRateParams {
+        DescribeRateParams {
+            rate_type,
+            term_years,
+            index: index.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn renames_a_stepping_row_from_its_current_figures() {
+        // The defect: a row seeded as "then + 0.60%" that still said so
+        // after the spread was edited to 1.50%.
+        let described = describe(&describe_params(
+            RateTypeDto::Reverting {
+                base_rate_percent: 1.12,
+                initial_spread_percent: 0.3,
+                initial_years: 2.0,
+                thereafter_spread_percent: 1.5,
+            },
+            25.0,
+            Some("3M SORA"),
+        ))
+        .unwrap();
+
+        assert_eq!(described.code, "preset.reverting");
+        assert_eq!(described.params.get("thereafter").unwrap(), "1.50");
+        assert_eq!(described.params.get("initial").unwrap(), "0.30");
+        assert_eq!(described.params.get("index").unwrap(), "3M SORA");
+    }
+
+    #[test]
+    fn a_row_naming_no_benchmark_keeps_the_name_it_was_given() {
+        // Built from scratch rather than seeded, so there is nothing to
+        // regenerate from and the user's own name stands.
+        assert!(describe(&describe_params(
+            RateTypeDto::Fixed { rate_percent: 6.5 },
+            30.0,
+            None
+        ))
+        .is_none());
+    }
+
+    #[test]
+    fn renames_a_floating_row_from_its_spread() {
+        let described = describe(&describe_params(
+            RateTypeDto::Floating {
+                base_rate_percent: 3.63,
+                spread_percent: 2.25,
+            },
+            30.0,
+            Some("SOFR"),
+        ))
+        .unwrap();
+
+        assert_eq!(described.code, "preset.floating");
+        assert_eq!(described.params.get("spread").unwrap(), "2.25");
+    }
+
+    #[test]
+    fn a_preset_publishes_the_benchmark_it_names() {
+        // Without this the row has nothing to regenerate its name from.
+        assert_eq!(
+            preset_index(PresetLabel::Reverting {
+                index: RateIndex::Sora,
+                initial_spread: Decimal::new(3, 3),
+                initial_years: Decimal::from(2),
+                thereafter_spread: Decimal::new(6, 3),
+            }),
+            Some(RateIndex::Sora)
+        );
+        assert_eq!(preset_index(PresetLabel::HdbConcessionary), None);
     }
 }

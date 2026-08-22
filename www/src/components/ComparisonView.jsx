@@ -23,6 +23,10 @@ function presetName(preset, t) {
 // what was typed rather than discarding it. Only the fields the active kind
 // uses are sent across.
 const EMPTY_ENTRY = {
+  // The benchmark this row was seeded with, and whether the user has renamed
+  // it. Together they decide whether the name still follows the figures.
+  labelIndex: null,
+  labelEdited: false,
   kind: 'fixed',
   ratePercent: 6.5,
   baseRatePercent: 4.3,
@@ -42,6 +46,7 @@ function presetToEntry(preset, t) {
     // an editable field on the row from then on, so it belongs to the user
     // rather than re-translating under them on a language switch.
     label: presetName(preset, t),
+    labelIndex: preset.index ?? null,
     kind: rate.kind,
     termYears: preset.term_years,
     ...(rate.kind === 'fixed' && { ratePercent: rate.rate_percent }),
@@ -59,7 +64,8 @@ function presetToEntry(preset, t) {
 }
 
 function blankEntry(t) {
-  return { ...EMPTY_ENTRY, id: newId(), label: t('cmp.customScenario') };
+  // Named by the user from the start, so nothing regenerates over them.
+  return { ...EMPTY_ENTRY, id: newId(), label: t('cmp.customScenario'), labelEdited: true };
 }
 
 function toWasmEntry(entry) {
@@ -159,8 +165,29 @@ export default function ComparisonView({
   })();
 
   const updateEntry = (id, updated) => {
-    setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
+    setEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...updated, label: nameFor(updated, e) } : e)),
+    );
   };
+
+  /**
+   * A row's name after an edit.
+   *
+   * A row seeded from a preset is named from its own figures, so editing
+   * those figures renames it -- otherwise a row reads "then + 0.60%" while
+   * computing 1.50%. Once the user types their own name it is theirs, and
+   * nothing overwrites it.
+   */
+  function nameFor(updated, previous) {
+    if (updated.labelEdited || !updated.labelIndex) return updated.label;
+    if (updated.label !== previous.label) return updated.label;
+    const described = wasmModule?.describe_rate?.({
+      rate_type: toWasmEntry(updated).rate_type,
+      term_years: updated.termYears,
+      index: updated.labelIndex,
+    });
+    return described ? t(described.code, described.params) : updated.label;
+  }
 
   const removeEntry = (id) => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
