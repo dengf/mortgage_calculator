@@ -10,6 +10,7 @@ import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
 import { DEFAULT_SCENARIO } from './scenario';
+import { detectRegion, rememberRegion } from './region';
 
 const PANELS = {
   payment: PaymentCalculator,
@@ -30,23 +31,11 @@ function panelFor(tab, region) {
   return PANELS[tab];
 }
 
-/**
- * Picks the starting region from the browser's locale, the same way the
- * Slint app reads the device locale at startup. The header toggle
- * overrides it.
- */
-function detectRegion() {
-  const locales = navigator.languages?.length ? navigator.languages : [navigator.language];
-  return locales.some((l) => typeof l === 'string' && l.toUpperCase().endsWith('-SG'))
-    ? 'SG'
-    : 'US';
-}
-
 /// Exported so tests can drive the real tab wiring — the shared scenario
 /// only means anything across a tab switch, which App owns.
 export function AppShell({ wasmModule }) {
   const [activeTab, setActiveTab] = useState('payment');
-  const [region, setRegion] = useState(detectRegion);
+  const [region, setRegion] = useState(() => detectRegion(wasmModule));
   // One loan, described from several angles — see src/scenario.js.
   const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
   const { t } = useI18n();
@@ -58,7 +47,13 @@ export function AppShell({ wasmModule }) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         region={region}
-        onRegionChange={setRegion}
+        onRegionChange={(next) => {
+          // Remembered, so a guess the user had to correct is only ever
+          // corrected once. Detection reads this back ahead of any inferred
+          // signal.
+          rememberRegion(next);
+          setRegion(next);
+        }}
       />
       <main className="app-main">
         <Intro region={region} />

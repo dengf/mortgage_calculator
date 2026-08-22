@@ -3002,6 +3002,7 @@ name = "mortgage-ui-slint"
 version = "0.1.0"
 dependencies = [
  "i-slint-backend-testing",
+ "iana-time-zone",
  "js-sys",
  "mortgage-calc",
  "mortgage-core",

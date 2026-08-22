@@ -12,7 +12,7 @@ mod rounding;
 
 pub use error::MortgageError;
 pub use frequency::PaymentFrequency;
-pub use region::Region;
+pub use region::{Region, RegionSignals};
 pub use rounding::round_currency;
 
 /// Result alias used throughout the mortgage-calculator crates.
