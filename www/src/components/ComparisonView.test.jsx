@@ -99,21 +99,47 @@ describe('ComparisonView trade-off summary', () => {
     },
   ];
 
+  // Which row wins and by how much is mortgage-calc's answer, tested in
+  // crates/mortgage-calc/src/comparison.rs. These assert only that the
+  // component renders the verdict it was handed, in the reader's language --
+  // recomputing it here would be the duplication this change removed.
+  const split = {
+    cheapest_payment: 0,
+    cheapest_interest: 1,
+    cheapest_total_paid: 1,
+    kind: 'split',
+    cheaper: 1,
+    lighter: 0,
+    payment_delta: 847.16,
+    interest_delta: 302599.8,
+  };
+
+  const outright = {
+    cheapest_payment: 1,
+    cheapest_interest: 1,
+    cheapest_total_paid: 1,
+    kind: 'outright',
+    cheaper: 1,
+    lighter: 1,
+    payment_delta: 0,
+    interest_delta: 0,
+  };
+
   // Entries seed from presets, and nothing is computed without them.
-  const wasmWith = (comparisonRows) => ({
+  const wasmWith = (comparisonRows, verdict = null) => ({
     get_common_rate_presets: vi.fn(() => [
       preset('30-Year Fixed', 6.5, 30),
       preset('20-Year Fixed', 6.25, 20),
       preset('15-Year Fixed', 6.0, 15),
     ]),
-    calculate_comparison: vi.fn(() => ({ rows: comparisonRows, error: null })),
+    calculate_comparison: vi.fn(() => ({ rows: comparisonRows, verdict, error: null })),
     list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
   });
 
   it('states the difference, which is the question a comparison is asked', async () => {
     render(
       <I18nProvider initialLocale="en">
-        <ComparisonView wasmModule={wasmWith(rows)} region="US" />
+        <ComparisonView wasmModule={wasmWith(rows, split)} region="US" />
       </I18nProvider>,
     );
     // The delta between the two, not just two columns of figures.
@@ -125,7 +151,7 @@ describe('ComparisonView trade-off summary', () => {
     const dominant = [rows[0], { ...rows[1], payment: 100, total_paid: 1, total_interest: 1 }];
     render(
       <I18nProvider initialLocale="en">
-        <ComparisonView wasmModule={wasmWith(dominant)} region="US" />
+        <ComparisonView wasmModule={wasmWith(dominant, outright)} region="US" />
       </I18nProvider>,
     );
     expect(await screen.findByText(/wins on both/)).toBeInTheDocument();
