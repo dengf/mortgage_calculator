@@ -68,6 +68,44 @@ pub fn assessment_rate(contract_annual_rate: Decimal) -> Decimal {
     contract_annual_rate.max(MEDIUM_TERM_RATE_FLOOR)
 }
 
+/// The share of variable income — commission, bonus, allowance — that counts
+/// towards the servicing ratios.
+///
+/// MAS Notice 645 para 17(b): a bank may count "not more than 70% of ... the
+/// average of the monthly variable income earned in the preceding 12 months".
+/// Para 17(c)(i) applies the same haircut to the variable half of a mixed
+/// income, leaving fixed salary whole.
+pub const VARIABLE_INCOME_HAIRCUT: Decimal = dec!(0.70);
+
+/// A borrower's monthly income, split the way Notice 645 para 17 splits it.
+///
+/// Kept as a pair rather than one figure because the two halves are not
+/// interchangeable: $10,000 of salary supports a materially larger loan than
+/// $10,000 of commission. A calculator that asks only for "gross monthly
+/// income" silently assumes the borrower-friendly reading of every case.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct MonthlyIncome {
+    /// Fixed salary, counted in full — para 17(a).
+    pub fixed: Decimal,
+    /// Commission, bonus or allowance, counted at 70% — para 17(b).
+    pub variable: Decimal,
+}
+
+impl MonthlyIncome {
+    /// All fixed, no variable component — the common case.
+    pub fn fixed(amount: Decimal) -> Self {
+        Self {
+            fixed: amount,
+            variable: Decimal::ZERO,
+        }
+    }
+
+    /// The income figure the servicing ratios are actually computed on.
+    pub fn assessed(&self) -> Decimal {
+        self.fixed.max(Decimal::ZERO) + self.variable.max(Decimal::ZERO) * VARIABLE_INCOME_HAIRCUT
+    }
+}
+
 /// A ratio's standing against its regulatory ceiling: exceeded outright,
 /// within a warning band below it, or comfortably clear.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -99,12 +137,18 @@ pub struct TdsrMsrCheck {
     /// whenever they're quoted under the floor, so the UI can show both and
     /// explain the gap.
     pub assessed_monthly_instalment: Decimal,
+    /// Income after the variable-income haircut — the denominator of both
+    /// ratios. Below the borrower's headline pay whenever any of it is
+    /// commission or bonus.
+    pub assessed_monthly_income: Decimal,
 }
 
 /// Checks a loan against the MAS TDSR (always) and MSR (HDB/EC only)
 /// ceilings.
 ///
-/// Takes the loan rather than a payment on purpose. The ratios must be
+/// Takes [`MonthlyIncome`] rather than one gross figure so the Notice 645
+/// para 17 haircut on variable income is applied here, not left to callers to
+/// remember. Takes the loan rather than a payment for the same reason. The ratios must be
 /// computed on the instalment at [`MEDIUM_TERM_RATE_FLOOR`], not the one the
 /// borrower is quoted, and a caller handed a payment has no way to tell
 /// which it holds — so the repricing happens here, where it can't be
@@ -112,9 +156,10 @@ pub struct TdsrMsrCheck {
 pub fn check_tdsr_msr(
     loan: &Loan,
     other_monthly_debts: Decimal,
-    gross_monthly_income: Decimal,
+    income: MonthlyIncome,
     is_hdb_or_ec: bool,
 ) -> MortgageResult<TdsrMsrCheck> {
+    let gross_monthly_income = income.assessed();
     if gross_monthly_income <= Decimal::ZERO {
         return Err(MortgageError::InvalidIncome(
             gross_monthly_income.to_string(),
@@ -140,6 +185,7 @@ pub fn check_tdsr_msr(
         msr,
         assessment_rate,
         assessed_monthly_instalment: round_currency(instalment),
+        assessed_monthly_income: round_currency(gross_monthly_income),
     })
 }
 
@@ -149,6 +195,20 @@ pub enum Residency {
     Citizen,
     PermanentResident,
     Foreigner,
+    /// A foreigner entitled to National Treatment for stamp duty under one of
+    /// Singapore's free trade agreements, and so charged ABSD at citizen
+    /// rates rather than the flat 60%.
+    ///
+    /// Covers nationals of the **United States** (under the USSFTA — citizens
+    /// only, not green-card holders), and nationals *and* permanent residents
+    /// of **Iceland, Liechtenstein, Norway and Switzerland** (under the
+    /// EFTA-Singapore FTA).
+    ///
+    /// The gap this closes is not marginal: a US citizen buying their first
+    /// home here owes 0%, not 60% of the purchase price. Note the remission
+    /// is claimed from IRAS rather than applied automatically, which the UI
+    /// says out loud — the duty is assessed at the foreigner rate first.
+    FtaNational,
 }
 
 /// How many residential properties the buyer will own after this purchase,
@@ -216,6 +276,10 @@ pub fn additional_buyers_stamp_duty(
         (Residency::PermanentResident, PropertyCount::Second) => dec!(0.30),
         (Residency::PermanentResident, PropertyCount::ThirdOrMore) => dec!(0.35),
         (Residency::Foreigner, _) => dec!(0.60),
+        // National Treatment: charged exactly as a citizen would be.
+        (Residency::FtaNational, PropertyCount::First) => Decimal::ZERO,
+        (Residency::FtaNational, PropertyCount::Second) => dec!(0.20),
+        (Residency::FtaNational, PropertyCount::ThirdOrMore) => dec!(0.30),
     };
     round_currency(price.max(Decimal::ZERO) * rate)
 }
@@ -275,7 +339,7 @@ mod tests {
         let check = check_tdsr_msr(
             &loan_of(dec!(1_000_000), dec!(0.045), dec!(30)),
             dec!(1000),
-            dec!(10_000),
+            MonthlyIncome::fixed(dec!(10_000)),
             false,
         )
         .unwrap();
@@ -289,7 +353,7 @@ mod tests {
         let check = check_tdsr_msr(
             &loan_of(dec!(700_000), dec!(0.04), dec!(30)),
             dec!(0),
-            dec!(10_000),
+            MonthlyIncome::fixed(dec!(10_000)),
             true,
         )
         .unwrap();
@@ -302,7 +366,7 @@ mod tests {
         assert!(check_tdsr_msr(
             &loan_of(dec!(500_000), dec!(0.04), dec!(25)),
             dec!(0),
-            dec!(0),
+            MonthlyIncome::fixed(dec!(0)),
             false
         )
         .is_err());
@@ -317,7 +381,8 @@ mod tests {
         // TDSR. Repriced at the 4% floor it is ~$5,728/mo, or 57%, which is
         // not. A bank would decline this borrower; so must the calculator.
         let loan = loan_of(dec!(1_200_000), dec!(0.015), dec!(30));
-        let check = check_tdsr_msr(&loan, dec!(0), dec!(10_000), false).unwrap();
+        let check =
+            check_tdsr_msr(&loan, dec!(0), MonthlyIncome::fixed(dec!(10_000)), false).unwrap();
 
         assert_eq!(check.assessment_rate, MEDIUM_TERM_RATE_FLOOR);
 
@@ -338,7 +403,8 @@ mod tests {
     #[test]
     fn leaves_a_loan_above_the_floor_at_its_own_rate() {
         let loan = loan_of(dec!(500_000), dec!(0.065), dec!(25));
-        let check = check_tdsr_msr(&loan, dec!(0), dec!(20_000), false).unwrap();
+        let check =
+            check_tdsr_msr(&loan, dec!(0), MonthlyIncome::fixed(dec!(20_000)), false).unwrap();
 
         assert_eq!(check.assessment_rate, dec!(0.065));
         assert_eq!(
@@ -505,11 +571,16 @@ pub enum BindingConstraint {
 
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 pub struct SgAffordabilityInput {
-    pub gross_monthly_income: Decimal,
+    pub income: MonthlyIncome,
     pub other_monthly_debts: Decimal,
-    /// Everything available for the deposit and stamp duty — cash plus any
-    /// CPF OA the buyer can apply to the purchase.
-    pub funds_available: Decimal,
+    /// Cash the buyer holds. Kept apart from CPF because the two are not
+    /// interchangeable at completion: the minimum cash down payment cannot
+    /// be met from CPF, and both stamp duties must be paid in cash within 14
+    /// days — CPF only reimburses afterwards, too late to complete on.
+    pub cash_available: Decimal,
+    /// CPF Ordinary Account balance usable for this purchase. Can cover the
+    /// deposit above the cash floor, and nothing else here.
+    pub cpf_oa_available: Decimal,
     /// The borrower's own rate as a fraction. Servicing is assessed at the
     /// higher of this and [`MEDIUM_TERM_RATE_FLOOR`].
     pub annual_rate: Decimal,
@@ -536,11 +607,19 @@ pub struct SgAffordabilityResult {
     pub ltv: Decimal,
     pub extended_tenure: bool,
     pub deposit: Decimal,
-    /// The share of `deposit` that must be cash rather than CPF.
+    /// The share of `deposit` that must be cash rather than CPF, from the
+    /// Notice 632 cash column.
     pub min_cash_required: Decimal,
     pub bsd: Decimal,
     pub absd: Decimal,
+    /// Cash the buyer actually has to produce: the cash floor, whatever of
+    /// the remaining deposit CPF can't cover, and both stamp duties.
+    pub cash_required: Decimal,
+    /// CPF OA applied to the deposit.
+    pub cpf_used: Decimal,
     pub cash_and_cpf_at_completion: Decimal,
+    /// Income after the variable-income haircut.
+    pub assessed_monthly_income: Decimal,
 }
 
 /// The largest loan whose assessed instalment is `instalment`.
@@ -562,18 +641,48 @@ fn loan_for_instalment(instalment: Decimal, annual_rate: Decimal, term_years: De
     instalment / factor
 }
 
-/// How much of a purchase at `price` the buyer must find up front: the
-/// deposit the LTV leaves uncovered, plus BSD and ABSD.
-fn funds_needed_at(
+/// How a purchase at `price` is funded, once CPF is only allowed where the
+/// rules actually allow it.
+#[derive(Debug, Clone, Copy)]
+struct Funding {
+    loan: Decimal,
+    deposit: Decimal,
+    min_cash: Decimal,
+    duties: UpfrontCosts,
+    cpf_used: Decimal,
+    cash_required: Decimal,
+}
+
+/// Works out what a purchase at `price` demands in cash versus CPF.
+///
+/// CPF may only go towards the part of the deposit above the Notice 632 cash
+/// floor. It may not cover that floor, and it may not cover stamp duty at
+/// completion — both duties fall due within 14 days, faster than CPF Board
+/// disburses, so they are paid in cash and reimbursed later if at all.
+fn funding_at(
     price: Decimal,
     max_loan_by_income: Decimal,
     limit: LtvLimit,
+    cpf_available: Decimal,
     residency: Residency,
     count: PropertyCount,
-) -> Decimal {
+) -> Funding {
     let loan = (price * limit.ltv).min(max_loan_by_income);
-    let costs = upfront_costs(price, residency, count);
-    (price - loan) + costs.total
+    let deposit = (price - loan).max(Decimal::ZERO);
+    let min_cash = price * limit.min_cash;
+    let duties = upfront_costs(price, residency, count);
+
+    let cpf_eligible = (deposit - min_cash).max(Decimal::ZERO);
+    let cpf_used = cpf_available.max(Decimal::ZERO).min(cpf_eligible);
+
+    Funding {
+        loan,
+        deposit,
+        min_cash,
+        duties,
+        cpf_used,
+        cash_required: deposit - cpf_used + duties.total,
+    }
 }
 
 /// The most a Singapore buyer can pay for a property, given the MAS
@@ -585,17 +694,15 @@ fn funds_needed_at(
 /// aren't a linear function of it — but they are monotonic, which is all
 /// bisection requires.
 pub fn max_affordable_sg(input: &SgAffordabilityInput) -> MortgageResult<SgAffordabilityResult> {
-    if input.gross_monthly_income <= Decimal::ZERO {
-        return Err(MortgageError::InvalidIncome(
-            input.gross_monthly_income.to_string(),
-        ));
+    let assessed_income = input.income.assessed();
+    if assessed_income <= Decimal::ZERO {
+        return Err(MortgageError::InvalidIncome(assessed_income.to_string()));
     }
 
-    // 1. What the MAS ceilings allow to be spent on this loan each month.
-    let tdsr_capacity = input.gross_monthly_income * TDSR_LIMIT - input.other_monthly_debts;
-    let msr_capacity = input
-        .is_hdb_or_ec
-        .then(|| input.gross_monthly_income * MSR_LIMIT);
+    // 1. What the MAS ceilings allow to be spent on this loan each month,
+    //    on income after the variable-income haircut.
+    let tdsr_capacity = assessed_income * TDSR_LIMIT - input.other_monthly_debts;
+    let msr_capacity = input.is_hdb_or_ec.then(|| assessed_income * MSR_LIMIT);
 
     let mut binding = BindingConstraint::Tdsr;
     let mut max_instalment = tdsr_capacity;
@@ -619,36 +726,44 @@ pub fn max_affordable_sg(input: &SgAffordabilityInput) -> MortgageResult<SgAffor
         input.borrower_age,
     );
 
-    // 3. Largest price the buyer's funds can actually complete on.
-    let funds = input.funds_available.max(Decimal::ZERO);
+    // 3. Largest price the buyer can actually complete on. Cash is the
+    //    binding resource: CPF helps only with part of the deposit.
+    let cash = input.cash_available.max(Decimal::ZERO);
+    let cpf = input.cpf_oa_available.max(Decimal::ZERO);
     let mut lo = Decimal::ZERO;
-    // Generous ceiling: even at 100% LTV a purchase needs its deposit and
-    // duties covered, so the answer is well inside this.
-    let mut hi = (max_loan_by_income + funds).max(Decimal::ONE) * dec!(2);
+    // Generous ceiling: every purchase needs its deposit and duties covered,
+    // so the answer is well inside this.
+    let mut hi = (max_loan_by_income + cash + cpf).max(Decimal::ONE) * dec!(2);
     for _ in 0..60 {
         let mid = (lo + hi) / dec!(2);
-        let needed = funds_needed_at(
+        let funding = funding_at(
             mid,
             max_loan_by_income,
             limit,
+            cpf,
             input.residency,
             input.property_count,
         );
-        if needed <= funds {
+        if funding.cash_required <= cash {
             lo = mid;
         } else {
             hi = mid;
         }
     }
     let max_price = round_currency(lo);
-    let max_loan = round_currency((max_price * limit.ltv).min(max_loan_by_income));
+    let funding = funding_at(
+        max_price,
+        max_loan_by_income,
+        limit,
+        cpf,
+        input.residency,
+        input.property_count,
+    );
+    let max_loan = round_currency(funding.loan);
 
     // 4. Name whichever side is tight. If the loan came to rest on the LTV
     //    ceiling then income had slack and the deposit is what binds;
     //    otherwise the servicing ceiling chosen in step 1 stands.
-    let costs = upfront_costs(max_price, input.residency, input.property_count);
-    let deposit = round_currency(max_price - max_loan);
-    let needed = deposit + costs.total;
     if max_loan < max_loan_by_income - dec!(1) {
         binding = BindingConstraint::Ltv;
     }
@@ -661,11 +776,14 @@ pub fn max_affordable_sg(input: &SgAffordabilityInput) -> MortgageResult<SgAffor
         assessment_rate,
         ltv: limit.ltv,
         extended_tenure: limit.extended_tenure,
-        deposit,
-        min_cash_required: round_currency(max_price * limit.min_cash),
-        bsd: costs.bsd,
-        absd: costs.absd,
-        cash_and_cpf_at_completion: round_currency(needed),
+        deposit: round_currency(funding.deposit),
+        min_cash_required: round_currency(funding.min_cash),
+        bsd: funding.duties.bsd,
+        absd: funding.duties.absd,
+        cash_required: round_currency(funding.cash_required),
+        cpf_used: round_currency(funding.cpf_used),
+        cash_and_cpf_at_completion: round_currency(funding.deposit + funding.duties.total),
+        assessed_monthly_income: round_currency(assessed_income),
     })
 }
 
@@ -675,9 +793,10 @@ mod capacity_tests {
 
     fn afford() -> SgAffordabilityInput {
         SgAffordabilityInput {
-            gross_monthly_income: dec!(12_000),
+            income: MonthlyIncome::fixed(dec!(12_000)),
             other_monthly_debts: dec!(0),
-            funds_available: dec!(500_000),
+            cash_available: dec!(500_000),
+            cpf_oa_available: dec!(0),
             annual_rate: dec!(0.04),
             term_years: dec!(25),
             borrower_age: Some(dec!(35)),
@@ -765,7 +884,7 @@ mod capacity_tests {
         // the 75% ceiling is what the loan comes to rest on. Earning more
         // would not raise this figure; saving more would.
         let result = max_affordable_sg(&SgAffordabilityInput {
-            funds_available: dec!(80_000),
+            cash_available: dec!(80_000),
             ..afford()
         })
         .unwrap();
@@ -775,8 +894,8 @@ mod capacity_tests {
             round_currency(result.max_price * dec!(0.75))
         );
         // Everything the buyer has goes into the purchase.
-        assert!(result.cash_and_cpf_at_completion <= dec!(80_000));
-        assert!(result.cash_and_cpf_at_completion > dec!(78_000));
+        assert!(result.cash_required <= dec!(80_000));
+        assert!(result.cash_required > dec!(78_000));
     }
 
     #[test]
@@ -784,7 +903,7 @@ mod capacity_tests {
         // Reverse the squeeze: plenty of deposit, ordinary salary. Now it is
         // servicing capacity that stops the loan growing.
         let result = max_affordable_sg(&SgAffordabilityInput {
-            funds_available: dec!(4_000_000),
+            cash_available: dec!(4_000_000),
             ..afford()
         })
         .unwrap();
@@ -798,7 +917,7 @@ mod capacity_tests {
     fn msr_binds_before_tdsr_on_an_hdb_flat() {
         let result = max_affordable_sg(&SgAffordabilityInput {
             is_hdb_or_ec: true,
-            funds_available: dec!(2_000_000),
+            cash_available: dec!(2_000_000),
             ..afford()
         })
         .unwrap();
@@ -810,12 +929,12 @@ mod capacity_tests {
     #[test]
     fn other_debts_come_straight_off_the_tdsr_ceiling() {
         let clean = max_affordable_sg(&SgAffordabilityInput {
-            funds_available: dec!(3_000_000),
+            cash_available: dec!(3_000_000),
             ..afford()
         })
         .unwrap();
         let indebted = max_affordable_sg(&SgAffordabilityInput {
-            funds_available: dec!(3_000_000),
+            cash_available: dec!(3_000_000),
             other_monthly_debts: dec!(2_000),
             ..afford()
         })
@@ -847,14 +966,14 @@ mod capacity_tests {
         // deposit plus duties must fit inside what they said they have.
         for funds in [dec!(80_000), dec!(300_000), dec!(900_000)] {
             let r = max_affordable_sg(&SgAffordabilityInput {
-                funds_available: funds,
+                cash_available: funds,
                 ..afford()
             })
             .unwrap();
             assert!(
-                r.cash_and_cpf_at_completion <= funds + dec!(1),
-                "needs {} but only {} available",
-                r.cash_and_cpf_at_completion,
+                r.cash_required <= funds + dec!(1),
+                "needs {} cash but only {} available",
+                r.cash_required,
                 funds
             );
             assert!(r.max_loan <= round_currency(r.max_price * r.ltv) + dec!(1));
@@ -864,9 +983,192 @@ mod capacity_tests {
     #[test]
     fn rejects_non_positive_income_for_affordability() {
         assert!(max_affordable_sg(&SgAffordabilityInput {
-            gross_monthly_income: dec!(0),
+            income: MonthlyIncome::fixed(dec!(0)),
             ..afford()
         })
         .is_err());
+    }
+    // -- Notice 645 para 17: variable income haircut ------------------------
+
+    #[test]
+    fn fixed_salary_counts_in_full_and_commission_at_seventy_percent() {
+        assert_eq!(MonthlyIncome::fixed(dec!(10_000)).assessed(), dec!(10_000));
+        assert_eq!(
+            MonthlyIncome {
+                fixed: dec!(0),
+                variable: dec!(10_000),
+            }
+            .assessed(),
+            dec!(7_000)
+        );
+        // Para 17(c)(i): the haircut hits only the variable half.
+        assert_eq!(
+            MonthlyIncome {
+                fixed: dec!(6_000),
+                variable: dec!(4_000),
+            }
+            .assessed(),
+            dec!(8_800)
+        );
+    }
+
+    #[test]
+    fn a_commission_earner_is_assessed_below_their_headline_pay() {
+        // Same $12,000 a month, all commission rather than salary. The
+        // borrower feels equally well paid; MAS does not.
+        let loan = Loan::builder()
+            .principal(dec!(1_000_000))
+            .annual_rate(dec!(0.04))
+            .term_years(dec!(30))
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+        let salaried =
+            check_tdsr_msr(&loan, dec!(0), MonthlyIncome::fixed(dec!(12_000)), false).unwrap();
+        let commissioned = check_tdsr_msr(
+            &loan,
+            dec!(0),
+            MonthlyIncome {
+                fixed: dec!(0),
+                variable: dec!(12_000),
+            },
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(salaried.assessed_monthly_income, dec!(12_000));
+        assert_eq!(commissioned.assessed_monthly_income, dec!(8_400));
+        assert!(commissioned.tdsr.ratio > salaried.tdsr.ratio);
+    }
+
+    #[test]
+    fn negative_income_components_cannot_inflate_the_assessment() {
+        let income = MonthlyIncome {
+            fixed: dec!(-5_000),
+            variable: dec!(10_000),
+        };
+        // The negative fixed figure is discarded rather than netted off.
+        assert_eq!(income.assessed(), dec!(7_000));
+    }
+
+    // -- CPF cannot cover the cash floor or stamp duty ----------------------
+
+    #[test]
+    fn cpf_cannot_substitute_for_the_minimum_cash_down_payment() {
+        // All CPF, no cash: the buyer cannot complete on anything, because
+        // the Notice 632 cash floor and both stamp duties are cash-only.
+        let r = max_affordable_sg(&SgAffordabilityInput {
+            cash_available: dec!(0),
+            cpf_oa_available: dec!(500_000),
+            ..afford()
+        })
+        .unwrap();
+        assert_eq!(r.max_price, Decimal::ZERO);
+    }
+
+    #[test]
+    fn cpf_covers_the_deposit_above_the_cash_floor() {
+        let cash_only = max_affordable_sg(&afford()).unwrap();
+        let with_cpf = max_affordable_sg(&SgAffordabilityInput {
+            cpf_oa_available: dec!(300_000),
+            ..afford()
+        })
+        .unwrap();
+
+        // CPF can't buy the cash floor or the duties, but it can take over
+        // the rest of the deposit, freeing cash to reach a higher price.
+        assert!(with_cpf.max_price > cash_only.max_price);
+        assert!(with_cpf.cpf_used > Decimal::ZERO);
+        assert!(with_cpf.cpf_used <= dec!(300_000));
+    }
+
+    #[test]
+    fn stamp_duty_always_falls_on_cash_even_with_cpf_to_spare() {
+        // Both duties are payable within 14 days, which CPF Board cannot
+        // disburse against — so they sit in the cash column regardless.
+        let r = max_affordable_sg(&SgAffordabilityInput {
+            residency: Residency::Foreigner,
+            cash_available: dec!(600_000),
+            cpf_oa_available: dec!(2_000_000),
+            ..afford()
+        })
+        .unwrap();
+        assert!(r.absd > Decimal::ZERO);
+        assert!(
+            r.cash_required >= r.bsd + r.absd,
+            "cash {} should cover at least the duties {}",
+            r.cash_required,
+            r.bsd + r.absd
+        );
+    }
+
+    #[test]
+    fn the_cash_floor_is_never_met_from_cpf() {
+        for cpf in [dec!(0), dec!(200_000), dec!(1_000_000)] {
+            let r = max_affordable_sg(&SgAffordabilityInput {
+                cpf_oa_available: cpf,
+                ..afford()
+            })
+            .unwrap();
+            // Whatever CPF does, cash still has to cover the floor plus duties.
+            assert!(
+                r.cash_required >= r.min_cash_required + r.bsd + r.absd - dec!(1),
+                "cpf {cpf}: cash {} below floor {} + duties {}",
+                r.cash_required,
+                r.min_cash_required,
+                r.bsd + r.absd
+            );
+            assert!(r.cpf_used <= (r.deposit - r.min_cash_required).max(Decimal::ZERO) + dec!(1));
+        }
+    }
+    // -- FTA National Treatment --------------------------------------------
+
+    #[test]
+    fn an_fta_national_pays_citizen_absd_rates_not_the_foreigner_flat_rate() {
+        let price = dec!(2_000_000);
+        // A US citizen's first home: 0%, where a plain foreigner owes 60%.
+        assert_eq!(
+            additional_buyers_stamp_duty(price, Residency::FtaNational, PropertyCount::First),
+            Decimal::ZERO
+        );
+        assert_eq!(
+            additional_buyers_stamp_duty(price, Residency::Foreigner, PropertyCount::First),
+            dec!(1_200_000)
+        );
+    }
+
+    #[test]
+    fn fta_treatment_tracks_citizen_rates_all_the_way_up() {
+        for count in [
+            PropertyCount::First,
+            PropertyCount::Second,
+            PropertyCount::ThirdOrMore,
+        ] {
+            assert_eq!(
+                additional_buyers_stamp_duty(dec!(1_500_000), Residency::FtaNational, count),
+                additional_buyers_stamp_duty(dec!(1_500_000), Residency::Citizen, count),
+                "FTA and citizen rates diverged at {count:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn fta_status_changes_what_a_buyer_can_reach_but_not_their_ltv() {
+        // Stamp duty relief only. Notice 632 keys LTV off outstanding loans,
+        // never residency, so the ceiling is untouched.
+        let foreigner = max_affordable_sg(&SgAffordabilityInput {
+            residency: Residency::Foreigner,
+            ..afford()
+        })
+        .unwrap();
+        let fta = max_affordable_sg(&SgAffordabilityInput {
+            residency: Residency::FtaNational,
+            ..afford()
+        })
+        .unwrap();
+
+        assert_eq!(fta.absd, Decimal::ZERO);
+        assert_eq!(fta.ltv, foreigner.ltv);
+        assert!(fta.max_price > foreigner.max_price);
     }
 }

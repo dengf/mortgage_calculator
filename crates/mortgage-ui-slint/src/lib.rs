@@ -299,6 +299,7 @@ fn parse_residency(s: &str) -> singapore::Residency {
     match s {
         "PR" => singapore::Residency::PermanentResident,
         "Foreigner" => singapore::Residency::Foreigner,
+        "FTA" => singapore::Residency::FtaNational,
         _ => singapore::Residency::Citizen,
     }
 }
@@ -350,7 +351,13 @@ fn recompute_payment_sg(
 
     match (loan, monthly_payment) {
         (Some(loan), Some(payment)) => {
-            let income = Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default();
+            // Slint asks for one income figure, so it is all treated as
+            // fixed salary. Splitting out variable income is a web-only
+            // input for now; fixed is the borrower-favourable reading and
+            // matches what this UI actually collects.
+            let income = singapore::MonthlyIncome::fixed(
+                Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default(),
+            );
             let other_debts =
                 Decimal::from_str(ui.get_sg_other_debts().as_str()).unwrap_or_default();
 

@@ -19,7 +19,8 @@ const US_DEFAULTS = {
 
 const SG_DEFAULTS = {
   home_price: 1000000,
-  gross_monthly_income: 12000,
+  fixed_monthly_income: 12000,
+  variable_monthly_income: 0,
   other_monthly_debts: 0,
   cpf_oa_available: 1500,
   residency: 'Citizen',

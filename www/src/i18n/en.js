@@ -180,6 +180,16 @@ export default {
   'sgaff.bound.tdsr': 'Limited by TDSR — what you can service on this income. Earning more, or clearing other debts, would raise it.',
   'sgaff.bound.msr': 'Limited by MSR — the 30% housing-only ceiling on HDB flats and ECs, which bites before TDSR does.',
   'sgaff.bound.ltv': 'Limited by your deposit — the loan is already at the MAS LTV ceiling, so a larger deposit would raise this, not a larger income.',
+  'sg.ftaNational': 'US / Iceland / Liechtenstein / Norway / Switzerland',
+  'sgaff.fixedIncome': 'Fixed monthly salary',
+  'sgaff.variableIncome': 'Commission / bonus (monthly avg)',
+  'sgaff.cash': 'Cash available',
+  'sgaff.cpf': 'CPF OA available',
+  'sgaff.cpfUsed': 'Paid from CPF OA',
+  'sgaff.cashRequired': 'Cash needed at completion',
+  'sgaff.cashNote': 'CPF cannot cover the minimum cash down payment or stamp duty — both duties fall due in 14 days, before CPF can reimburse.',
+  'sgaff.ftaNote': 'Under the relevant free trade agreement you are charged ABSD at citizen rates. The remission is claimed from IRAS, not applied automatically — budget for the foreigner rate until it is granted. US nationals only (not green-card holders); Iceland, Liechtenstein, Norway and Switzerland cover nationals and PRs.',
+  'sgaff.assessedIncome': 'Assessed income {amount}/mo — commission counts at 70%',
 
   // United States panel
   'us.title': 'US costs & PMI',

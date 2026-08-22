@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import SingaporeAffordability from './SingaporeAffordability';
 import { I18nProvider } from '../i18n';
@@ -40,7 +41,7 @@ describe('SingaporeAffordability', () => {
     // bug: SG users were shown DTI, HOA and a flat property-tax rate.
     const body = document.body.textContent;
     expect(body).not.toMatch(/debt-to-income|DTI|HOA/i);
-    expect(await screen.findByText(/Cash \+ CPF available/i)).toBeInTheDocument();
+    expect(await screen.findByText(/^Cash available$/i)).toBeInTheDocument();
     expect(screen.getByText(/Housing loans outstanding/i)).toBeInTheDocument();
   });
 
@@ -68,6 +69,38 @@ describe('SingaporeAffordability', () => {
   it('spells out the minimum cash portion, which CPF cannot cover', async () => {
     renderPanel(mockWasm());
     expect(await screen.findByText(/must be cash, not CPF/i)).toBeInTheDocument();
+  });
+
+  it('asks for cash and CPF separately, since they are not interchangeable', async () => {
+    const wasmModule = mockWasm();
+    renderPanel(wasmModule);
+    await waitFor(() => expect(wasmModule.calculate_sg_affordability).toHaveBeenCalled());
+
+    const args = wasmModule.calculate_sg_affordability.mock.calls.at(-1)[0];
+    expect(args).toHaveProperty('cash_available');
+    expect(args).toHaveProperty('cpf_oa_available');
+    expect(args).not.toHaveProperty('funds_available');
+  });
+
+  it('splits fixed from variable income, because MAS haircuts the variable half', async () => {
+    const wasmModule = mockWasm();
+    renderPanel(wasmModule);
+    await waitFor(() => expect(wasmModule.calculate_sg_affordability).toHaveBeenCalled());
+
+    const args = wasmModule.calculate_sg_affordability.mock.calls.at(-1)[0];
+    expect(args).toHaveProperty('fixed_monthly_income');
+    expect(args).toHaveProperty('variable_monthly_income');
+    expect(args).not.toHaveProperty('gross_monthly_income');
+  });
+
+  it('warns that the FTA remission is claimed, not automatic', async () => {
+    renderPanel(mockWasm());
+    const select = await screen.findByDisplayValue('Citizen');
+    await userEvent.selectOptions(select, 'FTA');
+    // A buyer who assumes it applies at the counter will be short the whole
+    // foreigner ABSD on completion day.
+    expect(await screen.findByText(/claimed from IRAS, not applied automatically/i))
+      .toBeInTheDocument();
   });
 
   it('degrades to a message rather than crashing on a cached wasm without the binding', async () => {

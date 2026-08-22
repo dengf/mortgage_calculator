@@ -19,9 +19,11 @@ const formatSgd = makeFormatMoney('SG');
  */
 export default function SingaporeAffordability({ wasmModule }) {
   const { t } = useI18n();
-  const [income, setIncome] = useState(12000);
+  const [fixedIncome, setFixedIncome] = useState(12000);
+  const [variableIncome, setVariableIncome] = useState(0);
   const [debts, setDebts] = useState(0);
-  const [funds, setFunds] = useState(400000);
+  const [cash, setCash] = useState(400000);
+  const [cpf, setCpf] = useState(0);
   const [rate, setRate] = useState(4);
   const [termYears, setTermYears] = useState(25);
   const [age, setAge] = useState(35);
@@ -32,11 +34,13 @@ export default function SingaporeAffordability({ wasmModule }) {
 
   const result = useMemo(() => {
     if (!wasmModule?.calculate_sg_affordability) return null;
-    if (!allFilled(income, debts, funds, rate, termYears)) return null;
+    if (!allFilled(fixedIncome, variableIncome, debts, cash, cpf, rate, termYears)) return null;
     return wasmModule.calculate_sg_affordability({
-      gross_monthly_income: income,
+      fixed_monthly_income: fixedIncome,
+      variable_monthly_income: variableIncome,
       other_monthly_debts: debts,
-      funds_available: funds,
+      cash_available: cash,
+      cpf_oa_available: cpf,
       annual_rate_percent: rate,
       term_years: termYears,
       borrower_age: allFilled(age) ? age : null,
@@ -46,7 +50,7 @@ export default function SingaporeAffordability({ wasmModule }) {
       outstanding_housing_loans: outstandingLoans,
     });
   }, [
-    wasmModule, income, debts, funds, rate, termYears, age,
+    wasmModule, fixedIncome, variableIncome, debts, cash, cpf, rate, termYears, age,
     isHdb, residency, propertyCount, outstandingLoans,
   ]);
 
@@ -55,9 +59,11 @@ export default function SingaporeAffordability({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label={t('sg.income')} value={income} onChange={setIncome} suffix="S$" min={0} />
+        <NumberField label={t('sgaff.fixedIncome')} value={fixedIncome} onChange={setFixedIncome} suffix="S$" min={0} />
+        <NumberField label={t('sgaff.variableIncome')} value={variableIncome} onChange={setVariableIncome} suffix="S$" min={0} />
         <NumberField label={t('sg.otherDebts')} value={debts} onChange={setDebts} suffix="S$" min={0} />
-        <NumberField label={t('sgaff.funds')} value={funds} onChange={setFunds} suffix="S$" min={0} />
+        <NumberField label={t('sgaff.cash')} value={cash} onChange={setCash} suffix="S$" min={0} />
+        <NumberField label={t('sgaff.cpf')} value={cpf} onChange={setCpf} suffix="S$" min={0} />
         <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
         <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
         <NumberField label={t('sgaff.age')} value={age} onChange={setAge} suffix={t('sgaff.yearsOld')} min={18} />
@@ -76,6 +82,7 @@ export default function SingaporeAffordability({ wasmModule }) {
             <option value="Citizen">{t('sg.citizen')}</option>
             <option value="PR">{t('sg.pr')}</option>
             <option value="Foreigner">{t('sg.foreigner')}</option>
+            <option value="FTA">{t('sg.ftaNational')}</option>
           </select>
         </label>
 
@@ -146,6 +153,13 @@ export default function SingaporeAffordability({ wasmModule }) {
               {t(`sgaff.bound.${result.binding_constraint}`)}
             </div>
 
+            {/* The FTA remission is claimed from IRAS, not applied at the
+                counter — saying so matters, because a buyer who assumes it
+                is automatic will be short S$276k on completion day. */}
+            {residency === 'FTA' && (
+              <div className="sg-constraint">{t('sgaff.ftaNote')}</div>
+            )}
+
             <div className="stat-grid">
               <div className="stat">
                 <span className="stat-label">{t('sg.downPayment')}</span>
@@ -162,9 +176,14 @@ export default function SingaporeAffordability({ wasmModule }) {
                 <span className="stat-label">{t('sg.absd')}</span>
                 <span className="stat-value">{formatSgd(result.absd)}</span>
               </div>
+              <div className="stat">
+                <span className="stat-label">{t('sgaff.cpfUsed')}</span>
+                <span className="stat-value">{formatSgd(result.cpf_used)}</span>
+              </div>
               <div className="stat stat-primary">
-                <span className="stat-label">{t('sg.cashAtCompletion')}</span>
-                <span className="stat-value">{formatSgd(result.cash_and_cpf_at_completion)}</span>
+                <span className="stat-label">{t('sgaff.cashRequired')}</span>
+                <span className="stat-value">{formatSgd(result.cash_required)}</span>
+                <span className="stat-note">{t('sgaff.cashNote')}</span>
               </div>
             </div>
           </>
@@ -175,13 +194,15 @@ export default function SingaporeAffordability({ wasmModule }) {
         wasmModule={wasmModule}
         calculatorKind="affordability"
         getCurrentInputs={() => ({
-          income, debts, funds, rate, termYears, age,
+          fixedIncome, variableIncome, debts, cash, cpf, rate, termYears, age,
           isHdb, residency, propertyCount, outstandingLoans,
         })}
         onLoad={(inputs) => {
-          setIncome(inputs.income);
+          setFixedIncome(inputs.fixedIncome);
+          setVariableIncome(inputs.variableIncome);
           setDebts(inputs.debts);
-          setFunds(inputs.funds);
+          setCash(inputs.cash);
+          setCpf(inputs.cpf);
           setRate(inputs.rate);
           setTermYears(inputs.termYears);
           setAge(inputs.age);
