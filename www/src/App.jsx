@@ -3,6 +3,7 @@ import Header from './components/Header';
 import PaymentCalculator from './components/PaymentCalculator';
 import AmortizationSchedule from './components/AmortizationSchedule';
 import AffordabilityCalculator from './components/AffordabilityCalculator';
+import SingaporeAffordability from './components/SingaporeAffordability';
 import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
@@ -14,6 +15,17 @@ const PANELS = {
   refinance: RefinanceCalculator,
   compare: ComparisonView,
 };
+
+/**
+ * Affordability is the one tab with no shared model across regions: the US
+ * works backwards from a debt-to-income ratio, Singapore from MAS servicing
+ * ceilings and LTV limits. They're separate components rather than one with
+ * branches, so neither carries the other's fields.
+ */
+function panelFor(tab, region) {
+  if (tab === 'affordability' && region === 'SG') return SingaporeAffordability;
+  return PANELS[tab];
+}
 
 /**
  * Picks the starting region from the browser's locale, the same way the
@@ -29,7 +41,7 @@ function AppShell({ wasmModule }) {
   const [activeTab, setActiveTab] = useState('payment');
   const [region, setRegion] = useState(detectRegion);
   const { t } = useI18n();
-  const ActivePanel = PANELS[activeTab];
+  const ActivePanel = panelFor(activeTab, region);
 
   return (
     <div className="app">

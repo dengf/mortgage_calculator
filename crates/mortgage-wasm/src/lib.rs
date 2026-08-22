@@ -36,6 +36,7 @@ pub mod loan;
 pub mod message;
 pub mod payment;
 pub mod refinance;
+pub mod sg_affordability;
 pub mod singapore;
 #[cfg(target_arch = "wasm32")]
 pub mod storage;

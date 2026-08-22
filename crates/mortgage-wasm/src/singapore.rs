@@ -53,8 +53,12 @@ fn parse_property_count(s: &str) -> singapore::PropertyCount {
 
 /// Ratios come back from `mortgage_calc` as fractions (0.482); the UI shows
 /// percentages.
+///
+/// Scaled in `Decimal` and converted once. Converting first and then
+/// multiplying by 100.0 lands on values like 55.00000000000001, which
+/// survives into any caller that doesn't round on the way out.
 fn to_percent(ratio: Decimal) -> f64 {
-    decimal_to_f64(ratio) * 100.0
+    decimal_to_f64(ratio * Decimal::from(100))
 }
 
 /// The JsValue-free core, so it can be unit-tested with plain
