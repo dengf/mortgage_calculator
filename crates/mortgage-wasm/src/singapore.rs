@@ -39,6 +39,7 @@ fn parse_residency(s: &str) -> singapore::Residency {
     match s {
         "PR" => singapore::Residency::PermanentResident,
         "Foreigner" => singapore::Residency::Foreigner,
+        "FTA" => singapore::Residency::FtaNational,
         _ => singapore::Residency::Citizen,
     }
 }
@@ -76,7 +77,10 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
     // duty below does not, so an invalid loan still gets useful output.
     if let Some(payment) = p.monthly_payment.filter(|v| v.is_finite() && *v > 0.0) {
         let payment = f64_to_decimal(payment);
-        let income = f64_to_decimal(p.gross_monthly_income);
+        let income = singapore::MonthlyIncome {
+            fixed: f64_to_decimal(p.fixed_monthly_income),
+            variable: f64_to_decimal(p.variable_monthly_income),
+        };
         let other_debts = f64_to_decimal(p.other_monthly_debts);
 
         // The ratios are assessed on this loan repriced at MAS's medium-term
@@ -99,6 +103,7 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
             result.assessment_rate_percent = Some(to_percent(check.assessment_rate));
             result.assessed_monthly_instalment =
                 Some(decimal_to_f64(check.assessed_monthly_instalment));
+            result.assessed_monthly_income = Some(decimal_to_f64(check.assessed_monthly_income));
             if check.tdsr.exceeded {
                 result.warnings.push("Exceeds MAS TDSR limit (55%).".into());
                 result.warning_codes.push("warn.tdsrExceeded".into());
@@ -150,7 +155,8 @@ mod tests {
             annual_rate_percent: 4.0,
             term_years: 30.0,
             home_price: 1_000_000.0,
-            gross_monthly_income: 10_000.0,
+            fixed_monthly_income: 10_000.0,
+            variable_monthly_income: 0.0,
             other_monthly_debts: 0.0,
             cpf_oa_available: 1_200.0,
             residency: "Citizen".into(),

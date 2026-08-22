@@ -42,9 +42,16 @@ export default function SingaporePanel({ inputs, onChange, result }) {
           min={0}
         />
         <NumberField
-          label={t('sg.income')}
-          value={inputs.gross_monthly_income}
-          onChange={set('gross_monthly_income')}
+          label={t('sgaff.fixedIncome')}
+          value={inputs.fixed_monthly_income}
+          onChange={set('fixed_monthly_income')}
+          suffix="S$"
+          min={0}
+        />
+        <NumberField
+          label={t('sgaff.variableIncome')}
+          value={inputs.variable_monthly_income}
+          onChange={set('variable_monthly_income')}
           suffix="S$"
           min={0}
         />
@@ -72,6 +79,7 @@ export default function SingaporePanel({ inputs, onChange, result }) {
             <option value="Citizen">{t('sg.citizen')}</option>
             <option value="PR">{t('sg.pr')}</option>
             <option value="Foreigner">{t('sg.foreigner')}</option>
+            <option value="FTA">{t('sg.ftaNational')}</option>
           </select>
         </label>
         <label className="field">

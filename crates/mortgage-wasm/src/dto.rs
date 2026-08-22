@@ -299,7 +299,10 @@ pub struct SingaporeParams {
     pub annual_rate_percent: f64,
     pub term_years: f64,
     pub home_price: f64,
-    pub gross_monthly_income: f64,
+    /// Fixed salary, counted in full.
+    pub fixed_monthly_income: f64,
+    /// Commission, bonus or allowance, counted at 70% per Notice 645 para 17.
+    pub variable_monthly_income: f64,
     pub other_monthly_debts: f64,
     pub cpf_oa_available: f64,
     /// `"Citizen" | "PR" | "Foreigner"`, defaults to Citizen.
@@ -332,6 +335,8 @@ pub struct SingaporeResult {
     /// the UI shows both so the difference is explained rather than
     /// mysterious.
     pub assessed_monthly_instalment: Option<f64>,
+    /// Income after the variable-income haircut — the ratios' denominator.
+    pub assessed_monthly_income: Option<f64>,
     pub cpf_used: Option<f64>,
     pub cash_required: Option<f64>,
     pub bsd: f64,
@@ -360,10 +365,16 @@ pub struct SingaporeResult {
 /// than growing a union type with half its fields unused on either side.
 #[derive(Debug, Clone, Deserialize)]
 pub struct SgAffordabilityParams {
-    pub gross_monthly_income: f64,
+    /// Fixed salary, counted in full.
+    pub fixed_monthly_income: f64,
+    /// Commission, bonus or allowance, counted at 70% per Notice 645 para 17.
+    pub variable_monthly_income: f64,
     pub other_monthly_debts: f64,
-    /// Cash plus usable CPF OA for the deposit and stamp duty.
-    pub funds_available: f64,
+    /// Cash on hand. Separate from CPF because the cash floor and both stamp
+    /// duties cannot be met from CPF.
+    pub cash_available: f64,
+    /// CPF OA balance usable for the deposit above the cash floor.
+    pub cpf_oa_available: f64,
     /// The borrower's own rate, e.g. `4.5`. Servicing is assessed at the
     /// higher of this and MAS's 4% floor.
     pub annual_rate_percent: f64,
@@ -394,7 +405,13 @@ pub struct SgAffordabilityResultDto {
     pub min_cash_required: Option<f64>,
     pub bsd: Option<f64>,
     pub absd: Option<f64>,
+    /// Cash the buyer must actually produce at completion.
+    pub cash_required: Option<f64>,
+    /// CPF OA applied to the deposit.
+    pub cpf_used: Option<f64>,
     pub cash_and_cpf_at_completion: Option<f64>,
+    /// Income after the variable-income haircut.
+    pub assessed_monthly_income: Option<f64>,
     pub error: Option<String>,
     /// The same failure as `error`, but as a code plus its values so a
     /// translated UI can compose the sentence itself.

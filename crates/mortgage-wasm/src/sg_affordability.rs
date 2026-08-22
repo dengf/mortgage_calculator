@@ -41,6 +41,7 @@ fn parse_residency(s: &str) -> singapore::Residency {
     match s {
         "PR" => singapore::Residency::PermanentResident,
         "Foreigner" => singapore::Residency::Foreigner,
+        "FTA" => singapore::Residency::FtaNational,
         _ => singapore::Residency::Citizen,
     }
 }
@@ -73,9 +74,13 @@ fn constraint_code(c: BindingConstraint) -> &'static str {
 /// The JsValue-free core, so it can be unit-tested without a wasm32 target.
 fn sg_affordability_from_params(p: SgAffordabilityParams) -> SgAffordabilityResultDto {
     let input = singapore::SgAffordabilityInput {
-        gross_monthly_income: f64_to_decimal(p.gross_monthly_income),
+        income: singapore::MonthlyIncome {
+            fixed: f64_to_decimal(p.fixed_monthly_income),
+            variable: f64_to_decimal(p.variable_monthly_income),
+        },
         other_monthly_debts: f64_to_decimal(p.other_monthly_debts),
-        funds_available: f64_to_decimal(p.funds_available),
+        cash_available: f64_to_decimal(p.cash_available),
+        cpf_oa_available: f64_to_decimal(p.cpf_oa_available),
         annual_rate: f64_to_decimal(p.annual_rate_percent) / Decimal::from(100),
         term_years: f64_to_decimal(p.term_years),
         borrower_age: p
@@ -101,7 +106,10 @@ fn sg_affordability_from_params(p: SgAffordabilityParams) -> SgAffordabilityResu
             min_cash_required: Some(decimal_to_f64(r.min_cash_required)),
             bsd: Some(decimal_to_f64(r.bsd)),
             absd: Some(decimal_to_f64(r.absd)),
+            cash_required: Some(decimal_to_f64(r.cash_required)),
+            cpf_used: Some(decimal_to_f64(r.cpf_used)),
             cash_and_cpf_at_completion: Some(decimal_to_f64(r.cash_and_cpf_at_completion)),
+            assessed_monthly_income: Some(decimal_to_f64(r.assessed_monthly_income)),
             error: None,
             error_message: None,
         },
@@ -122,9 +130,11 @@ mod tests {
 
     fn params() -> SgAffordabilityParams {
         SgAffordabilityParams {
-            gross_monthly_income: 12_000.0,
+            fixed_monthly_income: 12_000.0,
+            variable_monthly_income: 0.0,
             other_monthly_debts: 0.0,
-            funds_available: 500_000.0,
+            cash_available: 500_000.0,
+            cpf_oa_available: 0.0,
             annual_rate_percent: 4.0,
             term_years: 25.0,
             borrower_age: Some(35.0),
@@ -140,7 +150,7 @@ mod tests {
         let r = sg_affordability_from_params(params());
         assert!(r.error.is_none());
         assert!(r.max_price.unwrap() > 0.0);
-        assert!(r.cash_and_cpf_at_completion.unwrap() <= 500_000.0 + 1.0);
+        assert!(r.cash_required.unwrap() <= 500_000.0 + 1.0);
     }
 
     #[test]
@@ -188,7 +198,7 @@ mod tests {
     #[test]
     fn a_zero_income_reports_a_translatable_error_not_a_number() {
         let r = sg_affordability_from_params(SgAffordabilityParams {
-            gross_monthly_income: 0.0,
+            fixed_monthly_income: 0.0,
             ..params()
         });
         assert!(r.max_price.is_none());
