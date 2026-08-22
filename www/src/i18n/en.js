@@ -150,6 +150,7 @@ export default {
   'preset.fixed': '{years}-Year Fixed',
   'preset.floating': 'Floating: {index} + {spread}%',
   'preset.hdbConcessionary': 'HDB concessionary',
+  'cmp.scenarioLabel': 'Scenario label',
   'cmp.customScenario': 'Custom scenario',
   'cmp.remove': 'Remove',
   'cmp.fixed': 'Fixed',

@@ -139,6 +139,7 @@ export default {
   'preset.fixed': '{years} 年固定利率',
   'preset.floating': '浮動利率：{index} + {spread}%',
   'preset.hdbConcessionary': '建屋局優惠利率',
+  'cmp.scenarioLabel': '方案名稱',
   'cmp.customScenario': '自訂方案',
   'cmp.remove': '刪除',
   'cmp.fixed': '固定利率',
