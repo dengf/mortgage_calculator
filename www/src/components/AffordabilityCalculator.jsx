@@ -91,7 +91,7 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
           label={t('aff.propertyTaxRate')}
           value={taxRate}
           onChange={setTaxRate}
-          suffix="%/yr"
+          suffix={t('field.percentPerYear')}
           min={0}
         />
         <NumberField
