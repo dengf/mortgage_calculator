@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 SS = 4  # supersample factor; artwork is drawn at SS x and LANCZOS-downsampled
 
@@ -98,20 +98,46 @@ def vertical_gradient(size, top, bottom):
     return img.resize((size, size), Image.BILINEAR)
 
 
-def draw_mark(img, size, inset):
-    """The house-with-carved-curve mark, composited onto `img`."""
+def curve_points():
+    """The carved curve, placed within the mark's box."""
+    return [(lerp(0.045, 0.955, p[0]), lerp(0.930, 0.400, p[1]))
+            for p in amortization_curve()]
+
+
+def draw_mark(img, size, inset, punch_through=False):
+    """The house-with-carved-curve mark, composited onto `img`.
+
+    `punch_through` cuts the curve out as actual transparency rather than
+    painting it the ground colour. That matters wherever the mark sits on a
+    surface that isn't the icon's own dark ground -- painting NAVY_DEEP
+    there would draw a near-black band across whatever is behind it.
+    """
     house_px = [to_px(p, size, inset) for p in HOUSE]
 
     body = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     ImageDraw.Draw(body).polygon(house_px, fill=BLUE)
+
+    shaped = curve_points()
+
+    if punch_through:
+        # Erase along the wide stroke, then lay the green one back on top.
+        erase = Image.new("L", (size, size), 0)
+        stroke(ImageDraw.Draw(erase), shaped, size, inset, 0.155, 255)
+        kept = ImageChops.subtract(body.getchannel("A"), erase)
+        body.putalpha(kept)
+
+        green = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        stroke(ImageDraw.Draw(green), [(p[0], p[1] + 0.004) for p in shaped],
+               size, inset, 0.072, GREEN)
+        body.alpha_composite(green)
+        img.alpha_composite(body)
+        return
 
     # The curve is carved out of the body rather than drawn on top: a wide
     # ground-coloured stroke first, then the green one inside it. Clipped to
     # the silhouette so nothing spills past the roofline.
     cut = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     cd = ImageDraw.Draw(cut)
-    shaped = [(lerp(0.045, 0.955, p[0]), lerp(0.930, 0.400, p[1]))
-              for p in amortization_curve()]
     stroke(cd, shaped, size, inset, 0.155, NAVY_DEEP)
     stroke(cd, [(p[0], p[1] + 0.004) for p in shaped], size, inset, 0.072, GREEN)
 
@@ -121,6 +147,20 @@ def draw_mark(img, size, inset):
                                  Image.new("L", (size, size), 0), clip))
     body.alpha_composite(cut)
     img.alpha_composite(body)
+
+
+def render_logo(size):
+    """The mark alone, on transparency, for use as a logo in a UI.
+
+    The app icon carries its own dark ground because a home screen needs a
+    tile. Reused as a header logo that ground is almost exactly the page
+    background (#0b1119 vs #0f1720), so the tile disappears and the mark
+    reads as missing. This variant has no ground at all.
+    """
+    s = size * SS
+    art = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    draw_mark(art, s, 0.0, punch_through=True)
+    return art.resize((size, size), Image.LANCZOS)
 
 
 def render(size, inset=0.0, radius=None, opaque=False):
@@ -261,6 +301,8 @@ def build_web(root):
     write(render(180, opaque=True), static, "apple-touch-icon.png")
     write(render(192, radius=0.22), static, "icon-192.png")
     write(render(512, radius=0.22), static, "icon-512.png")
+    # Header logo: the mark with no tile behind it (see render_logo).
+    write(render_logo(192), static, "logo-mark.png")
     # "maskable" promises the platform it may crop to any shape it likes.
     write(render(512, inset=0.10), static, "icon-maskable-512.png")
 
