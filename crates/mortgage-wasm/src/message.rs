@@ -51,6 +51,25 @@ impl Message {
         params.insert("value".to_string(), value.into());
         Self::new(code, params, text)
     }
+
+    /// The values a caller sent could not be read into the expected shape —
+    /// a blank field, a non-numeric string, a missing key.
+    ///
+    /// Deliberately carries nothing from the underlying
+    /// `serde_wasm_bindgen::Error`. That error wraps a JS `Error` object, so
+    /// its `Debug` rendering includes a live JavaScript stack trace, and
+    /// every caller writes this message straight into the DOM. Formatting it
+    /// with `{e:?}` put bundle paths and raw `wasm-function[N]:0x…` offsets
+    /// on the page the moment anyone cleared a numeric field — which is the
+    /// first thing a visitor does, since they have to clear the default
+    /// before typing their own. A reader needs one sentence about their
+    /// input, not a backtrace.
+    pub fn bad_request() -> Self {
+        Message::bare(
+            "err.badRequest",
+            "Some values are missing or aren't valid numbers. Check the fields above.",
+        )
+    }
 }
 
 impl From<&MortgageError> for Message {
