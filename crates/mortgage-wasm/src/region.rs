@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+use crate::convert::to_js;
 use mortgage_core::{Region, RegionSignals};
 
 #[derive(Debug, Default, Deserialize)]
@@ -29,7 +30,7 @@ pub struct RegionResult {
 #[wasm_bindgen]
 pub fn detect_region(params: JsValue) -> JsValue {
     let result = detect_region_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn detect_region_impl(params: JsValue) -> RegionResult {

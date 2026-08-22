@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 
 use mortgage_calc::scenario::Scenario;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal};
+use crate::convert::{decimal_to_f64, f64_to_decimal, to_js};
 
 #[derive(Debug, Default, Deserialize)]
 pub struct ScenarioParams {
@@ -44,7 +44,7 @@ pub struct DownPaymentResult {
 #[wasm_bindgen]
 pub fn summarize_scenario(params: JsValue) -> JsValue {
     let result = summarize_scenario_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn summarize_scenario_impl(params: JsValue) -> ScenarioSummaryResult {
@@ -71,7 +71,7 @@ fn summary_of(params: &ScenarioParams) -> ScenarioSummaryResult {
 #[wasm_bindgen]
 pub fn down_payment_for_percent(params: JsValue) -> JsValue {
     let result = down_payment_for_percent_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn down_payment_for_percent_impl(params: JsValue) -> DownPaymentResult {

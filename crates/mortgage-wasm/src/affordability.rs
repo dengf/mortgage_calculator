@@ -3,14 +3,14 @@
 use mortgage_calc::affordability::AffordabilityInput;
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal, percent_to_rate, rate_to_percent};
+use crate::convert::{decimal_to_f64, f64_to_decimal, percent_to_rate, rate_to_percent, to_js};
 use crate::dto::{AffordabilityParams, AffordabilityResultDto};
 use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_affordability(params: JsValue) -> JsValue {
     let result = calculate_affordability_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_affordability_impl(params: JsValue) -> AffordabilityResultDto {

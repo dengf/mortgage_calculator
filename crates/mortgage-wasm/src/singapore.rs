@@ -11,14 +11,14 @@ use mortgage_calc::singapore;
 use mortgage_core::round_currency;
 use rust_decimal::Decimal;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal};
+use crate::convert::{decimal_to_f64, f64_to_decimal, to_js};
 use crate::dto::{SingaporeParams, SingaporeResult};
 use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_singapore(params: JsValue) -> JsValue {
     let result = calculate_singapore_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_singapore_impl(params: JsValue) -> SingaporeResult {

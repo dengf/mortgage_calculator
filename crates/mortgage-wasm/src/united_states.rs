@@ -12,14 +12,14 @@ use mortgage_calc::united_states;
 use mortgage_core::round_currency;
 use rust_decimal::Decimal;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal};
+use crate::convert::{decimal_to_f64, f64_to_decimal, to_js};
 use crate::dto::{UnitedStatesParams, UnitedStatesResult};
 use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_united_states(params: JsValue) -> JsValue {
     let result = calculate_united_states_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_united_states_impl(params: JsValue) -> UnitedStatesResult {

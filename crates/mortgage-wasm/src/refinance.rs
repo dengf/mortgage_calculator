@@ -3,14 +3,14 @@
 use mortgage_calc::refinance::RefinanceInput;
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal, parse_frequency, percent_to_rate};
+use crate::convert::{decimal_to_f64, f64_to_decimal, parse_frequency, percent_to_rate, to_js};
 use crate::dto::{RefinanceParams, RefinanceResultDto};
 use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_refinance(params: JsValue) -> JsValue {
     let result = calculate_refinance_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_refinance_impl(params: JsValue) -> RefinanceResultDto {

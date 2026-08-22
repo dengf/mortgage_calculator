@@ -6,8 +6,27 @@ use mortgage_core::PaymentFrequency;
 use mortgage_ports::CalculatorKind;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
+use wasm_bindgen::prelude::*;
 
 use crate::dto::RateTypeDto;
+
+/// Serializes a result for JavaScript.
+///
+/// Uses the JSON-compatible serializer rather than `to_value` because the
+/// default one turns a Rust map into a JS `Map`, not a plain object. Every
+/// message that carries values -- every validation error on the site -- was
+/// therefore handed to the UI as a `Map`, and the interpolator, which reads
+/// its placeholders with `hasOwnProperty`, found nothing. Readers were shown
+/// "Loan term must cover at least one payment (got {value})." with the
+/// braces intact.
+///
+/// A `JsValue::NULL` on failure keeps the existing contract: callers already
+/// treat a null result as "no answer".
+pub fn to_js<T: serde::Serialize + ?Sized>(value: &T) -> JsValue {
+    value
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .unwrap_or(JsValue::NULL)
+}
 
 /// Converts a percentage as entered by a user (`6.5` for 6.5%) into the
 /// fractional rate the calc crate expects (`0.065`). Returns `None` for
