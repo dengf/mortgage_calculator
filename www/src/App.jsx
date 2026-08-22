@@ -5,6 +5,7 @@ import AmortizationSchedule from './components/AmortizationSchedule';
 import AffordabilityCalculator from './components/AffordabilityCalculator';
 import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
+import { I18nProvider, detectLocale, useI18n } from './i18n';
 
 const PANELS = {
   payment: PaymentCalculator,
@@ -24,9 +25,10 @@ function detectRegion() {
   return locales.some((l) => typeof l === 'string' && l.toUpperCase().endsWith('-SG')) ? 'SG' : 'US';
 }
 
-export default function App({ wasmModule }) {
+function AppShell({ wasmModule }) {
   const [activeTab, setActiveTab] = useState('payment');
   const [region, setRegion] = useState(detectRegion);
+  const { t } = useI18n();
   const ActivePanel = PANELS[activeTab];
 
   return (
@@ -41,13 +43,20 @@ export default function App({ wasmModule }) {
         <ActivePanel wasmModule={wasmModule} region={region} />
       </main>
       <footer className="app-footer">
-        Calculations run entirely client-side, compiled from Rust to WebAssembly.
-        Your numbers never leave your device.{' '}
+        {t('app.footer')}{' '}
         {/* Relative so it resolves under a GitHub Pages project subpath. */}
-        <a href="privacy.html">Privacy</a>
+        <a href="privacy.html">{t('app.privacy')}</a>
         {' · '}
-        <a href="https://github.com/dengf/mortgage_calculator">Source</a>
+        <a href="https://github.com/dengf/mortgage_calculator">{t('app.source')}</a>
       </footer>
     </div>
+  );
+}
+
+export default function App({ wasmModule }) {
+  return (
+    <I18nProvider initialLocale={detectLocale()}>
+      <AppShell wasmModule={wasmModule} />
+    </I18nProvider>
   );
 }

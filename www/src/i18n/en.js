@@ -1,0 +1,205 @@
+// Source-of-truth catalog. Every other locale mirrors these keys; a key
+// missing elsewhere falls back to the string here rather than rendering
+// blank.
+//
+// Keys are namespaced by where they appear (`nav.`, `payment.`, `sg.`) so
+// a string's home is obvious when one needs changing. `err.` and `warn.`
+// mirror codes emitted by the Rust layer — see crates/mortgage-core's
+// MortgageError and crates/mortgage-wasm/src/singapore.rs.
+
+export default {
+  // App shell
+  'app.title': 'Mortgage Calculator',
+  'app.footer':
+    'Calculations run entirely client-side, compiled from Rust to WebAssembly. Your numbers never leave your device.',
+  'app.privacy': 'Privacy',
+  'app.source': 'Source',
+  'app.loading': 'Loading calculator...',
+  'app.region': 'Region',
+  'app.language': 'Language',
+
+  // Tabs
+  'nav.payment': 'Payment',
+  'nav.amortization': 'Amortization',
+  'nav.affordability': 'Affordability',
+  'nav.refinance': 'Refinance',
+  'nav.compare': 'Compare',
+
+  // Shared field labels
+  'field.loanAmount': 'Home loan amount',
+  'field.interestRate': 'Interest rate',
+  'field.loanTerm': 'Loan term',
+  'field.paymentFrequency': 'Payment frequency',
+  'field.years': 'years',
+  'field.percent': '%',
+
+  'freq.monthly': 'Monthly',
+  'freq.biweekly': 'Bi-weekly',
+  'freq.weekly': 'Weekly',
+
+  // Payment
+  'payment.payment': 'Payment',
+  'payment.totalOf': 'Total of {count} payments',
+  'payment.totalInterest': 'Total interest',
+
+  // Amortization
+  'amort.extraPayment': 'Extra payment per period',
+  'amort.timeSaved': 'Payoff time saved',
+  'amort.interestSaved': 'Interest saved',
+  'amort.newPayoff': 'New payoff',
+  'amort.payments': '{count} payments',
+  'amort.yearlySummary': 'Yearly summary',
+  'amort.fullSchedule': 'Full schedule',
+  'amort.showEvery': 'Show every payment',
+  'amort.showYearly': 'Show yearly summary',
+  'amort.year': 'Year',
+  'amort.period': 'Period',
+  'amort.paid': 'Paid',
+  'amort.principal': 'Principal',
+  'amort.interest': 'Interest',
+  'amort.balance': 'Balance',
+
+  // Affordability
+  'aff.income': 'Gross monthly income',
+  'aff.debts': 'Other monthly debts',
+  'aff.downPayment': 'Down payment',
+  'aff.maxDti': 'Max debt-to-income',
+  'aff.propertyTaxRate': 'Property tax rate',
+  'aff.insurance': 'Annual insurance',
+  'aff.hoa': 'Monthly HOA',
+  'aff.maxHomePrice': 'Max home price',
+  'aff.maxLoan': 'Max loan amount',
+  'aff.maxHousingPayment': 'Max monthly housing payment',
+  'aff.frontEndDti': 'Front-end DTI',
+  'aff.principalAndInterest': 'Principal & interest',
+  'aff.backEndDti': 'Back-end DTI',
+
+  // Refinance
+  'refi.lifetimeSavingsNet': 'Lifetime savings (net of costs)',
+  'refi.currentBalance': 'Current balance',
+  'refi.currentRate': 'Current rate',
+  'refi.remainingPeriods': 'Remaining payments',
+  'refi.newRate': 'New rate',
+  'refi.newTerm': 'New term',
+  'refi.closingCosts': 'Closing costs',
+  'refi.currentPayment': 'Current payment',
+  'refi.newPayment': 'New payment',
+  'refi.monthlySavings': 'Monthly savings',
+  'refi.breakEven': 'Break-even',
+  'refi.lifetimeSavings': 'Lifetime savings',
+  'refi.neverBreaksEven': 'Never breaks even',
+
+  // Compare
+  'cmp.addScenario': 'Add a scenario to compare.',
+  'cmp.quickAdd': 'Quick add:',
+  'cmp.custom': 'Custom',
+  'cmp.remove': 'Remove',
+  'cmp.fixed': 'Fixed',
+  'cmp.floating': 'Floating',
+  'cmp.rate': 'Rate',
+  'cmp.term': 'Term',
+  'cmp.base': 'Base',
+  'cmp.spread': 'Spread',
+  'cmp.scenario': 'Scenario',
+  'cmp.effectiveRate': 'Rate',
+  'cmp.payment': 'Payment',
+  'cmp.totalPaid': 'Total paid',
+  'cmp.totalInterest': 'Total interest',
+  'cmp.yrs': 'yrs',
+
+  // Saved scenarios
+  'saved.title': 'Saved scenarios',
+  'saved.empty': 'No saved scenarios yet.',
+  'saved.saveAs': '+ Save current as...',
+  'saved.name': 'Name',
+  'saved.namePlaceholder': 'Scenario name',
+  'saved.save': 'Save',
+  'saved.cancel': 'Cancel',
+  'saved.load': 'Load',
+  'saved.delete': 'Delete',
+
+  // Charts
+  'chart.moneyGoes': 'Where your money goes',
+  'chart.balanceVsInterest': 'Balance vs. interest paid',
+  'chart.remainingBalance': 'Remaining balance',
+  'chart.interestToDate': 'Interest paid to date',
+  'chart.principalLegend': 'Principal {amount}',
+  'chart.interestLegend': 'Interest {amount}',
+  'chart.interestShare': 'Interest is {percent}% of everything you pay.',
+  'chart.yearN': 'Year {n}',
+  'chart.sharedScale':
+    'Both lines share a vertical scale of {min} – {max}. They cross when interest paid so far overtakes what you still owe.',
+  'chart.balanceAria':
+    'Remaining balance falling from {principal} to zero, against cumulative interest reaching {interest}.',
+  'chart.splitAria':
+    '{principal} principal and {interest} interest, so interest is {percent} percent of everything paid.',
+
+  // Singapore panel
+  'sg.title': 'Singapore rules',
+  'sg.propertyPrice': 'Property price',
+  'sg.income': 'Gross monthly income',
+  'sg.otherDebts': 'Other monthly debts',
+  'sg.cpfAvailable': 'CPF OA available monthly',
+  'sg.residency': 'Residency',
+  'sg.citizen': 'Citizen',
+  'sg.pr': 'Permanent Resident',
+  'sg.foreigner': 'Foreigner',
+  'sg.propertyCount': 'Properties owned after purchase',
+  'sg.first': '1st property',
+  'sg.second': '2nd property',
+  'sg.thirdPlus': '3rd or more',
+  'sg.propertyType': 'Property type',
+  'sg.private': 'Private property',
+  'sg.hdb': 'HDB flat / EC',
+  'sg.loanType': 'Loan type',
+  'sg.bankLoan': 'Bank loan',
+  'sg.hdbLoan': 'HDB concessionary loan',
+  'sg.tdsr': 'TDSR (limit 55%)',
+  'sg.msr': 'MSR (limit 30%)',
+  'sg.cpfUsed': 'Paid from CPF OA',
+  'sg.cashMonthly': 'Cash needed monthly',
+  'sg.bsd': "Buyer's Stamp Duty",
+  'sg.absd': "Additional Buyer's Stamp Duty",
+  'sg.downPayment': 'Down payment',
+  'sg.cashAtCompletion': 'Cash needed at completion',
+
+  // United States panel
+  'us.title': 'US costs & PMI',
+  'us.homePrice': 'Home price',
+  'us.zip': 'ZIP code',
+  'us.pmiRate': 'PMI rate',
+  'us.useTaxDeduction': 'Estimate tax deduction',
+  'us.marginalRate': 'Marginal tax rate',
+  'us.yes': 'Yes',
+  'us.no': 'No',
+  'us.loanType': 'Loan type',
+  'us.conforming': 'Conforming',
+  'us.jumbo': 'Jumbo',
+  'us.downPayment': 'Down payment',
+  'us.propertyTax': 'Property tax',
+  'us.propertyTaxWithRate': 'Property tax ({rate}%)',
+  'us.pmiRequired': 'PMI (required)',
+  'us.pmiNotRequired': 'PMI (not required)',
+  'us.piti': 'Monthly PITI',
+  'us.taxSavings': 'Tax savings',
+  'us.netCost': 'Net monthly cost',
+  'us.pmiHint': 'PMI applies below 20% down. Raising the down payment to {amount} removes it.',
+  'us.unknownZip':
+    "ZIP {zip} doesn't match a state we have a property tax rate for, so tax is excluded below.",
+
+  // Messages produced by the Rust layer, keyed by the code it returns.
+  'err.invalidPrincipal': 'Loan amount must be greater than zero (got {value}).',
+  'err.invalidRate': 'Interest rate cannot be negative (got {value}).',
+  'err.invalidTerm': 'Loan term must cover at least one payment (got {value}).',
+  'err.termTooLong': 'Loan term is unreasonably long ({value} payments).',
+  'err.downPaymentTooLarge': 'Down payment ({downPayment}) cannot exceed the home price ({homePrice}).',
+  'err.invalidIncome': 'Monthly income must be greater than zero (got {value}).',
+  'err.invalidDti': 'Debt-to-income ratio must be between 0 and 1 (got {value}).',
+  'err.invalidExtraPayment': 'Extra payment cannot be negative (got {value}).',
+  'err.parse': 'Could not read that input: {value}',
+  'err.unknown': 'Something went wrong with that calculation.',
+
+  'warn.tdsrExceeded': 'Exceeds the MAS TDSR limit of 55%.',
+  'warn.msrExceeded': 'Exceeds the MAS MSR limit of 30% for HDB flats and ECs.',
+  'warn.hdbLoanIneligible': 'HDB loans are only available for HDB flats and ECs bought from HDB.',
+};

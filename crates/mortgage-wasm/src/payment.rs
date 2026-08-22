@@ -30,7 +30,8 @@ fn payment_from_params(loan_params: LoanParams) -> PaymentSummaryResult {
         Ok(loan) => loan,
         Err(e) => {
             return PaymentSummaryResult {
-                error: Some(e),
+                error: Some(e.text.clone()),
+                error_message: Some(e),
                 ..Default::default()
             }
         }
@@ -44,6 +45,7 @@ fn payment_from_params(loan_params: LoanParams) -> PaymentSummaryResult {
         total_paid: Some(decimal_to_f64(summary.total_paid)),
         total_interest: Some(decimal_to_f64(summary.total_interest)),
         error: None,
+        error_message: None,
     }
 }
 

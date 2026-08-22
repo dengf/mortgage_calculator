@@ -66,6 +66,12 @@ body {
   color: #0f1720;
 }
 
+.app-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .app-regions {
   display: flex;
   gap: 4px;

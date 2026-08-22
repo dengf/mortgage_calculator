@@ -1,6 +1,8 @@
 import React from 'react';
+import { useI18n } from '../i18n';
 
 export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
+  const { t } = useI18n();
   const set = (patch) => onChange({ ...entry, ...patch });
 
   return (
@@ -17,19 +19,19 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
           className={entry.kind === 'fixed' ? 'kind-toggle active' : 'kind-toggle'}
           onClick={() => set({ kind: 'fixed' })}
         >
-          Fixed
+          {t('cmp.fixed')}
         </button>
         <button
           className={entry.kind === 'floating' ? 'kind-toggle active' : 'kind-toggle'}
           onClick={() => set({ kind: 'floating' })}
         >
-          Floating
+          {t('cmp.floating')}
         </button>
       </div>
 
       {entry.kind === 'fixed' ? (
         <label className="comparison-entry-field">
-          <span>Rate</span>
+          <span>{t('cmp.rate')}</span>
           <input
             type="number"
             step="any"
@@ -41,7 +43,7 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
       ) : (
         <>
           <label className="comparison-entry-field">
-            <span>Base</span>
+            <span>{t('cmp.base')}</span>
             <input
               type="number"
               step="any"
@@ -51,7 +53,7 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
             <span className="unit">%</span>
           </label>
           <label className="comparison-entry-field">
-            <span>Spread</span>
+            <span>{t('cmp.spread')}</span>
             <input
               type="number"
               step="any"
@@ -64,7 +66,7 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
       )}
 
       <label className="comparison-entry-field">
-        <span>Term</span>
+        <span>{t('cmp.term')}</span>
         <input
           type="number"
           step="1"
@@ -72,11 +74,11 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
           value={entry.termYears}
           onChange={(e) => set({ termYears: Number(e.target.value) })}
         />
-        <span className="unit">yrs</span>
+        <span className="unit">{t('cmp.yrs')}</span>
       </label>
 
       <button className="link-button danger" onClick={onRemove}>
-        Remove
+        {t('cmp.remove')}
       </button>
     </div>
   );

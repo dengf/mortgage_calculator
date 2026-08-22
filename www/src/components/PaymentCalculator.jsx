@@ -5,6 +5,7 @@ import SingaporePanel from './SingaporePanel';
 import UnitedStatesPanel from './UnitedStatesPanel';
 import { PrincipalInterestSplit } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
+import { useI18n } from '../i18n';
 
 
 const US_DEFAULTS = {
@@ -34,6 +35,7 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   const [sgInputs, setSgInputs] = useState(SG_DEFAULTS);
   const [usInputs, setUsInputs] = useState(US_DEFAULTS);
 
+  const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
 
@@ -82,33 +84,39 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix={money} min={0} />
-        <NumberField label="Interest rate" value={rate} onChange={setRate} suffix="%" min={0} />
-        <NumberField label="Loan term" value={termYears} onChange={setTermYears} suffix="years" min={1} />
+        <NumberField label={t('field.loanAmount')} value={principal} onChange={setPrincipal} suffix={money} min={0} />
+        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
+        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
         <label className="field">
-          <span className="field-label">Payment frequency</span>
+          <span className="field-label">{t('field.paymentFrequency')}</span>
           <select className="field-select" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="monthly">Monthly</option>
-            <option value="biweekly">Bi-weekly</option>
-            <option value="weekly">Weekly</option>
+            <option value="monthly">{t('freq.monthly')}</option>
+            <option value="biweekly">{t('freq.biweekly')}</option>
+            <option value="weekly">{t('freq.weekly')}</option>
           </select>
         </label>
       </div>
 
       <div className="panel-results">
-        {result?.error && <div className="error">{result.error}</div>}
+        {result?.error && (
+          <div className="error">
+            {result.error_message
+              ? t(result.error_message.code, result.error_message.params)
+              : result.error}
+          </div>
+        )}
         {result && !result.error && (
           <div className="stat-grid">
             <div className="stat stat-primary">
-              <span className="stat-label">Payment</span>
+              <span className="stat-label">{t('payment.payment')}</span>
               <span className="stat-value">{formatMoney(result.payment)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Total of {result.total_periods} payments</span>
+              <span className="stat-label">{t('payment.totalOf', { count: result.total_periods })}</span>
               <span className="stat-value">{formatMoney(result.total_paid)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Total interest</span>
+              <span className="stat-label">{t('payment.totalInterest')}</span>
               <span className="stat-value">{formatMoney(result.total_interest)}</span>
             </div>
           </div>

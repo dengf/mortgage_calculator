@@ -69,6 +69,7 @@ fn comparison_from_params(params: ComparisonParams) -> ComparisonResult {
                 })
                 .collect(),
             error: None,
+            error_message: None,
         },
         Err(e) => ComparisonResult {
             error: Some(e.to_string()),

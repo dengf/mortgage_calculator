@@ -3,6 +3,7 @@ import NumberField from './NumberField';
 import ComparisonEntryRow from './ComparisonEntryRow';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
+import { useI18n } from '../i18n';
 
 
 let nextId = 0;
@@ -42,6 +43,7 @@ function toWasmEntry(entry) {
 }
 
 export default function ComparisonView({ wasmModule, region }) {
+  const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
   const [principal, setPrincipal] = useState(400000);
@@ -84,19 +86,19 @@ export default function ComparisonView({ wasmModule, region }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix={money} min={0} />
+        <NumberField label={t('field.loanAmount')} value={principal} onChange={setPrincipal} suffix={money} min={0} />
         <label className="field">
-          <span className="field-label">Payment frequency</span>
+          <span className="field-label">{t('field.paymentFrequency')}</span>
           <select className="field-select" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="monthly">Monthly</option>
-            <option value="biweekly">Bi-weekly</option>
-            <option value="weekly">Weekly</option>
+            <option value="monthly">{t('freq.monthly')}</option>
+            <option value="biweekly">{t('freq.biweekly')}</option>
+            <option value="weekly">{t('freq.weekly')}</option>
           </select>
         </label>
       </div>
 
       <div className="comparison-presets">
-        <span className="field-label">Quick add:</span>
+        <span className="field-label">{t('cmp.quickAdd')}</span>
         {presets.map((preset) => (
           <button
             key={preset.label}
@@ -107,7 +109,7 @@ export default function ComparisonView({ wasmModule, region }) {
           </button>
         ))}
         <button className="link-button" onClick={() => setEntries((prev) => [...prev, blankEntry()])}>
-          + Custom
+          + {t('cmp.custom')}
         </button>
       </div>
 
@@ -120,7 +122,7 @@ export default function ComparisonView({ wasmModule, region }) {
             onRemove={() => removeEntry(entry.id)}
           />
         ))}
-        {entries.length === 0 && <p className="saved-scenarios-empty">Add a scenario to compare.</p>}
+        {entries.length === 0 && <p className="saved-scenarios-empty">{t('cmp.addScenario')}</p>}
       </div>
 
       {result?.error && <div className="error">{result.error}</div>}
@@ -130,12 +132,12 @@ export default function ComparisonView({ wasmModule, region }) {
           <table className="schedule-table">
             <thead>
               <tr>
-                <th>Scenario</th>
+                <th>{t('cmp.scenario')}</th>
                 <th>Rate</th>
                 <th>Term</th>
-                <th>Payment</th>
-                <th>Total paid</th>
-                <th>Total interest</th>
+                <th>{t('cmp.payment')}</th>
+                <th>{t('cmp.totalPaid')}</th>
+                <th>{t('cmp.totalInterest')}</th>
               </tr>
             </thead>
             <tbody>

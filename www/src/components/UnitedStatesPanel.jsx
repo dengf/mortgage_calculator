@@ -1,6 +1,7 @@
 import React from 'react';
 import NumberField from './NumberField';
 import { makeFormatMoney } from '../currency';
+import { useI18n } from '../i18n';
 
 // This panel only ever renders under the US region, so its currency is
 // fixed rather than passed in.
@@ -15,22 +16,23 @@ const formatUsd = makeFormatMoney('US');
  * `calculate_united_states` binding — no US rules are reimplemented here.
  */
 export default function UnitedStatesPanel({ inputs, onChange, result }) {
+  const { t } = useI18n();
   const set = (key) => (value) => onChange({ ...inputs, [key]: value });
 
   return (
     <div className="sg-panel">
-      <h3 className="sg-panel-title">US costs &amp; PMI</h3>
+      <h3 className="sg-panel-title">{t('us.title')}</h3>
 
       <div className="panel-form sg-panel-form">
         <NumberField
-          label="Home price"
+          label={t('us.homePrice')}
           value={inputs.home_price}
           onChange={set('home_price')}
           suffix="$"
           min={0}
         />
         <label className="field">
-          <span className="field-label">ZIP code</span>
+          <span className="field-label">{t('us.zip')}</span>
           <div className="field-input">
             <input
               type="text"
@@ -42,26 +44,26 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
           </div>
         </label>
         <NumberField
-          label="PMI rate"
+          label={t('us.pmiRate')}
           value={inputs.pmi_rate_percent}
           onChange={set('pmi_rate_percent')}
           suffix="%"
           min={0}
         />
         <label className="field">
-          <span className="field-label">Estimate tax deduction</span>
+          <span className="field-label">{t('us.useTaxDeduction')}</span>
           <select
             className="field-select"
             value={inputs.use_tax_deduction ? 'yes' : 'no'}
             onChange={(e) => set('use_tax_deduction')(e.target.value === 'yes')}
           >
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
+            <option value="no">{t('us.no')}</option>
+            <option value="yes">{t('us.yes')}</option>
           </select>
         </label>
         {inputs.use_tax_deduction && (
           <NumberField
-            label="Marginal tax rate"
+            label={t('us.marginalRate')}
             value={inputs.marginal_tax_rate_percent}
             onChange={set('marginal_tax_rate_percent')}
             suffix="%"
@@ -73,21 +75,18 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
       {result?.error && <div className="error">{result.error}</div>}
 
       {result?.property_tax_rate_percent == null && inputs.zip.length > 0 && (
-        <div className="error">
-          ZIP {inputs.zip} doesn&apos;t match a state we have a property tax rate for, so tax
-          is excluded below.
-        </div>
+        <div className="error">{t('us.unknownZip', { zip: inputs.zip })}</div>
       )}
 
       {result && !result.error && (
         <>
           <div className="stat-grid">
             <div className="stat">
-              <span className="stat-label">Loan type</span>
-              <span className="stat-value">{result.loan_type}</span>
+              <span className="stat-label">{t('us.loanType')}</span>
+              <span className="stat-value">{result.loan_type === 'Jumbo' ? t('us.jumbo') : t('us.conforming')}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Down payment</span>
+              <span className="stat-label">{t('us.downPayment')}</span>
               <span className="stat-value">
                 {formatUsd(result.down_payment)}{' '}
                 <small>({result.down_payment_percent.toFixed(1)}%)</small>
@@ -95,15 +94,17 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
             </div>
             <div className="stat">
               <span className="stat-label">
-                Property tax
-                {result.property_tax_rate_percent != null &&
-                  ` (${result.property_tax_rate_percent.toFixed(2)}%)`}
+                {result.property_tax_rate_percent == null
+                  ? t('us.propertyTax')
+                  : t('us.propertyTaxWithRate', {
+                      rate: result.property_tax_rate_percent.toFixed(2),
+                    })}
               </span>
               <span className="stat-value">{formatUsd(result.monthly_property_tax)}</span>
             </div>
             <div className="stat">
               <span className="stat-label">
-                PMI {result.pmi_required ? '(required)' : '(not required)'}
+                {result.pmi_required ? t('us.pmiRequired') : t('us.pmiNotRequired')}
               </span>
               <span className="stat-value">{formatUsd(result.monthly_pmi)}</span>
             </div>
@@ -111,18 +112,18 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
 
           <div className="stat-grid">
             <div className="stat stat-primary">
-              <span className="stat-label">Monthly PITI</span>
+              <span className="stat-label">{t('us.piti')}</span>
               <span className="stat-value">{formatUsd(result.monthly_piti)}</span>
             </div>
             {result.monthly_tax_savings != null && (
               <div className="stat">
-                <span className="stat-label">Tax savings</span>
+                <span className="stat-label">{t('us.taxSavings')}</span>
                 <span className="stat-value">{formatUsd(result.monthly_tax_savings)}</span>
               </div>
             )}
             {result.net_monthly_cost != null && (
               <div className="stat">
-                <span className="stat-label">Net monthly cost</span>
+                <span className="stat-label">{t('us.netCost')}</span>
                 <span className="stat-value">{formatUsd(result.net_monthly_cost)}</span>
               </div>
             )}
@@ -130,8 +131,7 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
 
           {result.pmi_required && (
             <p className="chart-note">
-              PMI applies below 20% down. Raising the down payment to{' '}
-              {formatUsd(inputs.home_price * 0.2)} removes it.
+              {t('us.pmiHint', { amount: formatUsd(inputs.home_price * 0.2) })}
             </p>
           )}
         </>

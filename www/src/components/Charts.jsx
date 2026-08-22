@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import { useI18n } from '../i18n';
 
 // Hand-rolled SVG rather than a charting library: these are two fixed chart
 // shapes, and pulling in Recharts/Chart.js would cost more gzipped than the
@@ -34,6 +35,7 @@ function pathFrom(values, max, { close = false } = {}) {
  * where interest paid to date overtakes what's still owed.
  */
 export function BalanceChart({ rows, principal, termYears, formatMoney }) {
+  const { t } = useI18n();
   const gradientId = useId();
   if (!rows?.length) return null;
 
@@ -58,13 +60,13 @@ export function BalanceChart({ rows, principal, termYears, formatMoney }) {
 
   return (
     <figure className="chart">
-      <figcaption className="chart-title">Balance vs. interest paid</figcaption>
+      <figcaption className="chart-title">{t('chart.balanceVsInterest')}</figcaption>
       <div className="chart-legend">
         <span className="chart-key">
-          <i style={{ background: BLUE }} /> Remaining balance
+          <i style={{ background: BLUE }} /> {t('chart.remainingBalance')}
         </span>
         <span className="chart-key">
-          <i style={{ background: AMBER }} /> Interest paid to date
+          <i style={{ background: AMBER }} /> {t('chart.interestToDate')}
         </span>
       </div>
       <svg
@@ -72,7 +74,10 @@ export function BalanceChart({ rows, principal, termYears, formatMoney }) {
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label={`Remaining balance falling from ${formatMoney(principal)} to zero, against cumulative interest reaching ${formatMoney(totalInterest)}.`}
+        aria-label={t('chart.balanceAria', {
+          principal: formatMoney(principal),
+          interest: formatMoney(totalInterest),
+        })}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -110,12 +115,11 @@ export function BalanceChart({ rows, principal, termYears, formatMoney }) {
       {/* The horizontal axis is time; the shared vertical scale is called out
           separately so the two aren't confused for one another. */}
       <div className="chart-axis">
-        <span>Year 0</span>
-        <span>Year {termYears}</span>
+        <span>{t('chart.yearN', { n: 0 })}</span>
+        <span>{t('chart.yearN', { n: termYears })}</span>
       </div>
       <p className="chart-note">
-        Both lines share a vertical scale of {formatMoney(0)} – {formatMoney(max)}. They cross
-        when interest paid so far overtakes what you still owe.
+        {t('chart.sharedScale', { min: formatMoney(0), max: formatMoney(max) })}
       </p>
     </figure>
   );
@@ -127,17 +131,22 @@ export function BalanceChart({ rows, principal, termYears, formatMoney }) {
  * stays legible at any width.
  */
 export function PrincipalInterestSplit({ principal, totalInterest, formatMoney }) {
+  const { t } = useI18n();
   const total = principal + totalInterest;
   if (!(total > 0)) return null;
   const interestShare = (totalInterest / total) * 100;
 
   return (
     <figure className="chart">
-      <figcaption className="chart-title">Where your money goes</figcaption>
+      <figcaption className="chart-title">{t('chart.moneyGoes')}</figcaption>
       <div
         className="split-bar"
         role="img"
-        aria-label={`${formatMoney(principal)} principal and ${formatMoney(totalInterest)} interest, so interest is ${interestShare.toFixed(0)} percent of everything paid.`}
+        aria-label={t('chart.splitAria', {
+          principal: formatMoney(principal),
+          interest: formatMoney(totalInterest),
+          percent: interestShare.toFixed(0),
+        })}
       >
         <span
           className="split-bar-principal"
@@ -147,14 +156,14 @@ export function PrincipalInterestSplit({ principal, totalInterest, formatMoney }
       </div>
       <div className="chart-legend">
         <span className="chart-key">
-          <i style={{ background: BLUE }} /> Principal {formatMoney(principal)}
+          <i style={{ background: BLUE }} /> {t('chart.principalLegend', { amount: formatMoney(principal) })}
         </span>
         <span className="chart-key">
-          <i style={{ background: AMBER }} /> Interest {formatMoney(totalInterest)}
+          <i style={{ background: AMBER }} /> {t('chart.interestLegend', { amount: formatMoney(totalInterest) })}
         </span>
       </div>
       <p className="chart-note">
-        Interest is {interestShare.toFixed(0)}% of everything you pay.
+        {t('chart.interestShare', { percent: interestShare.toFixed(0) })}
       </p>
     </figure>
   );
