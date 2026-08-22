@@ -199,7 +199,39 @@ mod no_debug_formatted_errors {
         ("united_states.rs", include_str!("united_states.rs")),
         ("singapore.rs", include_str!("singapore.rs")),
         ("storage.rs", include_str!("storage.rs")),
+        ("sg_affordability.rs", include_str!("sg_affordability.rs")),
+        ("region.rs", include_str!("region.rs")),
+        ("scenario.rs", include_str!("scenario.rs")),
+        ("duration.rs", include_str!("duration.rs")),
     ];
+
+    #[test]
+    fn every_binding_serializes_through_the_json_compatible_helper() {
+        // `serde_wasm_bindgen::to_value` turns a Rust map into a JS `Map`,
+        // not a plain object. Every message carrying values -- every
+        // validation error on the site -- reached the UI as a `Map`, and the
+        // interpolator reads its placeholders with `hasOwnProperty`, so
+        // readers were shown "(got {value})" with the braces intact. It
+        // shipped, in three languages.
+        //
+        // `convert::to_js` uses the JSON-compatible serializer. This fails if
+        // a new binding goes back to the raw call.
+        let mut offenders = Vec::new();
+        for (name, source) in BINDINGS {
+            for (i, line) in source.lines().enumerate() {
+                let code = line.split("//").next().unwrap_or(line);
+                if code.contains("serde_wasm_bindgen::to_value") {
+                    offenders.push(format!("{name}:{}", i + 1));
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "these lines serialize with serde_wasm_bindgen::to_value: {offenders:?}. \
+             That renders a map as a JS Map rather than a plain object, and every \
+             message parameter silently stops interpolating. Use convert::to_js."
+        );
+    }
 
     #[test]
     fn no_binding_debug_formats_an_error_into_a_user_facing_field() {

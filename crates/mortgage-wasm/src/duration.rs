@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{decimal_to_f64, parse_frequency};
+use crate::convert::{decimal_to_f64, parse_frequency, to_js};
 
 #[derive(Debug, Default, Deserialize)]
 pub struct DurationParams {
@@ -37,7 +37,7 @@ pub struct DurationResult {
 #[wasm_bindgen]
 pub fn describe_duration(params: JsValue) -> JsValue {
     let result = describe_duration_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn describe_duration_impl(params: JsValue) -> DurationResult {

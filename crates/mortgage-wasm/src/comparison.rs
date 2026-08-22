@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::convert::{
     decimal_to_f64, f64_to_decimal, parse_frequency, rate_to_percent, rate_type_from_dto,
-    rate_type_to_dto,
+    rate_type_to_dto, to_js,
 };
 use crate::dto::{
     ComparisonParams, ComparisonResult, ComparisonRowDto, ComparisonVerdictDto, RatePresetDto,
@@ -15,7 +15,7 @@ use crate::message::Message;
 #[wasm_bindgen]
 pub fn calculate_comparison(params: JsValue) -> JsValue {
     let result = calculate_comparison_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_comparison_impl(params: JsValue) -> ComparisonResult {
@@ -131,7 +131,7 @@ pub fn get_common_rate_presets() -> JsValue {
         })
         .collect();
 
-    serde_wasm_bindgen::to_value(&presets).unwrap_or(JsValue::NULL)
+    to_js(&presets)
 }
 
 #[cfg(test)]

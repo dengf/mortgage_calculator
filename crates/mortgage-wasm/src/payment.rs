@@ -2,7 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 
-use crate::convert::decimal_to_f64;
+use crate::convert::{decimal_to_f64, to_js};
 use crate::dto::{LoanParams, PaymentSummaryResult};
 use crate::loan::build_loan;
 use crate::message::Message;
@@ -10,7 +10,7 @@ use crate::message::Message;
 #[wasm_bindgen]
 pub fn calculate_payment(params: JsValue) -> JsValue {
     let result = calculate_payment_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_payment_impl(params: JsValue) -> PaymentSummaryResult {

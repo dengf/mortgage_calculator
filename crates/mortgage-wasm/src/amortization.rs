@@ -3,7 +3,7 @@
 use rust_decimal::Decimal;
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal};
+use crate::convert::{decimal_to_f64, f64_to_decimal, to_js};
 use crate::dto::{
     AmortizationParams, AmortizationResult, AmortizationRowDto, AmortizationYearDto,
     ExtraPaymentImpactResult,
@@ -14,7 +14,7 @@ use crate::message::Message;
 #[wasm_bindgen]
 pub fn calculate_amortization_schedule(params: JsValue) -> JsValue {
     let result = calculate_schedule_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_schedule_impl(params: JsValue) -> AmortizationResult {
@@ -91,7 +91,7 @@ fn to_row_dto(row: mortgage_calc::amortization::AmortizationRow) -> Amortization
 #[wasm_bindgen]
 pub fn calculate_extra_payment_impact(params: JsValue) -> JsValue {
     let result = calculate_extra_payment_impact_impl(params);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 fn calculate_extra_payment_impact_impl(params: JsValue) -> ExtraPaymentImpactResult {

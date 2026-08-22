@@ -15,7 +15,7 @@ use std::rc::Rc;
 use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore};
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{calculator_kind_to_str, parse_calculator_kind};
+use crate::convert::{calculator_kind_to_str, parse_calculator_kind, to_js};
 use crate::dto::{
     DeleteScenarioResult, SaveScenarioParams, SaveScenarioResult, ScenarioDto, ScenarioListResult,
     ScenarioResult,
@@ -65,7 +65,7 @@ pub async fn init_storage() -> Result<(), JsValue> {
 #[wasm_bindgen]
 pub async fn save_scenario(params: JsValue) -> JsValue {
     let result = save_scenario_impl(params).await;
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 async fn save_scenario_impl(params: JsValue) -> SaveScenarioResult {
@@ -126,7 +126,7 @@ async fn save_scenario_impl(params: JsValue) -> SaveScenarioResult {
 #[wasm_bindgen]
 pub async fn list_scenarios(calculator: Option<String>) -> JsValue {
     let result = list_scenarios_impl(calculator).await;
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 async fn list_scenarios_impl(calculator: Option<String>) -> ScenarioListResult {
@@ -166,7 +166,7 @@ async fn list_scenarios_impl(calculator: Option<String>) -> ScenarioListResult {
 #[wasm_bindgen]
 pub async fn load_scenario(id: String) -> JsValue {
     let result = load_scenario_impl(id).await;
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 async fn load_scenario_impl(id: String) -> ScenarioResult {
@@ -195,7 +195,7 @@ async fn load_scenario_impl(id: String) -> ScenarioResult {
 #[wasm_bindgen]
 pub async fn delete_scenario(id: String) -> JsValue {
     let result = delete_scenario_impl(id).await;
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    to_js(&result)
 }
 
 async fn delete_scenario_impl(id: String) -> DeleteScenarioResult {
