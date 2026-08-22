@@ -19,7 +19,9 @@ export default function Header({ activeTab, onTabChange, region, onRegionChange 
 
   return (
     <header className="app-header">
-      <div className="app-title">
+      {/* The page had no h1 at all. This is the one, and it names the
+          product rather than repeating a tab label. */}
+      <h1 className="app-title">
         {/* The logo mark, not the app icon. The icon carries its own dark
             tile for a home screen, and that tile is near-identical to this
             page's background (#0b1119 vs #0f1720) — reused here it vanished
@@ -30,7 +32,7 @@ export default function Header({ activeTab, onTabChange, region, onRegionChange 
             Decorative: the adjacent text already names the app. */}
         <img className="app-title-mark" src="logo-mark.png" alt="" width="32" height="32" />
         {t('app.title')}
-      </div>
+      </h1>
 
       <div className="app-switches">
         {/* Language and region are separate axes on purpose: someone reading
