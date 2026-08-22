@@ -22,11 +22,7 @@ export default function DownPaymentField({ label, scenario, onChange, money }) {
       : Number(v).toLocaleString('en-US', { maximumFractionDigits: 10 });
 
   const shown =
-    mode === 'percent'
-      ? percent == null
-        ? ''
-        : Number(percent.toFixed(4))
-      : scenario.downPayment;
+    mode === 'percent' ? (percent == null ? '' : Number(percent.toFixed(4))) : scenario.downPayment;
 
   const handle = (value) => {
     if (value === '') return onChange('');

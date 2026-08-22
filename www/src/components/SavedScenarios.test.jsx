@@ -28,7 +28,7 @@ describe('SavedScenarios', () => {
         calculatorKind="payment"
         getCurrentInputs={() => ({})}
         onLoad={() => {}}
-      />
+      />,
     );
 
     expect(await screen.findByText('30yr fixed')).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('SavedScenarios', () => {
         calculatorKind="payment"
         getCurrentInputs={getCurrentInputs}
         onLoad={() => {}}
-      />
+      />,
     );
     await waitFor(() => expect(wasmModule.list_scenarios).toHaveBeenCalledTimes(1));
 
@@ -58,8 +58,8 @@ describe('SavedScenarios', () => {
           calculator: 'payment',
           name: 'My scenario',
           inputs_json: JSON.stringify({ principal: 400000 }),
-        })
-      )
+        }),
+      ),
     );
     // Save triggers a second list_scenarios call to pick up the new entry.
     await waitFor(() => expect(wasmModule.list_scenarios).toHaveBeenCalledTimes(2));
@@ -73,7 +73,7 @@ describe('SavedScenarios', () => {
         calculatorKind="payment"
         getCurrentInputs={() => ({})}
         onLoad={() => {}}
-      />
+      />,
     );
     await waitFor(() => expect(wasmModule.list_scenarios).toHaveBeenCalledTimes(1));
 
@@ -101,7 +101,7 @@ describe('SavedScenarios', () => {
         calculatorKind="payment"
         getCurrentInputs={() => ({})}
         onLoad={onLoad}
-      />
+      />,
     );
 
     await userEvent.click(await screen.findByRole('button', { name: 'Load' }));
@@ -120,7 +120,7 @@ describe('SavedScenarios', () => {
         calculatorKind="payment"
         getCurrentInputs={() => ({})}
         onLoad={() => {}}
-      />
+      />,
     );
     await waitFor(() => expect(wasmModule.list_scenarios).toHaveBeenCalledTimes(1));
 

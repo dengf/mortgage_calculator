@@ -14,7 +14,8 @@ export default {
   'app.title': '房貸試算器',
   'meta.title': '房貸試算器 — 月供、還款明細、購房力與再融資',
   'meta.ogTitle': '房貸試算器 — 資料不離開您的裝置',
-  'meta.description': '免費房貸試算器，涵蓋月供、還款明細、購房力與再融資，並內建新加坡 TDSR、公積金與印花稅規則。全部在瀏覽器內計算——您的資料不會離開裝置。',
+  'meta.description':
+    '免費房貸試算器，涵蓋月供、還款明細、購房力與再融資，並內建新加坡 TDSR、公積金與印花稅規則。全部在瀏覽器內計算——您的資料不會離開裝置。',
   'intro.lead': '算清一套房的真實成本——月供、還款明細、您能負擔多少，以及再融資是否划算。',
   'intro.privacy': '所有計算都在您的瀏覽器中完成。您輸入的內容不會被傳送、儲存或記錄。',
   'intro.verify': '不必只聽我們說——打開瀏覽器的網路面板，看它始終是空的。',
@@ -23,25 +24,35 @@ export default {
   'about.title': '這些數字是怎麼算出來的',
 
   'about.us.payment.q': '月供包含哪些部分？',
-  'about.us.payment.a': '首要顯示的金額僅含本金與利息。下方的美國面板會加上按郵遞區號估算的房產稅，以及首付低於 20% 時的 PMI——合計構成完整的 PITI 金額。',
+  'about.us.payment.a':
+    '首要顯示的金額僅含本金與利息。下方的美國面板會加上按郵遞區號估算的房產稅，以及首付低於 20% 時的 PMI——合計構成完整的 PITI 金額。',
   'about.us.pmi.q': 'PMI 什麼時候可以停？',
-  'about.us.pmi.a': '當首付低於房價的 20% 時需繳納私人房貸保險。當您的房屋淨值達到 20% 時可申請取消；根據《房主保護法》，貸款價值比降至 78% 時貸方必須自動終止。',
+  'about.us.pmi.a':
+    '當首付低於房價的 20% 時需繳納私人房貸保險。當您的房屋淨值達到 20% 時可申請取消；根據《房主保護法》，貸款價值比降至 78% 時貸方必須自動終止。',
   'about.us.jumbo.q': '什麼樣的貸款屬於大額貸款？',
-  'about.us.jumbo.a': '超過聯邦住房金融局合規上限的貸款——2026 年單戶住宅為 832,750 美元——房利美與房地美無法購入，因此按大額貸款定價。高成本縣以及阿拉斯加和夏威夷適用更高上限，本計算器暫未納入。',
+  'about.us.jumbo.a':
+    '超過聯邦住房金融局合規上限的貸款——2026 年單戶住宅為 832,750 美元——房利美與房地美無法購入，因此按大額貸款定價。高成本縣以及阿拉斯加和夏威夷適用更高上限，本計算器暫未納入。',
 
   'about.sg.payment.q': '月供包含哪些部分？',
-  'about.sg.payment.a': '首要顯示的金額僅含本金與利息。下方的新加坡面板會將其拆分為公積金普通帳戶與現金兩部分，並計算您在交屋時所需的印花稅與首付。',
+  'about.sg.payment.a':
+    '首要顯示的金額僅含本金與利息。下方的新加坡面板會將其拆分為公積金普通帳戶與現金兩部分，並計算您在交屋時所需的印花稅與首付。',
   'about.sg.tdsr.q': 'TDSR 和 MSR 是什麼？',
-  'about.sg.tdsr.a': '新加坡限制收入中可用於償債的比例。TDSR 將全部債務還款限制在月總收入的 55%；MSR 僅將房貸還款限制在 30%，且只適用於組屋與執行共管公寓。銀行按 4% 與您實際利率兩者取高來測算，因此此處比率採用該評估值，而非您的實際月供。',
+  'about.sg.tdsr.a':
+    '新加坡限制收入中可用於償債的比例。TDSR 將全部債務還款限制在月總收入的 55%；MSR 僅將房貸還款限制在 30%，且只適用於組屋與執行共管公寓。銀行按 4% 與您實際利率兩者取高來測算，因此此處比率採用該評估值，而非您的實際月供。',
   'about.sg.afford.q': '為什麼我的購房力比預期低？',
-  'about.sg.afford.a': '通常有三條規則比收入更早觸頂：首套房貸的 LTV 上限將貸款限制在房價的 75%；首付中的最低現金部分不能用公積金支付；兩項印花稅須在 14 天內以現金繳清。此外，佣金與獎金僅按 70% 計入。',
+  'about.sg.afford.a':
+    '通常有三條規則比收入更早觸頂：首套房貸的 LTV 上限將貸款限制在房價的 75%；首付中的最低現金部分不能用公積金支付；兩項印花稅須在 14 天內以現金繳清。此外，佣金與獎金僅按 70% 計入。',
 
   'about.refi.q': '再融資什麼時候才真正划算？',
-  'about.refi.a': '當您在房中住到超過回本點——即累計節省超過手續費用的那個月。除了利率也要看年限：轉成全新的 30 年貸款會降低月供，但可能推高總支出。',
+  'about.refi.a':
+    '當您在房中住到超過回本點——即累計節省超過手續費用的那個月。除了利率也要看年限：轉成全新的 30 年貸款會降低月供，但可能推高總支出。',
 
-  'about.disclaimer.US': '本工具提供的是用於規劃的估算，不構成財務建議或貸款要約。房產稅率為各州平均值，各縣存在差異；貸款上限與相關規則可能變動。',
-  'about.disclaimer.SG': '本工具提供的是用於規劃的估算，不構成財務建議或貸款要約。新加坡金融管理局與稅務局的規則依據已公布數據，可能變動；在做決定前請向稅務局確認印花稅及任何減免。',
-  'app.footer': '所有計算均在您的瀏覽器中完成，由 Rust 編譯為 WebAssembly。您輸入的數字不會離開您的裝置。',
+  'about.disclaimer.US':
+    '本工具提供的是用於規劃的估算，不構成財務建議或貸款要約。房產稅率為各州平均值，各縣存在差異；貸款上限與相關規則可能變動。',
+  'about.disclaimer.SG':
+    '本工具提供的是用於規劃的估算，不構成財務建議或貸款要約。新加坡金融管理局與稅務局的規則依據已公布數據，可能變動；在做決定前請向稅務局確認印花稅及任何減免。',
+  'app.footer':
+    '所有計算均在您的瀏覽器中完成，由 Rust 編譯為 WebAssembly。您輸入的數字不會離開您的裝置。',
   'app.privacy': '隱私權政策',
   'app.source': '原始碼',
   'app.loading': '正在載入試算器…',
@@ -133,9 +144,11 @@ export default {
   'cmp.spread': '加碼',
   'cmp.rate': '利率',
   'cmp.term': '年限',
-  'cmp.tradeoff': '{cheaper} 每月比 {lighter} 多付 {paymentDelta}，但在整個貸款期內可少付 {interestDelta} 利息。',
+  'cmp.tradeoff':
+    '{cheaper} 每月比 {lighter} 多付 {paymentDelta}，但在整個貸款期內可少付 {interestDelta} 利息。',
   'cmp.outright': '{label} 兩項皆優：月供最低，利息總額也最低。',
-  'refi.termWarning': '此再融資為 {newTerm}，而您現有貸款僅剩 {remaining}——您將多還 {extra}。下方的節省額為現金總支出之差，並非同口徑比較。',
+  'refi.termWarning':
+    '此再融資為 {newTerm}，而您現有貸款僅剩 {remaining}——您將多還 {extra}。下方的節省額為現金總支出之差，並非同口徑比較。',
   'cmp.scenario': '方案',
   'cmp.effectiveRate': '實際利率',
   'cmp.payment': '月付金',
@@ -161,7 +174,8 @@ export default {
   'chart.interestLegend': '利息 {amount}',
   'chart.interestShare': '利息占您全部支出的 {percent}%。',
   'chart.yearN': '第 {n} 年',
-  'chart.sharedScale': '兩條曲線使用相同的縱軸刻度：{min} – {max}。交點即為累計已付利息超過剩餘本金之時。',
+  'chart.sharedScale':
+    '兩條曲線使用相同的縱軸刻度：{min} – {max}。交點即為累計已付利息超過剩餘本金之時。',
   'chart.balanceAria': '剩餘本金自 {principal} 遞減至零，累計利息達到 {interest}。',
   'chart.splitAria': '本金 {principal}，利息 {interest}，利息占全部支出的 {percent}%。',
 
@@ -188,12 +202,13 @@ export default {
   'sg.msr': 'MSR（上限 30%）',
   'sg.cpfUsed': 'CPF OA 支付部分',
   'sg.cashMonthly': '每月所需現金',
-  'sg.bsd': 'Buyer\'s Stamp Duty (BSD)',
-  'sg.absd': 'Additional Buyer\'s Stamp Duty (ABSD)',
+  'sg.bsd': "Buyer's Stamp Duty (BSD)",
+  'sg.absd': "Additional Buyer's Stamp Duty (ABSD)",
   'sg.downPayment': '頭期款',
   'sg.cashAtCompletion': '成交時所需現金',
   'sg.assessedAt': '按 {rate}% 評估（{instalment}/月）',
-  'sg.assessedNote': '新加坡金融管理局要求銀行按 4% 與您的利率兩者取高來測算 TDSR 和 MSR，因此以上比率使用 {instalment}/月，而非您的實際月供。',
+  'sg.assessedNote':
+    '新加坡金融管理局要求銀行按 4% 與您的利率兩者取高來測算 TDSR 和 MSR，因此以上比率使用 {instalment}/月，而非您的實際月供。',
   'sgaff.funds': '可用現金 + 公積金',
   'sgaff.age': '您的年齡',
   'sgaff.yearsOld': '歲',
@@ -217,8 +232,10 @@ export default {
   'sgaff.cpf': '可用公積金普通帳戶',
   'sgaff.cpfUsed': '公積金支付',
   'sgaff.cashRequired': '完成交易所需現金',
-  'sgaff.cashNote': '公積金不可用於最低現金首付或印花稅——兩項印花稅須在 14 天內繳清，早於公積金可報銷的時間。',
-  'sgaff.ftaNote': '根據相關自由貿易協定，您的額外買方印花稅按公民稅率計算。該減免須向新加坡稅務局申請，並非自動適用——在獲批前請按外國人稅率預留資金。僅限美國公民（不含綠卡持有者）；冰島、列支敦斯登、挪威和瑞士則包含公民與永久居民。',
+  'sgaff.cashNote':
+    '公積金不可用於最低現金首付或印花稅——兩項印花稅須在 14 天內繳清，早於公積金可報銷的時間。',
+  'sgaff.ftaNote':
+    '根據相關自由貿易協定，您的額外買方印花稅按公民稅率計算。該減免須向新加坡稅務局申請，並非自動適用——在獲批前請按外國人稅率預留資金。僅限美國公民（不含綠卡持有者）；冰島、列支敦斯登、挪威和瑞士則包含公民與永久居民。',
   'sgaff.assessedIncome': '評估收入 {amount}/月——佣金按 70% 計入',
 
   'us.title': '美國費用與 PMI',

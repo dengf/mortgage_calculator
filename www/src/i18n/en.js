@@ -12,33 +12,47 @@ export default {
   'app.title': 'Mortgage Calculator',
   'meta.title': 'Mortgage Calculator — Payments, Amortization, Affordability & Refinance',
   'meta.ogTitle': 'Mortgage Calculator — nothing leaves your device',
-  'meta.description': 'Free mortgage calculator for payments, amortization, affordability and refinancing, with Singapore TDSR, CPF and stamp duty built in. Runs entirely in your browser — your numbers never leave your device.',
-  'intro.lead': 'Work out what a home really costs — payments, amortization, what you can afford, and whether refinancing pays off.',
-  'intro.privacy': 'Everything is calculated in your browser. Nothing you type is sent anywhere, stored, or logged.',
-  'intro.verify': "Don't take our word for it — open your browser's network tab and watch it stay empty.",
-  'intro.depth.US': 'Property tax estimated from your ZIP code, PMI, and 2026 conforming loan limits.',
+  'meta.description':
+    'Free mortgage calculator for payments, amortization, affordability and refinancing, with Singapore TDSR, CPF and stamp duty built in. Runs entirely in your browser — your numbers never leave your device.',
+  'intro.lead':
+    'Work out what a home really costs — payments, amortization, what you can afford, and whether refinancing pays off.',
+  'intro.privacy':
+    'Everything is calculated in your browser. Nothing you type is sent anywhere, stored, or logged.',
+  'intro.verify':
+    "Don't take our word for it — open your browser's network tab and watch it stay empty.",
+  'intro.depth.US':
+    'Property tax estimated from your ZIP code, PMI, and 2026 conforming loan limits.',
   'intro.depth.SG': 'MAS TDSR and MSR limits, CPF, LTV ceilings, and IRAS stamp duty.',
   'about.title': 'How these numbers are worked out',
 
   'about.us.payment.q': 'What does the monthly payment include?',
-  'about.us.payment.a': 'The headline figure is principal and interest only. The US panel below adds property tax, estimated from your ZIP code, and PMI where the deposit is under 20% — together making the full PITI figure.',
+  'about.us.payment.a':
+    'The headline figure is principal and interest only. The US panel below adds property tax, estimated from your ZIP code, and PMI where the deposit is under 20% — together making the full PITI figure.',
   'about.us.pmi.q': 'When does PMI stop?',
-  'about.us.pmi.a': 'Private mortgage insurance applies while the deposit is under 20% of the price. You can request cancellation once you hold 20% equity, and lenders must drop it automatically at 78% loan-to-value under the Homeowners Protection Act.',
+  'about.us.pmi.a':
+    'Private mortgage insurance applies while the deposit is under 20% of the price. You can request cancellation once you hold 20% equity, and lenders must drop it automatically at 78% loan-to-value under the Homeowners Protection Act.',
   'about.us.jumbo.q': 'What makes a loan jumbo?',
-  'about.us.jumbo.a': 'A loan above the FHFA conforming limit — $832,750 for a one-unit property in 2026 — cannot be bought by Fannie Mae or Freddie Mac, so it is priced as a jumbo. High-cost counties, Alaska and Hawaii have higher limits, which this calculator does not yet apply.',
+  'about.us.jumbo.a':
+    'A loan above the FHFA conforming limit — $832,750 for a one-unit property in 2026 — cannot be bought by Fannie Mae or Freddie Mac, so it is priced as a jumbo. High-cost counties, Alaska and Hawaii have higher limits, which this calculator does not yet apply.',
 
   'about.sg.payment.q': 'What does the monthly payment include?',
-  'about.sg.payment.a': 'The headline figure is principal and interest only. The Singapore panel below splits it between CPF Ordinary Account and cash, and prices the stamp duty and deposit you need at completion.',
+  'about.sg.payment.a':
+    'The headline figure is principal and interest only. The Singapore panel below splits it between CPF Ordinary Account and cash, and prices the stamp duty and deposit you need at completion.',
   'about.sg.tdsr.q': 'What are TDSR and MSR?',
-  'about.sg.tdsr.a': 'Singapore caps how much of your income can service debt. TDSR limits all debt repayments to 55% of gross monthly income; MSR limits the housing loan alone to 30%, and applies only to HDB flats and Executive Condominiums. Banks assess both at the higher of 4% or your actual rate, so the ratios here use that assessed figure rather than your quoted payment.',
+  'about.sg.tdsr.a':
+    'Singapore caps how much of your income can service debt. TDSR limits all debt repayments to 55% of gross monthly income; MSR limits the housing loan alone to 30%, and applies only to HDB flats and Executive Condominiums. Banks assess both at the higher of 4% or your actual rate, so the ratios here use that assessed figure rather than your quoted payment.',
   'about.sg.afford.q': 'Why is my affordability lower than I expected?',
-  'about.sg.afford.a': 'Three rules usually bite before income does: the LTV ceiling caps a first housing loan at 75% of price, the minimum cash portion of the deposit cannot come from CPF, and both stamp duties fall due in cash within 14 days. Commission and bonus also count at only 70%.',
+  'about.sg.afford.a':
+    'Three rules usually bite before income does: the LTV ceiling caps a first housing loan at 75% of price, the minimum cash portion of the deposit cannot come from CPF, and both stamp duties fall due in cash within 14 days. Commission and bonus also count at only 70%.',
 
   'about.refi.q': 'When does refinancing actually pay off?',
-  'about.refi.a': 'When you stay in the home past the break-even point — the month at which cumulative savings overtake the closing costs. Watch the term as well as the rate: refinancing into a fresh 30-year loan lowers the payment but can raise the total paid.',
+  'about.refi.a':
+    'When you stay in the home past the break-even point — the month at which cumulative savings overtake the closing costs. Watch the term as well as the rate: refinancing into a fresh 30-year loan lowers the payment but can raise the total paid.',
 
-  'about.disclaimer.US': 'Estimates for planning, not financial advice or a loan offer. Property tax rates are state averages and vary by county; loan limits and rules change.',
-  'about.disclaimer.SG': 'Estimates for planning, not financial advice or a loan offer. MAS and IRAS rules reflect published figures and can change; confirm stamp duty and any remission with IRAS before you commit.',
+  'about.disclaimer.US':
+    'Estimates for planning, not financial advice or a loan offer. Property tax rates are state averages and vary by county; loan limits and rules change.',
+  'about.disclaimer.SG':
+    'Estimates for planning, not financial advice or a loan offer. MAS and IRAS rules reflect published figures and can change; confirm stamp duty and any remission with IRAS before you commit.',
   'app.footer':
     'Calculations run entirely client-side, compiled from Rust to WebAssembly. Your numbers never leave your device.',
   'app.privacy': 'Privacy',
@@ -139,9 +153,11 @@ export default {
   'cmp.spread': 'Spread',
   'cmp.rate': 'Rate',
   'cmp.term': 'Term',
-  'cmp.tradeoff': '{cheaper} costs {paymentDelta} more each month than {lighter}, and saves {interestDelta} in interest over the life of the loan.',
+  'cmp.tradeoff':
+    '{cheaper} costs {paymentDelta} more each month than {lighter}, and saves {interestDelta} in interest over the life of the loan.',
   'cmp.outright': '{label} wins on both: the lowest monthly payment and the lowest total interest.',
-  'refi.termWarning': 'This refinance runs {newTerm} against {remaining} left on your current loan — you would pay for {extra} longer. The savings below are total cash out the door, not a like-for-like comparison.',
+  'refi.termWarning':
+    'This refinance runs {newTerm} against {remaining} left on your current loan — you would pay for {extra} longer. The savings below are total cash out the door, not a like-for-like comparison.',
   'cmp.scenario': 'Scenario',
   'cmp.effectiveRate': 'Rate',
   'cmp.payment': 'Payment',
@@ -205,7 +221,8 @@ export default {
   'sg.downPayment': 'Down payment',
   'sg.cashAtCompletion': 'Cash needed at completion',
   'sg.assessedAt': 'Assessed at {rate}% ({instalment}/mo)',
-  'sg.assessedNote': 'MAS requires banks to test TDSR and MSR at the higher of 4% or your rate, so these ratios use {instalment}/mo, not your actual payment.',
+  'sg.assessedNote':
+    'MAS requires banks to test TDSR and MSR at the higher of 4% or your rate, so these ratios use {instalment}/mo, not your actual payment.',
   'sgaff.funds': 'Cash + CPF available',
   'sgaff.age': 'Your age',
   'sgaff.yearsOld': 'yrs',
@@ -219,9 +236,12 @@ export default {
   'sgaff.ltvNote': 'LTV limit {ltv}%',
   'sgaff.extendedTenure': 'extended tenure',
   'sgaff.minCash': 'At least {amount} must be cash, not CPF',
-  'sgaff.bound.tdsr': 'Limited by TDSR — what you can service on this income. Earning more, or clearing other debts, would raise it.',
-  'sgaff.bound.msr': 'Limited by MSR — the 30% housing-only ceiling on HDB flats and ECs, which bites before TDSR does.',
-  'sgaff.bound.ltv': 'Limited by your deposit — the loan is already at the MAS LTV ceiling, so a larger deposit would raise this, not a larger income.',
+  'sgaff.bound.tdsr':
+    'Limited by TDSR — what you can service on this income. Earning more, or clearing other debts, would raise it.',
+  'sgaff.bound.msr':
+    'Limited by MSR — the 30% housing-only ceiling on HDB flats and ECs, which bites before TDSR does.',
+  'sgaff.bound.ltv':
+    'Limited by your deposit — the loan is already at the MAS LTV ceiling, so a larger deposit would raise this, not a larger income.',
   'sg.ftaNational': 'US / Iceland / Liechtenstein / Norway / Switzerland',
   'sgaff.fixedIncome': 'Fixed monthly salary',
   'sgaff.variableIncome': 'Commission / bonus (monthly avg)',
@@ -229,8 +249,10 @@ export default {
   'sgaff.cpf': 'CPF OA available',
   'sgaff.cpfUsed': 'Paid from CPF OA',
   'sgaff.cashRequired': 'Cash needed at completion',
-  'sgaff.cashNote': 'CPF cannot cover the minimum cash down payment or stamp duty — both duties fall due in 14 days, before CPF can reimburse.',
-  'sgaff.ftaNote': 'Under the relevant free trade agreement you are charged ABSD at citizen rates. The remission is claimed from IRAS, not applied automatically — budget for the foreigner rate until it is granted. US nationals only (not green-card holders); Iceland, Liechtenstein, Norway and Switzerland cover nationals and PRs.',
+  'sgaff.cashNote':
+    'CPF cannot cover the minimum cash down payment or stamp duty — both duties fall due in 14 days, before CPF can reimburse.',
+  'sgaff.ftaNote':
+    'Under the relevant free trade agreement you are charged ABSD at citizen rates. The remission is claimed from IRAS, not applied automatically — budget for the foreigner rate until it is granted. US nationals only (not green-card holders); Iceland, Liechtenstein, Norway and Switzerland cover nationals and PRs.',
   'sgaff.assessedIncome': 'Assessed income {amount}/mo — commission counts at 70%',
 
   // United States panel
@@ -262,7 +284,8 @@ export default {
   'err.invalidRate': 'Interest rate cannot be negative (got {value}).',
   'err.invalidTerm': 'Loan term must cover at least one payment (got {value}).',
   'err.termTooLong': 'Loan term is unreasonably long ({value} payments).',
-  'err.downPaymentTooLarge': 'Down payment ({downPayment}) cannot exceed the home price ({homePrice}).',
+  'err.downPaymentTooLarge':
+    'Down payment ({downPayment}) cannot exceed the home price ({homePrice}).',
   'err.invalidIncome': 'Monthly income must be greater than zero (got {value}).',
   'err.invalidDti': 'Debt-to-income ratio must be between 0 and 1 (got {value}).',
   'err.invalidExtraPayment': 'Extra payment cannot be negative (got {value}).',

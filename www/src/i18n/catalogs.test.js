@@ -93,3 +93,53 @@ describe('translate', () => {
     expect(DEFAULT_LOCALE).toBe('en');
   });
 });
+
+// UTF-8 bytes decoded as Latin-1 turn every CJK character into a run of
+// Latin-1 supplement characters: 新加坡 becomes something like "\u00e6\u00b0\u00e5 \u00e5\u00a1".
+// No catalog in this app legitimately contains any character in that range —
+// verified across all three — so its presence is proof of a mis-encoded
+// write and nothing else.
+const MOJIBAKE = /[\u0080-\u00ff]/;
+
+/** Han characters plus the CJK punctuation the catalogs use (，。？：、). */
+const CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/;
+
+/**
+ * Prose keys that must be translated. Short labels are deliberately left in
+ * English in places — regulatory scheme names with no authoritative Chinese
+ * rendering — but a paragraph never is.
+ */
+const PROSE = /^(about|intro|meta)\./;
+
+describe('catalog encoding', () => {
+  it.each(Object.keys(TRANSLATIONS))('%s survived the file round-trip intact', (locale) => {
+    // A single mis-encoded write turns 新加坡 into mojibake. It reads as
+    // garbage to a user but passes every other test here, since the key set
+    // and the placeholders are untouched.
+    const corrupted = Object.entries(TRANSLATIONS[locale])
+      .filter(([, value]) => MOJIBAKE.test(value))
+      .map(([key]) => key);
+    expect(corrupted).toEqual([]);
+  });
+
+  it('holds English to the same encoding rule', () => {
+    const corrupted = Object.entries(en)
+      .filter(([, value]) => MOJIBAKE.test(value))
+      .map(([key]) => key);
+    expect(corrupted).toEqual([]);
+  });
+
+  it.each(Object.keys(TRANSLATIONS))('%s actually contains Chinese', (locale) => {
+    const chinese = Object.values(TRANSLATIONS[locale]).filter((v) => CJK.test(v));
+    // Well over half of any real Chinese catalog. A wholesale corruption, or
+    // an accidental copy of the English file, falls far below this.
+    expect(chinese.length).toBeGreaterThan(Object.keys(en).length * 0.6);
+  });
+
+  it.each(Object.keys(TRANSLATIONS))('%s translates every prose string', (locale) => {
+    const untranslated = Object.entries(TRANSLATIONS[locale])
+      .filter(([key, value]) => PROSE.test(key) && !CJK.test(value))
+      .map(([key]) => key);
+    expect(untranslated).toEqual([]);
+  });
+});

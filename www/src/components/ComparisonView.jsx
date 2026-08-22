@@ -7,7 +7,6 @@ import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { DEFAULT_SCENARIO, principalOf } from '../scenario';
 
-
 let nextId = 0;
 const newId = () => `entry-${nextId++}`;
 
@@ -40,7 +39,11 @@ function toWasmEntry(entry) {
   const rate_type =
     entry.kind === 'fixed'
       ? { kind: 'fixed', rate_percent: entry.ratePercent }
-      : { kind: 'floating', base_rate_percent: entry.baseRatePercent, spread_percent: entry.spreadPercent };
+      : {
+          kind: 'floating',
+          base_rate_percent: entry.baseRatePercent,
+          spread_percent: entry.spreadPercent,
+        };
   return { label: entry.label, rate_type, term_years: entry.termYears };
 }
 
@@ -136,7 +139,10 @@ export default function ComparisonView({
             + {preset.label}
           </button>
         ))}
-        <button className="link-button" onClick={() => setEntries((prev) => [...prev, blankEntry()])}>
+        <button
+          className="link-button"
+          onClick={() => setEntries((prev) => [...prev, blankEntry()])}
+        >
           + {t('cmp.custom')}
         </button>
       </div>

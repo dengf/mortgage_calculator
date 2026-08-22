@@ -67,7 +67,9 @@ export default function UnitedStatesPanel({ inputs, onChange, result, homePrice 
 
       {result?.error && (
         <div className="error">
-          {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
+          {result.error_message
+            ? t(result.error_message.code, result.error_message.params)
+            : result.error}
         </div>
       )}
 
@@ -80,7 +82,9 @@ export default function UnitedStatesPanel({ inputs, onChange, result, homePrice 
           <div className="stat-grid">
             <div className="stat">
               <span className="stat-label">{t('us.loanType')}</span>
-              <span className="stat-value">{result.loan_type === 'Jumbo' ? t('us.jumbo') : t('us.conforming')}</span>
+              <span className="stat-value">
+                {result.loan_type === 'Jumbo' ? t('us.jumbo') : t('us.conforming')}
+              </span>
             </div>
             <div className="stat">
               <span className="stat-label">{t('us.downPayment')}</span>

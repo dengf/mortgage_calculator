@@ -33,5 +33,5 @@ export function principalOf(scenario) {
 export function downPaymentPercent(scenario) {
   const price = Number(scenario.homePrice) || 0;
   if (price <= 0) return null;
-  return (Number(scenario.downPayment) || 0) / price * 100;
+  return ((Number(scenario.downPayment) || 0) / price) * 100;
 }

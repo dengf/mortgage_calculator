@@ -117,7 +117,9 @@ export default function SingaporePanel({ inputs, onChange, result }) {
 
       {result?.error && (
         <div className="error">
-          {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
+          {result.error_message
+            ? t(result.error_message.code, result.error_message.params)
+            : result.error}
         </div>
       )}
 

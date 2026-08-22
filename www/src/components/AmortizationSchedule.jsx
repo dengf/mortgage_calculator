@@ -9,7 +9,6 @@ import { allFilled } from '../inputs';
 import { formatDuration, payoffDate } from '../duration';
 import { DEFAULT_SCENARIO, principalOf } from '../scenario';
 
-
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
 
 function summarizeByYear(rows, periodsPerYear) {

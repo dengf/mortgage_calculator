@@ -53,7 +53,9 @@ describe('ComparisonView preset seeding', () => {
   });
 
   it('survives a single preset', async () => {
-    render(<ComparisonView wasmModule={mockWasm([preset('30-Year Fixed', 6.5, 30)])} region="US" />);
+    render(
+      <ComparisonView wasmModule={mockWasm([preset('30-Year Fixed', 6.5, 30)])} region="US" />,
+    );
 
     expect(await screen.findByDisplayValue('30-Year Fixed')).toBeInTheDocument();
   });
@@ -77,8 +79,22 @@ describe('ComparisonView preset seeding', () => {
 
 describe('ComparisonView trade-off summary', () => {
   const rows = [
-    { label: '30-Year Fixed', effective_rate_percent: 6.5, term_years: 30, payment: 2528.27, total_paid: 910177.2, total_interest: 510177.2 },
-    { label: '15-Year Fixed', effective_rate_percent: 6.0, term_years: 15, payment: 3375.43, total_paid: 607577.4, total_interest: 207577.4 },
+    {
+      label: '30-Year Fixed',
+      effective_rate_percent: 6.5,
+      term_years: 30,
+      payment: 2528.27,
+      total_paid: 910177.2,
+      total_interest: 510177.2,
+    },
+    {
+      label: '15-Year Fixed',
+      effective_rate_percent: 6.0,
+      term_years: 15,
+      payment: 3375.43,
+      total_paid: 607577.4,
+      total_interest: 207577.4,
+    },
   ];
 
   // Entries seed from presets, and nothing is computed without them.
@@ -104,10 +120,7 @@ describe('ComparisonView trade-off summary', () => {
   });
 
   it('says so when one option wins outright', async () => {
-    const dominant = [
-      rows[0],
-      { ...rows[1], payment: 100, total_paid: 1, total_interest: 1 },
-    ];
+    const dominant = [rows[0], { ...rows[1], payment: 100, total_paid: 1, total_interest: 1 }];
     render(
       <I18nProvider initialLocale="en">
         <ComparisonView wasmModule={wasmWith(dominant)} region="US" />

@@ -65,7 +65,9 @@ describe('NumberField', () => {
 describe('NumberField grouped money display', () => {
   function Controlled({ initial = 500000, ...rest }) {
     const [v, setV] = React.useState(initial);
-    return <NumberField label="Home price" value={v} onChange={setV} suffix="$" grouped {...rest} />;
+    return (
+      <NumberField label="Home price" value={v} onChange={setV} suffix="$" grouped {...rest} />
+    );
   }
 
   it('shows separators at rest, which is when the figure is read', () => {

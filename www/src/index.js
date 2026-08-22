@@ -54,7 +54,11 @@ function createMockModule() {
       error: 'US costs need the WASM module — run `npm run build:wasm`.',
     }),
     calculate_payment: (params) => {
-      const payment = monthlyPayment(params.principal, params.annual_rate_percent, params.term_years);
+      const payment = monthlyPayment(
+        params.principal,
+        params.annual_rate_percent,
+        params.term_years,
+      );
       const totalPeriods = params.term_years * 12;
       const totalPaid = payment * totalPeriods;
       return {
@@ -111,7 +115,7 @@ function createMockModule() {
     calculate_affordability: (params) => {
       const maxHousingPayment = Math.max(
         0,
-        (params.gross_monthly_income * params.max_dti_percent) / 100 - params.monthly_debts
+        (params.gross_monthly_income * params.max_dti_percent) / 100 - params.monthly_debts,
       );
       const r = params.annual_rate_percent / 100 / 12;
       const n = params.term_years * 12;
@@ -119,7 +123,10 @@ function createMockModule() {
       const monthlyInsurance = params.annual_insurance / 12;
       const monthlyTaxRate = params.annual_property_tax_rate_percent / 100 / 12;
       const budget =
-        maxHousingPayment - monthlyInsurance - params.monthly_hoa - params.down_payment * monthlyTaxRate;
+        maxHousingPayment -
+        monthlyInsurance -
+        params.monthly_hoa -
+        params.down_payment * monthlyTaxRate;
       const maxLoanAmount = Math.max(0, budget / (k + monthlyTaxRate));
       const maxHomePrice = maxLoanAmount + params.down_payment;
       const maxPI = maxLoanAmount * k;
@@ -143,12 +150,17 @@ function createMockModule() {
         currentR === 0
           ? params.current_balance / params.remaining_periods
           : (params.current_balance * currentR * currentGrowth) / (currentGrowth - 1);
-      const newPayment = monthlyPayment(params.current_balance, params.new_annual_rate_percent, params.new_term_years);
+      const newPayment = monthlyPayment(
+        params.current_balance,
+        params.new_annual_rate_percent,
+        params.new_term_years,
+      );
       const newPeriods = params.new_term_years * 12;
       const paymentSavings = currentPayment - newPayment;
       const breakEvenPeriods =
         paymentSavings > 0 ? Math.max(1, Math.ceil(params.closing_costs / paymentSavings)) : null;
-      const remainingInterestCurrent = currentPayment * params.remaining_periods - params.current_balance;
+      const remainingInterestCurrent =
+        currentPayment * params.remaining_periods - params.current_balance;
       const totalInterestNew = newPayment * newPeriods - params.current_balance;
       return {
         current_payment: currentPayment,
@@ -183,7 +195,9 @@ function createMockModule() {
     ],
     calculate_comparison: (params) => {
       const effectiveRate = (rateType) =>
-        rateType.kind === 'fixed' ? rateType.rate_percent : rateType.base_rate_percent + rateType.spread_percent;
+        rateType.kind === 'fixed'
+          ? rateType.rate_percent
+          : rateType.base_rate_percent + rateType.spread_percent;
       const rows = params.entries.map((entry) => {
         const ratePercent = effectiveRate(entry.rate_type);
         const payment = monthlyPayment(params.principal, ratePercent, entry.term_years);
@@ -255,7 +269,7 @@ async function main() {
   root.render(
     <React.StrictMode>
       <App wasmModule={wasm} />
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 }
 
