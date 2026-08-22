@@ -6,10 +6,8 @@ import { BalanceChart } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
-import { formatDuration, payoffDate } from '../duration';
+import { describeDuration, formatDuration, payoffDate } from '../duration';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
-
-const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
 
 export default function AmortizationSchedule({
   wasmModule,
@@ -42,7 +40,11 @@ export default function AmortizationSchedule({
     return wasmModule.calculate_extra_payment_impact({ loan, extra_payment: extraPayment });
   }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
 
-  const periodsPerYear = PERIODS_PER_YEAR[frequency] ?? 12;
+  // Cadence and every period-to-time conversion come from the core rather
+  // than a table kept here -- see mortgage-core/src/frequency.rs.
+  const saved = describeDuration(wasmModule, impact?.periods_saved, frequency);
+  const payoff = describeDuration(wasmModule, impact?.payoff_periods, frequency);
+  const plotted = describeDuration(wasmModule, schedule?.rows?.length, frequency);
 
   // Grouped by the same call that produced the rows, so the yearly totals and
   // the periods they sum are never the output of two separate calculations.
@@ -73,9 +75,7 @@ export default function AmortizationSchedule({
         <div className="stat-grid" aria-live="polite">
           <div className="stat stat-primary">
             <span className="stat-label">{t('amort.timeSaved')}</span>
-            <span className="stat-value">
-              {formatDuration(impact.periods_saved, periodsPerYear, t)}
-            </span>
+            <span className="stat-value">{formatDuration(saved, t)}</span>
             <span className="stat-note">
               {t('amort.payments', { count: impact.periods_saved })}
             </span>
@@ -86,12 +86,10 @@ export default function AmortizationSchedule({
           </div>
           <div className="stat">
             <span className="stat-label">{t('amort.newPayoff')}</span>
-            <span className="stat-value">
-              {formatDuration(impact.payoff_periods, periodsPerYear, t)}
-            </span>
+            <span className="stat-value">{formatDuration(payoff, t)}</span>
             <span className="stat-note">
               {t('amort.payoffDate', {
-                date: payoffDate(impact.payoff_periods, periodsPerYear, locale),
+                date: payoffDate(payoff, locale),
               })}
             </span>
           </div>
@@ -104,7 +102,7 @@ export default function AmortizationSchedule({
         <BalanceChart
           rows={schedule.rows}
           principal={principal}
-          periodsPerYear={periodsPerYear}
+          yearsPlotted={plotted.years_exact}
           formatMoney={formatMoney}
         />
       )}

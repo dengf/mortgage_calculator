@@ -58,9 +58,7 @@ rather than a sign JavaScript is the right place.
 
 Named so they are not mistaken for precedent:
 
-- `www/src/components/RefinanceCalculator.jsx` -- extra periods from term
 - `www/src/components/Charts.jsx` -- interest share of total paid
-- `www/src/duration.js` -- payment periods to years and months
 - `www/src/index.js` -- `createMockModule` is a **full parallel
   implementation** of payment, amortization, affordability, refinance and
   comparison in JavaScript. It already declines to reimplement the Singapore

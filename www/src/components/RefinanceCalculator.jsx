@@ -4,7 +4,7 @@ import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
-import { formatDuration } from '../duration';
+import { describeDuration, formatDuration } from '../duration';
 
 export default function RefinanceCalculator({ wasmModule, region }) {
   const { t } = useI18n();
@@ -44,13 +44,20 @@ export default function RefinanceCalculator({ wasmModule, region }) {
 
   // Refinancing into a fresh 30-year loan when 25 years remain lowers the
   // payment and lengthens the debt. Both facts matter.
-  const extraPeriods = Math.round(Number(newTermYears) * 12) - Number(remainingPeriods);
+  //
+  // Refinance quotes are monthly here because `remainingPeriods` is entered
+  // as a number of monthly payments; the conversion to years and months is
+  // the core's either way.
+  const newPeriods = Math.round(Number(newTermYears) * 12);
+  const newTerm = describeDuration(wasmModule, newPeriods, 'monthly');
+  const remaining = describeDuration(wasmModule, remainingPeriods, 'monthly');
+  const extra = describeDuration(wasmModule, newPeriods - Number(remainingPeriods), 'monthly');
   const termExtension =
-    Number.isFinite(extraPeriods) && extraPeriods > 0
+    extra.total_months > 0
       ? t('refi.termWarning', {
-          newTerm: formatDuration(Number(newTermYears) * 12, 12, t),
-          remaining: formatDuration(remainingPeriods, 12, t),
-          extra: formatDuration(extraPeriods, 12, t),
+          newTerm: formatDuration(newTerm, t),
+          remaining: formatDuration(remaining, t),
+          extra: formatDuration(extra, t),
         })
       : null;
 

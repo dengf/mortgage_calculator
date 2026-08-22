@@ -34,7 +34,7 @@ function pathFrom(values, max, { close = false } = {}) {
  * shared vertical scale so the crossover point is honest — that point is
  * where interest paid to date overtakes what's still owed.
  */
-export function BalanceChart({ rows, principal, periodsPerYear, formatMoney }) {
+export function BalanceChart({ rows, principal, yearsPlotted, formatMoney }) {
   const { t } = useI18n();
   const gradientId = useId();
   if (!rows?.length) return null;
@@ -120,9 +120,7 @@ export function BalanceChart({ rows, principal, periodsPerYear, formatMoney }) {
             nominal term. With extra payments the curve retires early — it
             used to reach zero under a label reading "Year 30", which is
             exactly the fact the user added extra payments to see. */}
-        <span>
-          {t('chart.axisEnd', { n: Math.round((rows.length / periodsPerYear) * 10) / 10 })}
-        </span>
+        <span>{t('chart.axisEnd', { n: Number(Number(yearsPlotted ?? 0).toFixed(1)) })}</span>
       </div>
       <p className="chart-note">
         {t('chart.sharedScale', { min: formatMoney(0), max: formatMoney(max) })}

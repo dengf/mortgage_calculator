@@ -23,7 +23,7 @@ describe('BalanceChart', () => {
       <BalanceChart
         rows={schedule(1560, 400000, 300)}
         principal={400000}
-        periodsPerYear={12}
+        yearsPlotted={30}
         formatMoney={formatMoney}
       />,
     );
@@ -41,7 +41,7 @@ describe('BalanceChart', () => {
       <BalanceChart
         rows={schedule(360, 400000, 1417)}
         principal={400000}
-        periodsPerYear={12}
+        yearsPlotted={30}
         formatMoney={formatMoney}
       />,
     );
@@ -56,7 +56,7 @@ describe('BalanceChart', () => {
       <BalanceChart
         rows={schedule(360, 400000, 1417)}
         principal={400000}
-        periodsPerYear={12}
+        yearsPlotted={30}
         formatMoney={formatMoney}
       />,
     );
@@ -65,26 +65,35 @@ describe('BalanceChart', () => {
     expect(screen.getByText('Year 30')).toBeInTheDocument();
   });
 
-  it('ends the axis at the real payoff when extra payments retire the loan early', () => {
-    // A 30-year loan paid off in 233 months. The axis used to read "Year 30"
-    // while the curve hit zero at the right edge — mislabelling precisely the
-    // fact the user added extra payments to see.
-    render(
+  it('labels a part-year span to one decimal, and a whole one without it', () => {
+    // 233 months of a 30-year loan. That the span shown is the *plotted*
+    // schedule rather than the nominal term is now AmortizationSchedule's
+    // job -- it is asserted there, since this component is handed the span.
+    const { rerender } = render(
       <BalanceChart
         rows={schedule(233, 400000, 3028)}
         principal={400000}
-        periodsPerYear={12}
+        yearsPlotted={19.416666}
         formatMoney={formatMoney}
       />,
     );
-
     expect(screen.getByText('Year 19.4')).toBeInTheDocument();
-    expect(screen.queryByText('Year 30')).not.toBeInTheDocument();
+
+    rerender(
+      <BalanceChart
+        rows={schedule(360, 400000, 1417)}
+        principal={400000}
+        yearsPlotted={30}
+        formatMoney={formatMoney}
+      />,
+    );
+    // Not "Year 30.0": a whole span reads as a whole number.
+    expect(screen.getByText('Year 30')).toBeInTheDocument();
   });
 
   it('renders nothing without rows', () => {
     const { container } = render(
-      <BalanceChart rows={[]} principal={400000} periodsPerYear={12} formatMoney={formatMoney} />,
+      <BalanceChart rows={[]} principal={400000} yearsPlotted={30} formatMoney={formatMoney} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
