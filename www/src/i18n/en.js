@@ -145,6 +145,13 @@ export default {
   'cmp.addScenario': 'Add a scenario to compare.',
   'cmp.quickAdd': 'Quick add:',
   'cmp.custom': 'Custom',
+  // Index names stay in Latin script in every locale: a Singapore bank's
+  // own term sheet says "3M SORA".
+  'preset.fixed': '{years}-Year Fixed',
+  'preset.floating': 'Floating: {index} + {spread}%',
+  'preset.hdbConcessionary': 'HDB concessionary',
+  'cmp.scenarioLabel': 'Scenario label',
+  'cmp.customScenario': 'Custom scenario',
   'cmp.remove': 'Remove',
   'cmp.fixed': 'Fixed',
   'cmp.floating': 'Floating',

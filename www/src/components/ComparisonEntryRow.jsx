@@ -11,7 +11,7 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
         className="comparison-entry-label"
         value={entry.label}
         onChange={(e) => set({ label: e.target.value })}
-        placeholder="Scenario label"
+        placeholder={t('cmp.scenarioLabel')}
       />
 
       <div className="comparison-entry-kind">

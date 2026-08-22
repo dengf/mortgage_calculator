@@ -178,7 +178,12 @@ pub enum RateTypeDto {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RatePresetDto {
+    /// English rendering, kept as the entry's identity and as a fallback for
+    /// a UI with no catalog entry.
     pub label: String,
+    /// The same name as a code plus its values, so the UI can compose it in
+    /// the reader's language -- the convention already used for errors.
+    pub label_message: Message,
     pub rate_type: RateTypeDto,
     pub term_years: f64,
 }

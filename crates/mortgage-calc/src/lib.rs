@@ -31,4 +31,4 @@ pub mod united_states;
 
 pub use loan::{Loan, LoanBuilder};
 pub use mortgage_core::{MortgageError, MortgageResult, PaymentFrequency};
-pub use rate::{common_presets, RatePreset, RateType};
+pub use rate::{common_presets, PresetLabel, RateIndex, RatePreset, RateType};
