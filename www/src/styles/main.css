@@ -35,10 +35,11 @@ body {
   gap: 8px;
 }
 
+/* No border-radius: this is the bare mark on transparency, not a tile, so
+   rounding the box would clip the roofline rather than round a corner. */
 .app-title-mark {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
   flex: none;
 }
 
