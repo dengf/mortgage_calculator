@@ -1174,6 +1174,13 @@ fn detect_region() -> Region {
         .unwrap_or_default()
 }
 
+#[cfg(not(target_family = "wasm"))]
+fn detect_locale() -> &'static str {
+    sys_locale::get_locale()
+        .map(|tag| locale_to_catalog(&tag))
+        .unwrap_or("en")
+}
+
 #[cfg(target_family = "wasm")]
 #[wasm_bindgen(inline_js = "export function navigator_language() { \
     return (typeof navigator !== 'undefined' && navigator.language) || null; \
@@ -1189,6 +1196,46 @@ fn detect_region() -> Region {
         .unwrap_or_default()
 }
 
+#[cfg(target_family = "wasm")]
+fn detect_locale() -> &'static str {
+    navigator_language()
+        .map(|tag| locale_to_catalog(&tag))
+        .unwrap_or("en")
+}
+
+/// Maps a system locale tag onto one of the bundled translation catalogs.
+///
+/// Script subtags win where present (`zh-Hans-SG`); otherwise region decides,
+/// since that is how the tag usually arrives. Taiwan, Hong Kong and Macau are
+/// Traditional, everywhere else Chinese is spoken is Simplified. Anything
+/// else falls back to the source strings.
+fn locale_to_catalog(tag: &str) -> &'static str {
+    let lower = tag.to_ascii_lowercase();
+    if !lower.starts_with("zh") {
+        return "en";
+    }
+    if lower.contains("hant") {
+        return "zh-Hant";
+    }
+    if lower.contains("hans") {
+        return "zh-Hans";
+    }
+    let region_is_traditional = ["-tw", "-hk", "-mo"].iter().any(|r| lower.contains(r));
+    if region_is_traditional {
+        "zh-Hant"
+    } else {
+        "zh-Hans"
+    }
+}
+
+/// Applies a catalog, logging rather than failing: a missing translation
+/// should leave the app in English, never stop it starting.
+fn apply_locale(locale: &str) {
+    if let Err(e) = slint::select_bundled_translation(locale) {
+        eprintln!("could not select translation {locale}: {e}");
+    }
+}
+
 /// Shared entry point: builds the window, wires callbacks, and runs the
 /// event loop. Called from `main.rs` on native targets and from
 /// [`run_wasm`] on wasm32.
@@ -1197,6 +1244,19 @@ pub fn run_app() -> Result<(), Box<dyn Error>> {
     let amort_schedule_cache: AmortScheduleCache = Rc::new(RefCell::new(Vec::new()));
 
     ui.set_region(detect_region().as_str().into());
+
+    // Must run after the window exists: before the first component there is
+    // no global context holding the bundled catalogs.
+    let locale = detect_locale();
+    apply_locale(locale);
+    ui.set_locale(locale.into());
+
+    let ui_handle = ui.as_weak();
+    ui.on_locale_changed(move |locale| {
+        let ui = ui_handle.unwrap();
+        apply_locale(&locale);
+        ui.set_locale(locale);
+    });
 
     // The `region` property is already updated by the toggle's two-way
     // binding by the time this fires; region-specific calculators re-run
@@ -1782,6 +1842,58 @@ mod tests {
     fn new_test_window() -> AppWindow {
         i_slint_backend_testing::init_no_event_loop();
         AppWindow::new().expect("AppWindow::new() should succeed under the testing backend")
+    }
+
+    /// Bundled translations are compiled into the binary by build.rs. This
+    /// checks the whole chain end to end -- that the .po is found at the
+    /// path `with_bundled_translations` expects, that its msgctxt matches
+    /// the component name Slint derives, and that switching at runtime
+    /// re-renders already-created bindings.
+    #[test]
+    fn bundled_translations_switch_the_ui_language() {
+        // One window for the whole test: the testing backend can only be
+        // initialised once per thread, and `@tr` bindings are reactive to a
+        // language change, so re-creating the window would prove less.
+        let ui = new_test_window();
+        assert_eq!(ui.get_app_title(), "Mortgage Calculator");
+
+        slint::select_bundled_translation("zh-Hans").expect("zh-Hans should be bundled");
+        assert_eq!(
+            ui.get_app_title(),
+            "\u{623f}\u{8d37}\u{8ba1}\u{7b97}\u{5668}"
+        );
+
+        slint::select_bundled_translation("zh-Hant").expect("zh-Hant should be bundled");
+        assert_eq!(
+            ui.get_app_title(),
+            "\u{623f}\u{8cb8}\u{8a66}\u{7b97}\u{5668}"
+        );
+
+        slint::select_bundled_translation("en").expect("en falls back to the source strings");
+        assert_eq!(ui.get_app_title(), "Mortgage Calculator");
+    }
+
+    #[test]
+    fn locale_tags_map_onto_the_bundled_catalogs() {
+        // Script subtag wins where present.
+        assert_eq!(locale_to_catalog("zh-Hans-SG"), "zh-Hans");
+        assert_eq!(locale_to_catalog("zh-Hant-TW"), "zh-Hant");
+        // Otherwise region decides.
+        assert_eq!(locale_to_catalog("zh-TW"), "zh-Hant");
+        assert_eq!(locale_to_catalog("zh-HK"), "zh-Hant");
+        assert_eq!(locale_to_catalog("zh-MO"), "zh-Hant");
+        assert_eq!(locale_to_catalog("zh-CN"), "zh-Hans");
+        assert_eq!(locale_to_catalog("zh-SG"), "zh-Hans");
+        assert_eq!(locale_to_catalog("zh"), "zh-Hans");
+        // Anything else stays on the source strings.
+        assert_eq!(locale_to_catalog("en-US"), "en");
+        assert_eq!(locale_to_catalog("fr-FR"), "en");
+    }
+
+    #[test]
+    fn locale_matching_is_case_insensitive() {
+        assert_eq!(locale_to_catalog("ZH-HANT-TW"), "zh-Hant");
+        assert_eq!(locale_to_catalog("Zh_CN"), "zh-Hans");
     }
 
     #[test]

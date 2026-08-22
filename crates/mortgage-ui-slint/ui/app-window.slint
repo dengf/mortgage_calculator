@@ -159,7 +159,7 @@ component RateField inherits VerticalLayout {
         changed(v) => { root.rate-changed(v); }
     }
     if root.risk-coloring && root.rate >= root.danger-threshold: Text {
-        text: "Above typical market rates";
+        text: @tr("Above typical market rates");
         color: #eab308;
         font-size: 10px;
     }
@@ -261,6 +261,26 @@ component RegionToggle inherits Rectangle {
     }
 }
 
+// Language selector. Deliberately independent of the region toggle above:
+// the language someone reads in and the market they are buying in are
+// different questions. Labels are the endonyms, not translated, so each
+// stays recognisable whichever language is currently active.
+component LanguageToggle inherits Rectangle {
+    in-out property <string> locale: "en";
+    callback changed(string);
+
+    background: #10161f;
+    border-radius: 8px;
+
+    HorizontalLayout {
+        padding: 2px;
+        spacing: 2px;
+        RegionOption { text: "EN"; active: root.locale == "en"; clicked => { root.locale = "en"; root.changed("en"); } }
+        RegionOption { text: "\u{7b80}"; active: root.locale == "zh-Hans"; clicked => { root.locale = "zh-Hans"; root.changed("zh-Hans"); } }
+        RegionOption { text: "\u{7e41}"; active: root.locale == "zh-Hant"; clicked => { root.locale = "zh-Hant"; root.changed("zh-Hant"); } }
+    }
+}
+
 // Top-level "About" entry point, required by the Slint royalty-free
 // license's attribution clause (option a: an About screen/dialog
 // reachable from the app's top-level menu, showing the AboutSlint
@@ -346,16 +366,16 @@ component SavedScenariosPanel inherits VerticalLayout {
 
     spacing: 10px;
 
-    Text { text: "Saved scenarios"; font-weight: 700; font-size: 14px; }
+    Text { text: @tr("Saved scenarios"); font-weight: 700; font-size: 14px; }
 
     HorizontalLayout {
         spacing: 8px;
         LineEdit {
-            placeholder-text: "Scenario name";
+            placeholder-text: @tr("Scenario name");
             text <=> root.name-input;
         }
         AppButton {
-            text: "Save";
+            text: @tr("Save");
             primary: true;
             small: true;
             clicked => {
@@ -370,7 +390,7 @@ component SavedScenariosPanel inherits VerticalLayout {
     if error-text != "": ErrorText { text: error-text; }
 
     if scenarios.length == 0: Text {
-        text: "No saved scenarios yet.";
+        text: @tr("No saved scenarios yet.");
         color: #5c6b80;
         font-size: 12px;
     }
@@ -392,8 +412,8 @@ component SavedScenariosPanel inherits VerticalLayout {
                 horizontal-stretch: 1;
                 overflow: elide;
             }
-            AppButton { text: "Load"; small: true; clicked => { root.load(row.id); } }
-            AppButton { text: "Delete"; small: true; danger: true; clicked => { root.delete(row.id); } }
+            AppButton { text: @tr("Load"); small: true; clicked => { root.load(row.id); } }
+            AppButton { text: @tr("Delete"); small: true; danger: true; clicked => { root.delete(row.id); } }
         }
     }
 }
@@ -436,10 +456,10 @@ component ScheduleTable inherits VerticalLayout {
     HorizontalLayout {
         padding-right: 14px;
         Text { text: show-full ? "Period" : "Year"; color: #92a0b3; font-size: 11px; width: 46px; }
-        Text { text: "Paid"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
-        Text { text: "Principal"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
-        Text { text: "Interest"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
-        Text { text: "Balance"; color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: @tr("Paid"); color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: @tr("Principal"); color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: @tr("Interest"); color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
+        Text { text: @tr("Balance"); color: #92a0b3; font-size: 11px; horizontal-stretch: 1; horizontal-alignment: right; }
     }
 
     // Yearly summary is short (well under 100 rows even at the longest
@@ -496,9 +516,9 @@ component WhatIfPanel inherits VerticalLayout {
 
     spacing: 10px;
 
-    Text { text: "What if?"; font-weight: 700; font-size: 14px; }
+    Text { text: @tr("What if?"); font-weight: 700; font-size: 14px; }
     Text {
-        text: "Flip a habit on to see how it speeds up payoff. Sets the extra payment above.";
+        text: @tr("Flip a habit on to see how it speeds up payoff. Sets the extra payment above.");
         color: #92a0b3;
         font-size: 11px;
         wrap: word-wrap;
@@ -555,7 +575,7 @@ component PayoffChart inherits Rectangle {
     VerticalLayout {
         spacing: 8px;
 
-        Text { text: "Remaining balance over time"; font-weight: 700; font-size: 14px; }
+        Text { text: @tr("Remaining balance over time"); font-weight: 700; font-size: 14px; }
 
         HorizontalLayout {
             spacing: 14px;
@@ -601,8 +621,8 @@ component PayoffChart inherits Rectangle {
         }
 
         HorizontalLayout {
-            Text { text: "Today"; color: #5c6b80; font-size: 10px; horizontal-stretch: 1; }
-            Text { text: "Payoff"; color: #5c6b80; font-size: 10px; horizontal-alignment: right; }
+            Text { text: @tr("Today"); color: #5c6b80; font-size: 10px; horizontal-stretch: 1; }
+            Text { text: @tr("Payoff"); color: #5c6b80; font-size: 10px; horizontal-alignment: right; }
         }
     }
 }
@@ -621,14 +641,14 @@ component EquityTimeline inherits VerticalLayout {
 
     spacing: 10px;
 
-    Text { text: "Payoff timeline"; font-weight: 700; font-size: 14px; }
+    Text { text: @tr("Payoff timeline"); font-weight: 700; font-size: 14px; }
 
     HorizontalLayout {
         spacing: 14px;
         Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #4f8cff; }
-        Text { text: "Remaining principal"; color: #92a0b3; font-size: 11px; }
+        Text { text: @tr("Remaining principal"); color: #92a0b3; font-size: 11px; }
         Rectangle { width: 10px; height: 10px; border-radius: 5px; background: #ef4444; }
-        Text { text: "Interest paid so far"; color: #92a0b3; font-size: 11px; }
+        Text { text: @tr("Interest paid so far"); color: #92a0b3; font-size: 11px; }
         Rectangle { horizontal-stretch: 1; }
     }
 
@@ -686,8 +706,8 @@ component EquityTimeline inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        Text { text: "Today"; color: #5c6b80; font-size: 10px; horizontal-stretch: 1; }
-        Text { text: "Payoff"; color: #5c6b80; font-size: 10px; horizontal-alignment: right; }
+        Text { text: @tr("Today"); color: #5c6b80; font-size: 10px; horizontal-stretch: 1; }
+        Text { text: @tr("Payoff"); color: #5c6b80; font-size: 10px; horizontal-alignment: right; }
     }
 
     Text { text: root.month-label; font-weight: 700; font-size: 13px; color: white; }
@@ -696,17 +716,17 @@ component EquityTimeline inherits VerticalLayout {
         spacing: 20px;
         VerticalLayout {
             spacing: 2px;
-            Text { text: "Balance remaining"; color: #92a0b3; font-size: 11px; }
+            Text { text: @tr("Balance remaining"); color: #92a0b3; font-size: 11px; }
             Text { text: root.balance-label; color: #4f8cff; font-weight: 700; font-size: 14px; }
         }
         VerticalLayout {
             spacing: 2px;
-            Text { text: "Interest paid"; color: #92a0b3; font-size: 11px; }
+            Text { text: @tr("Interest paid"); color: #92a0b3; font-size: 11px; }
             Text { text: root.interest-label; color: #ef4444; font-weight: 700; font-size: 14px; }
         }
         VerticalLayout {
             spacing: 2px;
-            Text { text: "Equity"; color: #92a0b3; font-size: 11px; }
+            Text { text: @tr("Equity"); color: #92a0b3; font-size: 11px; }
             Text { text: root.equity-label; color: #7ee787; font-weight: 700; font-size: 14px; }
         }
     }
@@ -761,7 +781,11 @@ component EquityTimeline inherits VerticalLayout {
 }
 
 export component AppWindow inherits Window {
-    title: "Mortgage Calculator";
+    // Exposed rather than inlined into `title` so the value is readable
+    // from Rust: `title` is a builtin Window property with no generated
+    // getter, which leaves bundled translations untestable otherwise.
+    out property <string> app-title: @tr("Mortgage Calculator");
+    title: root.app-title;
     // Title bar and taskbar entry on desktop. iOS and Android take their
     // icons from the app bundle instead, and macOS from the .app -- so this
     // only actually shows up on Linux, Windows, and `cargo run`.
@@ -778,6 +802,11 @@ export component AppWindow inherits Window {
     // lib.rs); the header toggle lets the user override it.
     in-out property <string> region: "US";
     callback region-changed(string);
+
+    // Current UI language; the Rust side applies it with
+    // slint::select_bundled_translation.
+    in-out property <string> locale: "en";
+    callback locale-changed(string);
 
     // --- Payment ---
     in-out property <string> principal: "400000";
@@ -975,13 +1004,18 @@ export component AppWindow inherits Window {
 
         HorizontalLayout {
             Text {
-                text: "Mortgage Calculator";
+                text: @tr("Mortgage Calculator");
                 font-size: 22px;
                 font-weight: 800;
                 color: white;
             }
             Rectangle { horizontal-stretch: 1; }
             AboutButton { }
+            Rectangle { width: 8px; }
+            LanguageToggle {
+                locale <=> root.locale;
+                changed(l) => { root.locale-changed(l); }
+            }
             Rectangle { width: 8px; }
             RegionToggle {
                 region <=> root.region;
@@ -997,11 +1031,11 @@ export component AppWindow inherits Window {
             HorizontalLayout {
                 padding: 4px;
                 spacing: 4px;
-                TabBarButton { text: "Payment"; active: current-tab == 0; clicked => { root.current-tab = 0; } }
-                TabBarButton { text: "Amortization"; active: current-tab == 1; clicked => { root.current-tab = 1; } }
-                TabBarButton { text: "Affordability"; active: current-tab == 2; clicked => { root.current-tab = 2; } }
-                TabBarButton { text: "Refinance"; active: current-tab == 3; clicked => { root.current-tab = 3; } }
-                TabBarButton { text: "Compare"; active: current-tab == 4; clicked => { root.current-tab = 4; } }
+                TabBarButton { text: @tr("Payment"); active: current-tab == 0; clicked => { root.current-tab = 0; } }
+                TabBarButton { text: @tr("Amortization"); active: current-tab == 1; clicked => { root.current-tab = 1; } }
+                TabBarButton { text: @tr("Affordability"); active: current-tab == 2; clicked => { root.current-tab = 2; } }
+                TabBarButton { text: @tr("Refinance"); active: current-tab == 3; clicked => { root.current-tab = 3; } }
+                TabBarButton { text: @tr("Compare"); active: current-tab == 4; clicked => { root.current-tab = 4; } }
             }
         }
 
@@ -1048,7 +1082,7 @@ export component AppWindow inherits Window {
             }
 
             if root.region == "SG": Card {
-                Text { text: "Singapore"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("Singapore"); font-weight: 700; font-size: 14px; }
 
                 Field {
                     label: "Gross monthly income";
@@ -1060,7 +1094,7 @@ export component AppWindow inherits Window {
                 }
                 HorizontalLayout {
                     Text {
-                        text: "HDB flat / EC (MSR applies)";
+                        text: @tr("HDB flat / EC (MSR applies)");
                         color: #92a0b3;
                         font-size: 12px;
                         vertical-alignment: center;
@@ -1094,7 +1128,7 @@ export component AppWindow inherits Window {
 
                 HorizontalLayout {
                     Text {
-                        text: "Use CPF OA for monthly payment";
+                        text: @tr("Use CPF OA for monthly payment");
                         color: #92a0b3;
                         font-size: 12px;
                         vertical-alignment: center;
@@ -1111,7 +1145,7 @@ export component AppWindow inherits Window {
             }
 
             if root.region == "SG": Card {
-                Text { text: "Upfront costs (BSD/ABSD)"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("Upfront costs (BSD/ABSD)"); font-weight: 700; font-size: 14px; }
                 Field {
                     label: "Home purchase price";
                     LineEdit { input-type: InputType.decimal; text <=> root.sg-home-price; edited => { root.recompute(); } }
@@ -1121,7 +1155,7 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         spacing: 4px;
                         horizontal-stretch: 1;
-                        Text { text: "Residency"; color: #92a0b3; font-size: 12px; }
+                        Text { text: @tr("Residency"); color: #92a0b3; font-size: 12px; }
                         ComboBox {
                             model: ["Citizen", "PR", "Foreigner"];
                             current-value <=> root.sg-residency;
@@ -1131,7 +1165,7 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         spacing: 4px;
                         horizontal-stretch: 1;
-                        Text { text: "Property count"; color: #92a0b3; font-size: 12px; }
+                        Text { text: @tr("Property count"); color: #92a0b3; font-size: 12px; }
                         ComboBox {
                             model: ["1st", "2nd", "3rd+"];
                             current-value <=> root.sg-property-count;
@@ -1147,7 +1181,7 @@ export component AppWindow inherits Window {
             }
 
             if root.region == "US": Card {
-                Text { text: "United States"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("United States"); font-weight: 700; font-size: 14px; }
 
                 Field {
                     label: "Home price";
@@ -1199,7 +1233,7 @@ export component AppWindow inherits Window {
 
                 HorizontalLayout {
                     Text {
-                        text: "Show net cost after tax deductions";
+                        text: @tr("Show net cost after tax deductions");
                         color: #92a0b3;
                         font-size: 12px;
                         vertical-alignment: center;
@@ -1274,7 +1308,7 @@ export component AppWindow inherits Window {
                 ResultRow { label: "Total paid"; value: root.amort-total-paid-result; }
                 ResultRow { label: "Total interest"; value: root.amort-total-interest-result; }
                 if root.amort-show-impact: Text {
-                    text: "Extra payments save " + root.amort-periods-saved + " payments and " + root.amort-interest-saved + " in interest (payoff in " + root.amort-new-payoff + " payments)";
+                    text: @tr("Extra payments save ") + root.amort-periods-saved + " payments and " + root.amort-interest-saved + " in interest (payoff in " + root.amort-new-payoff + " payments)";
                     color: #7ee787;
                     font-size: 12px;
                     wrap: word-wrap;
@@ -1331,7 +1365,7 @@ export component AppWindow inherits Window {
         if current-tab == 2: VerticalLayout {
             spacing: 16px;
             Card {
-                Text { text: "Your finances"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("Your finances"); font-weight: 700; font-size: 14px; }
                 Field {
                     label: "Gross monthly income";
                     LineEdit { input-type: InputType.decimal; text <=> root.aff-income; edited => { root.aff-recompute(); } }
@@ -1347,7 +1381,7 @@ export component AppWindow inherits Window {
             }
 
             Card {
-                Text { text: "Loan & property costs"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("Loan & property costs"); font-weight: 700; font-size: 14px; }
                 RateField {
                     label: "Interest rate (%)";
                     rate <=> root.aff-rate-percent-value;
@@ -1509,12 +1543,12 @@ export component AppWindow inherits Window {
             }
 
             Card {
-                Text { text: "Scenario A"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("Scenario A"); font-weight: 700; font-size: 14px; }
                 LineEdit {
                     text <=> root.cmp-a-label;
                 }
                 CheckBox {
-                    text: "Floating rate";
+                    text: @tr("Floating rate");
                     checked <=> root.cmp-a-floating;
                     toggled => { root.cmp-recompute(); }
                 }
@@ -1556,12 +1590,12 @@ export component AppWindow inherits Window {
             }
 
             Card {
-                Text { text: "Scenario B"; font-weight: 700; font-size: 14px; }
+                Text { text: @tr("Scenario B"); font-weight: 700; font-size: 14px; }
                 LineEdit {
                     text <=> root.cmp-b-label;
                 }
                 CheckBox {
-                    text: "Floating rate";
+                    text: @tr("Floating rate");
                     checked <=> root.cmp-b-floating;
                     toggled => { root.cmp-recompute(); }
                 }
