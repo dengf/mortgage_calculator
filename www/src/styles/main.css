@@ -881,3 +881,8 @@ body {
   line-height: 1.55;
   color: var(--text, #e6ecf3);
 }
+
+/* The privacy notice, linked from the claim it belongs to. */
+.intro-privacy-link {
+  white-space: nowrap;
+}
