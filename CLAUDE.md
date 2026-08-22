@@ -58,8 +58,6 @@ rather than a sign JavaScript is the right place.
 
 Named so they are not mistaken for precedent:
 
-- `www/src/components/AmortizationSchedule.jsx` -- yearly aggregation of the
-  schedule
 - `www/src/components/ComparisonView.jsx` -- picking the cheapest row and
   computing the deltas between scenarios
 - `www/src/components/RefinanceCalculator.jsx` -- extra periods from term

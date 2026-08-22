@@ -72,3 +72,55 @@ describe('AmortizationSchedule saved scenarios', () => {
     expect(document.querySelector('.field-derived-value').textContent).toBe('$250,000.00');
   });
 });
+
+// The yearly view is what the tab shows by default, and it had no coverage
+// at all. It used to be summed in the component with f64 reduces over the
+// period rows; it now comes from the same call that produced them.
+describe('AmortizationSchedule yearly summary', () => {
+  const row = (period, balance) => ({
+    period,
+    payment: 1000,
+    extra_payment: 0,
+    principal_portion: 400,
+    interest_portion: 600,
+    remaining_balance: balance,
+  });
+
+  function scheduleWasm(schedule) {
+    return {
+      ...scenarioBindings(),
+      calculate_amortization_schedule: vi.fn(() => schedule),
+      calculate_extra_payment_impact: vi.fn(() => ({ error: null })),
+      list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+    };
+  }
+
+  it('renders the years the module returned', async () => {
+    renderControlled(AmortizationSchedule, {
+      wasmModule: scheduleWasm({
+        rows: [row(1, 99600), row(2, 99200)],
+        yearly: [
+          { year: 1, paid: 12000, principal: 4800, interest: 7200, remaining_balance: 95200 },
+          { year: 2, paid: 12000, principal: 4800, interest: 7200, remaining_balance: 90400 },
+        ],
+        error: null,
+      }),
+      region: 'US',
+    });
+
+    expect(await screen.findByText('$95,200.00')).toBeInTheDocument();
+    expect(screen.getByText('$90,400.00')).toBeInTheDocument();
+  });
+
+  it('shows no yearly table when the module returned no years', async () => {
+    renderControlled(AmortizationSchedule, {
+      wasmModule: scheduleWasm({ rows: [], yearly: [], error: null }),
+      region: 'US',
+    });
+
+    // Previously the component would have derived an empty list itself; now
+    // an absent grouping must not render an empty table either.
+    expect(await screen.findByDisplayValue('500,000')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+});

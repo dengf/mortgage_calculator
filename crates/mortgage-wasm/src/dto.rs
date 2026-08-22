@@ -50,9 +50,22 @@ pub struct AmortizationRowDto {
     pub remaining_balance: f64,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct AmortizationYearDto {
+    pub year: u32,
+    pub paid: f64,
+    pub principal: f64,
+    pub interest: f64,
+    pub remaining_balance: f64,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct AmortizationResult {
     pub rows: Vec<AmortizationRowDto>,
+    /// The same schedule grouped into years. Returned alongside the rows
+    /// rather than from a second binding: the yearly figures are shown
+    /// beside the periods they sum, so they must come from one calculation.
+    pub yearly: Vec<AmortizationYearDto>,
     pub error: Option<String>,
     /// The same failure as `error`, but as a code plus its values so a
     /// translated UI can compose the sentence itself.

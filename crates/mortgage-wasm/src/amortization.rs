@@ -5,7 +5,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::convert::{decimal_to_f64, f64_to_decimal};
 use crate::dto::{
-    AmortizationParams, AmortizationResult, AmortizationRowDto, ExtraPaymentImpactResult,
+    AmortizationParams, AmortizationResult, AmortizationRowDto, AmortizationYearDto,
+    ExtraPaymentImpactResult,
 };
 use crate::loan::build_loan;
 use crate::message::Message;
@@ -47,15 +48,32 @@ fn schedule_from_params(params: AmortizationParams) -> AmortizationResult {
     let extra_payment = f64_to_decimal(params.extra_payment).max(Decimal::ZERO);
 
     match mortgage_calc::amortization::schedule(&loan, extra_payment) {
-        Ok(rows) => AmortizationResult {
-            rows: rows.into_iter().map(to_row_dto).collect(),
-            error: None,
-            error_message: None,
-        },
+        Ok(rows) => {
+            let yearly = mortgage_calc::amortization::summarize_by_year(
+                &rows,
+                loan.frequency().periods_per_year(),
+            );
+            AmortizationResult {
+                rows: rows.into_iter().map(to_row_dto).collect(),
+                yearly: yearly.into_iter().map(to_year_dto).collect(),
+                error: None,
+                error_message: None,
+            }
+        }
         Err(e) => AmortizationResult {
             error: Some(e.to_string()),
             ..Default::default()
         },
+    }
+}
+
+fn to_year_dto(year: mortgage_calc::amortization::AmortizationYear) -> AmortizationYearDto {
+    AmortizationYearDto {
+        year: year.year,
+        paid: decimal_to_f64(year.paid),
+        principal: decimal_to_f64(year.principal),
+        interest: decimal_to_f64(year.interest),
+        remaining_balance: decimal_to_f64(year.remaining_balance),
     }
 }
 
