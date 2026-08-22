@@ -35,7 +35,13 @@ thiserror = "2.0"
 async-trait = "0.1"
 
 [profile.release]
-opt-level = 3
+# Size, not speed. This is a web app whose payload was 80% wasm binary, and
+# nothing here is compute-bound: the heaviest workload in the repo — 312,000
+# amortization rows plus 200 Singapore affordability solves, each bisecting
+# 60 times through progressive stamp duty — runs in 43ms at opt-level 3 and
+# 47ms at "z". A real user generates ~1,560 rows once, so that 11% costs
+# roughly a quarter of a millisecond, while the download drops by a third.
+opt-level = "z"
 lto = "fat"
 codegen-units = 1
 panic = "abort"
