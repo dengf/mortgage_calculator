@@ -1,11 +1,12 @@
 import React from 'react';
+import { LOCALES, useI18n } from '../i18n';
 
 const TABS = [
-  { id: 'payment', label: 'Payment' },
-  { id: 'amortization', label: 'Amortization' },
-  { id: 'affordability', label: 'Affordability' },
-  { id: 'refinance', label: 'Refinance' },
-  { id: 'compare', label: 'Compare' },
+  { id: 'payment', key: 'nav.payment' },
+  { id: 'amortization', key: 'nav.amortization' },
+  { id: 'affordability', key: 'nav.affordability' },
+  { id: 'refinance', key: 'nav.refinance' },
+  { id: 'compare', key: 'nav.compare' },
 ];
 
 const REGIONS = [
@@ -14,6 +15,8 @@ const REGIONS = [
 ];
 
 export default function Header({ activeTab, onTabChange, region, onRegionChange }) {
+  const { t, locale, setLocale } = useI18n();
+
   return (
     <header className="app-header">
       <div className="app-title">
@@ -21,23 +24,45 @@ export default function Header({ activeTab, onTabChange, region, onRegionChange 
             served from a subpath (e.g. a GitHub Pages project site).
             Decorative: the adjacent text already names the app. */}
         <img className="app-title-mark" src="icon-192.png" alt="" width="32" height="32" />
-        Mortgage Calculator
+        {t('app.title')}
       </div>
-      {onRegionChange && (
-        <div className="app-regions" role="group" aria-label="Region">
-          {REGIONS.map((r) => (
+
+      <div className="app-switches">
+        {/* Language and region are separate axes on purpose: someone reading
+            in Chinese may well be buying in the US, and vice versa. */}
+        <div className="app-regions" role="group" aria-label={t('app.language')}>
+          {LOCALES.map((l) => (
             <button
-              key={r.id}
+              key={l.id}
               type="button"
-              className={r.id === region ? 'app-region active' : 'app-region'}
-              aria-pressed={r.id === region}
-              onClick={() => onRegionChange(r.id)}
+              className={l.id === locale ? 'app-region active' : 'app-region'}
+              aria-pressed={l.id === locale}
+              title={l.name}
+              lang={l.id}
+              onClick={() => setLocale(l.id)}
             >
-              {r.label}
+              {l.label}
             </button>
           ))}
         </div>
-      )}
+
+        {onRegionChange && (
+          <div className="app-regions" role="group" aria-label={t('app.region')}>
+            {REGIONS.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className={r.id === region ? 'app-region active' : 'app-region'}
+                aria-pressed={r.id === region}
+                onClick={() => onRegionChange(r.id)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <nav className="app-tabs">
         {TABS.map((tab) => (
           <button
@@ -45,7 +70,7 @@ export default function Header({ activeTab, onTabChange, region, onRegionChange 
             className={tab.id === activeTab ? 'app-tab active' : 'app-tab'}
             onClick={() => onTabChange(tab.id)}
           >
-            {tab.label}
+            {t(tab.key)}
           </button>
         ))}
       </nav>

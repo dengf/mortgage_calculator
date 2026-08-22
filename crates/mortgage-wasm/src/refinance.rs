@@ -60,6 +60,7 @@ fn refinance_from_params(params: RefinanceParams) -> RefinanceResultDto {
             total_interest_on_new_loan: Some(decimal_to_f64(result.total_interest_on_new_loan)),
             lifetime_savings: Some(decimal_to_f64(result.lifetime_savings)),
             error: None,
+            error_message: None,
         },
         Err(e) => RefinanceResultDto {
             error: Some(e.to_string()),

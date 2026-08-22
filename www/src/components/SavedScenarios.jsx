@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useI18n } from '../i18n';
 
 export default function SavedScenarios({ wasmModule, calculatorKind, getCurrentInputs, onLoad }) {
+  const { t } = useI18n();
   const [scenarios, setScenarios] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -56,26 +58,26 @@ export default function SavedScenarios({ wasmModule, calculatorKind, getCurrentI
   return (
     <div className="saved-scenarios">
       <div className="saved-scenarios-header">
-        <h3>Saved scenarios</h3>
+        <h3>{t('saved.title')}</h3>
         {isSaving ? (
           <div className="save-form">
             <input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              placeholder="Scenario name"
+              placeholder={t('saved.namePlaceholder')}
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             />
             <button className="link-button" onClick={handleSave}>
-              Save
+              {t('saved.save')}
             </button>
             <button className="link-button" onClick={() => setIsSaving(false)}>
-              Cancel
+              {t('saved.cancel')}
             </button>
           </div>
         ) : (
           <button className="link-button" onClick={() => setIsSaving(true)}>
-            + Save current as...
+            {t('saved.saveAs')}
           </button>
         )}
       </div>
@@ -83,7 +85,7 @@ export default function SavedScenarios({ wasmModule, calculatorKind, getCurrentI
       {error && <div className="error">{error}</div>}
 
       {scenarios.length === 0 ? (
-        <p className="saved-scenarios-empty">No saved scenarios yet.</p>
+        <p className="saved-scenarios-empty">{t('saved.empty')}</p>
       ) : (
         <ul className="saved-scenarios-list">
           {scenarios.map((s) => (
@@ -91,10 +93,10 @@ export default function SavedScenarios({ wasmModule, calculatorKind, getCurrentI
               <span className="scenario-name">{s.name}</span>
               <span className="scenario-date">{new Date(s.created_at).toLocaleDateString()}</span>
               <button className="link-button" onClick={() => handleLoad(s.id)}>
-                Load
+                {t('saved.load')}
               </button>
               <button className="link-button danger" onClick={() => handleDelete(s.id)}>
-                Delete
+                {t('saved.delete')}
               </button>
             </li>
           ))}

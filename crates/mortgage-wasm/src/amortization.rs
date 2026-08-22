@@ -32,7 +32,8 @@ fn schedule_from_params(params: AmortizationParams) -> AmortizationResult {
         Ok(loan) => loan,
         Err(e) => {
             return AmortizationResult {
-                error: Some(e),
+                error: Some(e.text.clone()),
+                error_message: Some(e),
                 ..Default::default()
             }
         }
@@ -44,6 +45,7 @@ fn schedule_from_params(params: AmortizationParams) -> AmortizationResult {
         Ok(rows) => AmortizationResult {
             rows: rows.into_iter().map(to_row_dto).collect(),
             error: None,
+            error_message: None,
         },
         Err(e) => AmortizationResult {
             error: Some(e.to_string()),
@@ -86,7 +88,8 @@ fn extra_payment_impact_from_params(params: AmortizationParams) -> ExtraPaymentI
         Ok(loan) => loan,
         Err(e) => {
             return ExtraPaymentImpactResult {
-                error: Some(e),
+                error: Some(e.text.clone()),
+                error_message: Some(e),
                 ..Default::default()
             }
         }
@@ -103,6 +106,7 @@ fn extra_payment_impact_from_params(params: AmortizationParams) -> ExtraPaymentI
             total_interest_with_extra: Some(decimal_to_f64(impact.total_interest_with_extra)),
             interest_saved: Some(decimal_to_f64(impact.interest_saved)),
             error: None,
+            error_message: None,
         },
         Err(e) => ExtraPaymentImpactResult {
             error: Some(e.to_string()),

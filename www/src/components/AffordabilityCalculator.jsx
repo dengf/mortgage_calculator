@@ -2,9 +2,11 @@ import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
+import { useI18n } from '../i18n';
 
 
 export default function AffordabilityCalculator({ wasmModule, region }) {
+  const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
   const [income, setIncome] = useState(10000);
@@ -35,15 +37,15 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Gross monthly income" value={income} onChange={setIncome} suffix={money} min={0} />
-        <NumberField label="Other monthly debts" value={debts} onChange={setDebts} suffix={money} min={0} />
-        <NumberField label="Down payment" value={downPayment} onChange={setDownPayment} suffix={money} min={0} />
-        <NumberField label="Interest rate" value={rate} onChange={setRate} suffix="%" min={0} />
-        <NumberField label="Loan term" value={termYears} onChange={setTermYears} suffix="years" min={1} />
-        <NumberField label="Max debt-to-income" value={maxDti} onChange={setMaxDti} suffix="%" min={1} />
-        <NumberField label="Property tax rate" value={taxRate} onChange={setTaxRate} suffix="%/yr" min={0} />
-        <NumberField label="Annual insurance" value={insurance} onChange={setInsurance} suffix={money} min={0} />
-        <NumberField label="Monthly HOA" value={hoa} onChange={setHoa} suffix={money} min={0} />
+        <NumberField label={t('aff.income')} value={income} onChange={setIncome} suffix={money} min={0} />
+        <NumberField label={t('aff.debts')} value={debts} onChange={setDebts} suffix={money} min={0} />
+        <NumberField label={t('aff.downPayment')} value={downPayment} onChange={setDownPayment} suffix={money} min={0} />
+        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
+        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
+        <NumberField label={t('aff.maxDti')} value={maxDti} onChange={setMaxDti} suffix="%" min={1} />
+        <NumberField label={t('aff.propertyTaxRate')} value={taxRate} onChange={setTaxRate} suffix="%/yr" min={0} />
+        <NumberField label={t('aff.insurance')} value={insurance} onChange={setInsurance} suffix={money} min={0} />
+        <NumberField label={t('aff.hoa')} value={hoa} onChange={setHoa} suffix={money} min={0} />
       </div>
 
       <div className="panel-results">
@@ -51,23 +53,23 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
         {result && !result.error && (
           <div className="stat-grid">
             <div className="stat stat-primary">
-              <span className="stat-label">Max home price</span>
+              <span className="stat-label">{t('aff.maxHomePrice')}</span>
               <span className="stat-value">{formatMoney(result.max_home_price)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Max loan amount</span>
+              <span className="stat-label">{t('aff.maxLoan')}</span>
               <span className="stat-value">{formatMoney(result.max_loan_amount)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Principal &amp; interest</span>
+              <span className="stat-label">{t('aff.principalAndInterest')}</span>
               <span className="stat-value">{formatMoney(result.max_principal_and_interest)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Front-end DTI</span>
+              <span className="stat-label">{t('aff.frontEndDti')}</span>
               <span className="stat-value">{result.front_end_dti_percent.toFixed(1)}%</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Back-end DTI</span>
+              <span className="stat-label">{t('aff.backEndDti')}</span>
               <span className="stat-value">{result.back_end_dti_percent.toFixed(1)}%</span>
             </div>
           </div>

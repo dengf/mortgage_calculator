@@ -60,6 +60,7 @@ fn affordability_from_params(params: AffordabilityParams) -> AffordabilityResult
             front_end_dti_percent: Some(rate_to_percent(result.front_end_dti)),
             back_end_dti_percent: Some(rate_to_percent(result.back_end_dti)),
             error: None,
+            error_message: None,
         },
         Err(e) => AffordabilityResultDto {
             error: Some(e.to_string()),

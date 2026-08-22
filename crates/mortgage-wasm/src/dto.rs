@@ -7,6 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::message::Message;
+
 /// Shared loan terms: principal, rate, term, and payment cadence.
 #[derive(Debug, Clone, Deserialize)]
 pub struct LoanParams {
@@ -25,6 +27,9 @@ pub struct PaymentSummaryResult {
     pub total_paid: Option<f64>,
     pub total_interest: Option<f64>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -49,6 +54,9 @@ pub struct AmortizationRowDto {
 pub struct AmortizationResult {
     pub rows: Vec<AmortizationRowDto>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -60,6 +68,9 @@ pub struct ExtraPaymentImpactResult {
     pub total_interest_with_extra: Option<f64>,
     pub interest_saved: Option<f64>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -86,6 +97,9 @@ pub struct AffordabilityResultDto {
     pub front_end_dti_percent: Option<f64>,
     pub back_end_dti_percent: Option<f64>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -109,6 +123,9 @@ pub struct RefinanceResultDto {
     pub total_interest_on_new_loan: Option<f64>,
     pub lifetime_savings: Option<f64>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 /// A rate, expressed either as a flat fixed percentage or as a floating
@@ -164,6 +181,9 @@ pub struct ComparisonRowDto {
 pub struct ComparisonResult {
     pub rows: Vec<ComparisonRowDto>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 /// A saved scenario's inputs are stored as an opaque JSON string (see
@@ -301,7 +321,11 @@ pub struct SingaporeResult {
     pub total_cash_required: f64,
     /// Set when an HDB loan is selected for a property that can't have one.
     pub loan_type_warning: Option<String>,
+    /// The same warning as a translation code.
+    pub loan_type_warning_code: Option<String>,
     /// Human-readable breaches of the MAS ceilings, in display order.
     pub warnings: Vec<String>,
+    /// The same breaches as translation codes, in the same order.
+    pub warning_codes: Vec<String>,
     pub error: Option<String>,
 }

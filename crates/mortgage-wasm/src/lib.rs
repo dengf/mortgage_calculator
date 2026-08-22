@@ -33,6 +33,7 @@ pub mod comparison;
 pub mod convert;
 pub mod dto;
 pub mod loan;
+pub mod message;
 pub mod payment;
 pub mod refinance;
 pub mod singapore;
@@ -51,6 +52,7 @@ pub use dto::{
     SaveScenarioParams, SaveScenarioResult, ScenarioDto, ScenarioListResult, ScenarioResult,
     SingaporeParams, SingaporeResult, UnitedStatesParams, UnitedStatesResult,
 };
+pub use message::Message;
 pub use payment::calculate_payment;
 pub use refinance::calculate_refinance;
 pub use singapore::calculate_singapore;

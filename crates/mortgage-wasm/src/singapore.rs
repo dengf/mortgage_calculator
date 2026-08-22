@@ -60,6 +60,7 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
     if p.loan_type == "HDB Loan" && !singapore::hdb_loan_eligible(p.is_hdb_or_ec) {
         result.loan_type_warning =
             Some("HDB loans are only available for HDB flats/ECs bought from HDB.".to_string());
+        result.loan_type_warning_code = Some("warn.hdbLoanIneligible".to_string());
     }
 
     // TDSR/MSR and the CPF split both need a payment to work from. Stamp
@@ -75,6 +76,7 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
             result.tdsr_near_limit = check.tdsr.near_limit;
             if check.tdsr.exceeded {
                 result.warnings.push("Exceeds MAS TDSR limit (55%).".into());
+                result.warning_codes.push("warn.tdsrExceeded".into());
             }
 
             if let Some(msr) = check.msr {
@@ -85,6 +87,7 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
                     result
                         .warnings
                         .push("Exceeds MAS MSR limit (30%) for HDB/EC.".into());
+                    result.warning_codes.push("warn.msrExceeded".into());
                 }
             }
         }

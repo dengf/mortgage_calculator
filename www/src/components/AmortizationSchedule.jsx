@@ -3,6 +3,7 @@ import NumberField from './NumberField';
 import SavedScenarios from './SavedScenarios';
 import { BalanceChart } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
+import { useI18n } from '../i18n';
 
 
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
@@ -23,6 +24,7 @@ function summarizeByYear(rows, periodsPerYear) {
 }
 
 export default function AmortizationSchedule({ wasmModule, region }) {
+  const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
   const [principal, setPrincipal] = useState(400000);
@@ -52,19 +54,19 @@ export default function AmortizationSchedule({ wasmModule, region }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label="Home loan amount" value={principal} onChange={setPrincipal} suffix={money} min={0} />
-        <NumberField label="Interest rate" value={rate} onChange={setRate} suffix="%" min={0} />
-        <NumberField label="Loan term" value={termYears} onChange={setTermYears} suffix="years" min={1} />
+        <NumberField label={t('field.loanAmount')} value={principal} onChange={setPrincipal} suffix={money} min={0} />
+        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
+        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
         <label className="field">
-          <span className="field-label">Payment frequency</span>
+          <span className="field-label">{t('field.paymentFrequency')}</span>
           <select className="field-select" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="monthly">Monthly</option>
-            <option value="biweekly">Bi-weekly</option>
-            <option value="weekly">Weekly</option>
+            <option value="monthly">{t('freq.monthly')}</option>
+            <option value="biweekly">{t('freq.biweekly')}</option>
+            <option value="weekly">{t('freq.weekly')}</option>
           </select>
         </label>
         <NumberField
-          label="Extra payment per period"
+          label={t('amort.extraPayment')}
           value={extraPayment}
           onChange={setExtraPayment}
           suffix={money}
@@ -75,16 +77,16 @@ export default function AmortizationSchedule({ wasmModule, region }) {
       {impact && !impact.error && (
         <div className="stat-grid">
           <div className="stat stat-primary">
-            <span className="stat-label">Payoff time saved</span>
-            <span className="stat-value">{impact.periods_saved} payments</span>
+            <span className="stat-label">{t('amort.timeSaved')}</span>
+            <span className="stat-value">{t('amort.payments', { count: impact.periods_saved })}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">Interest saved</span>
+            <span className="stat-label">{t('amort.interestSaved')}</span>
             <span className="stat-value">{formatMoney(impact.interest_saved)}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">New payoff</span>
-            <span className="stat-value">{impact.payoff_periods} payments</span>
+            <span className="stat-label">{t('amort.newPayoff')}</span>
+            <span className="stat-value">{t('amort.payments', { count: impact.payoff_periods })}</span>
           </div>
         </div>
       )}
@@ -103,19 +105,19 @@ export default function AmortizationSchedule({ wasmModule, region }) {
       {yearlyRows.length > 0 && (
         <div className="schedule-table-wrap">
           <div className="schedule-table-header">
-            <h3>{showFullSchedule ? 'Full schedule' : 'Yearly summary'}</h3>
+            <h3>{showFullSchedule ? t('amort.fullSchedule') : t('amort.yearlySummary')}</h3>
             <button className="link-button" onClick={() => setShowFullSchedule((v) => !v)}>
-              {showFullSchedule ? 'Show yearly summary' : 'Show every payment'}
+              {showFullSchedule ? t('amort.showYearly') : t('amort.showEvery')}
             </button>
           </div>
           <table className="schedule-table">
             <thead>
               <tr>
-                <th>{showFullSchedule ? 'Period' : 'Year'}</th>
-                <th>Paid</th>
-                <th>Principal</th>
-                <th>Interest</th>
-                <th>Balance</th>
+                <th>{showFullSchedule ? t('amort.period') : t('amort.year')}</th>
+                <th>{t('amort.paid')}</th>
+                <th>{t('amort.principal')}</th>
+                <th>{t('amort.interest')}</th>
+                <th>{t('amort.balance')}</th>
               </tr>
             </thead>
             <tbody>
