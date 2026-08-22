@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import ComparisonView from './ComparisonView';
 import { I18nProvider } from '../i18n';
+import { renderControlled } from '../test/controlled';
 
 const preset = (label, rate, term) => ({
   label,
@@ -137,5 +139,57 @@ describe('ComparisonView trade-off summary', () => {
     );
     await screen.findByText('30-Year Fixed');
     expect(document.querySelector('.cmp-tradeoff')).toBeNull();
+  });
+});
+
+// Loading a saved comparison called setPrincipal/setFrequency, two setters
+// that stopped existing when price and deposit moved into the shared
+// scenario. Every Load click threw a ReferenceError and took the tab down.
+// This shipped.
+describe('ComparisonView saved scenarios', () => {
+  const savedWasm = (inputs) => ({
+    get_common_rate_presets: vi.fn(() => [preset('30-Year Fixed', 6.5, 30)]),
+    calculate_comparison: vi.fn(() => ({ rows: [], error: null })),
+    list_scenarios: vi.fn(async () => ({
+      scenarios: [{ id: 's1', name: 'Saved run', created_at: Date.now() }],
+      error: null,
+    })),
+    load_scenario: vi.fn(async () => ({
+      scenario: { inputs_json: JSON.stringify(inputs) },
+      error: null,
+    })),
+  });
+
+  it('restores price and deposit from a saved comparison', async () => {
+    const user = userEvent.setup();
+    renderControlled(ComparisonView, {
+      wasmModule: savedWasm({
+        homePrice: 900000,
+        downPayment: 180000,
+        frequency: 'biweekly',
+        entries: [],
+      }),
+      region: 'US',
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Load' }));
+
+    expect(await screen.findByDisplayValue('900,000')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('180,000')).toBeInTheDocument();
+  });
+
+  it('restores a record saved before the scenario held a deposit', async () => {
+    const user = userEvent.setup();
+    renderControlled(ComparisonView, {
+      wasmModule: savedWasm({ principal: 250000, frequency: 'monthly', entries: [] }),
+      region: 'US',
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Load' }));
+
+    // The split was never recorded, so the saved loan becomes the price and
+    // the deposit is zero -- no figure invented on the user's behalf.
+    expect(await screen.findByDisplayValue('250,000')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0')).toBeInTheDocument();
   });
 });
