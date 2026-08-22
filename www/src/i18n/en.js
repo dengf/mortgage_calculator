@@ -27,6 +27,8 @@ export default {
 
   // Shared field labels
   'field.loanAmount': 'Home loan amount',
+  'field.homePrice': 'Home price',
+  'field.downPayment': 'Down payment',
   'field.interestRate': 'Interest rate',
   'field.loanTerm': 'Loan term',
   'field.paymentFrequency': 'Payment frequency',

@@ -26,6 +26,8 @@ export default {
   'nav.compare': '方案比較',
 
   'field.loanAmount': '貸款金額',
+  'field.homePrice': '房價',
+  'field.downPayment': '首付',
   'field.interestRate': '年利率',
   'field.loanTerm': '貸款年限',
   'field.paymentFrequency': '還款頻率',
