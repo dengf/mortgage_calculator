@@ -59,14 +59,14 @@ export function AppShell({ wasmModule }) {
         onRegionChange={setRegion}
       />
       <main className="app-main">
-        <Intro />
+        <Intro region={region} />
         <ActivePanel
           wasmModule={wasmModule}
           region={region}
           scenario={scenario}
           onScenarioChange={setScenario}
         />
-        <About />
+        <About region={region} />
       </main>
       <footer className="app-footer">
         {t('app.footer')}{' '}
