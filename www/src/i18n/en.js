@@ -242,6 +242,8 @@ export default {
   'sg.assessedNote':
     'MAS requires banks to test TDSR and MSR at the higher of 4% or your rate, so these ratios use {instalment}/mo, not your actual payment.',
   'sgaff.funds': 'Cash + CPF available',
+  'sgaff.initialRate': 'Rate for the lock-in',
+  'sgaff.thereafterRate': 'Rate thereafter',
   'sgaff.age': 'Your age',
   'sgaff.yearsOld': 'yrs',
   'sgaff.outstandingLoans': 'Housing loans outstanding',

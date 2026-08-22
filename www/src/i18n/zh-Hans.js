@@ -222,6 +222,8 @@ export default {
   'sg.assessedNote':
     '新加坡金管局要求银行按 4% 与您的利率两者取高来测算 TDSR 和 MSR，因此以上比率使用 {instalment}/月，而非您的实际月供。',
   'sgaff.funds': '可用现金 + 公积金',
+  'sgaff.initialRate': '锁定期利率',
+  'sgaff.thereafterRate': '之后利率',
   'sgaff.age': '您的年龄',
   'sgaff.yearsOld': '岁',
   'sgaff.outstandingLoans': '尚未结清的房贷',

@@ -70,6 +70,18 @@ impl Loan {
         self.reversion
     }
 
+    /// The rate charged for the remainder of the term -- the one the loan
+    /// spends most of its life at.
+    ///
+    /// For a flat loan this is just the rate. For one that steps up it is
+    /// the thereafter rate, which is what a lender qualifies the borrower on
+    /// rather than the promotional rate they open at.
+    pub fn final_annual_rate(&self) -> Decimal {
+        self.reversion
+            .map(|r| r.annual_rate)
+            .unwrap_or(self.annual_rate)
+    }
+
     /// The annual rate charged in `period`, counting from 1.
     ///
     /// A reversion takes effect *after* `after_periods` payments, so period

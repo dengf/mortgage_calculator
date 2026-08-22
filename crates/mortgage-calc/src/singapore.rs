@@ -62,10 +62,17 @@ pub const MSR_LIMIT: Decimal = dec!(0.30);
 /// ceiling. So the ratios here are always computed on a repriced loan.
 pub const MEDIUM_TERM_RATE_FLOOR: Decimal = dec!(0.04);
 
-/// The rate a bank must assess a residential property loan at: the
-/// borrower's own rate, or the MAS floor, whichever is higher.
-pub fn assessment_rate(contract_annual_rate: Decimal) -> Decimal {
-    contract_annual_rate.max(MEDIUM_TERM_RATE_FLOOR)
+/// The rate a bank must assess a residential property loan at: the floor, or
+/// the rate the loan actually runs at, whichever is higher.
+///
+/// "Thereafter" is the operative word in the Notice and it is not a detail.
+/// Every Singapore bank package opens on a promotional spread and steps up
+/// after two or three years, so the rate a borrower is quoted is not the one
+/// they spend the loan at. Assessing on the promotional rate would pass
+/// borrowers a bank would decline -- the same one-directional error as
+/// ignoring the floor, and invisible for as long as both rates sit under 4%.
+pub fn assessment_rate(thereafter_annual_rate: Decimal) -> Decimal {
+    thereafter_annual_rate.max(MEDIUM_TERM_RATE_FLOOR)
 }
 
 /// The share of variable income — commission, bonus, allowance — that counts
@@ -166,7 +173,8 @@ pub fn check_tdsr_msr(
         ));
     }
 
-    let assessment_rate = assessment_rate(loan.annual_rate());
+    // The rate that lasts, not the one the loan opens on.
+    let assessment_rate = assessment_rate(loan.final_annual_rate());
     let assessed = Loan::builder()
         .principal(loan.principal())
         .annual_rate(assessment_rate)
@@ -421,6 +429,64 @@ mod tests {
     }
 
     #[test]
+    fn a_stepping_package_is_assessed_on_the_rate_that_lasts() {
+        // The failure this prevents: a package quoted at 3.5% promotional
+        // and 4.8% thereafter. Assessed on the teaser the borrower is tested
+        // at the 4% floor and passes; assessed correctly they are tested at
+        // 4.8% and may not. Invisible while both rates sit under 4%, which
+        // is exactly where Singapore rates are today -- so it would have
+        // surfaced only once rates rose, on the borrowers least able to
+        // absorb it.
+        let stepping = Loan::builder()
+            .principal(dec!(800_000))
+            .annual_rate(dec!(0.035))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .reversion(crate::loan::Reversion {
+                after_periods: 24,
+                annual_rate: dec!(0.048),
+            })
+            .build()
+            .unwrap();
+
+        let check = check_tdsr_msr(
+            &stepping,
+            Decimal::ZERO,
+            MonthlyIncome::fixed(dec!(12_000)),
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(check.assessment_rate, dec!(0.048));
+    }
+
+    #[test]
+    fn a_stepping_package_below_the_floor_is_still_assessed_at_the_floor() {
+        // Both rates under 4%, which is every Singapore package right now.
+        let sg_today = Loan::builder()
+            .principal(dec!(400_000))
+            .annual_rate(dec!(0.0142))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .reversion(crate::loan::Reversion {
+                after_periods: 24,
+                annual_rate: dec!(0.0172),
+            })
+            .build()
+            .unwrap();
+
+        let check = check_tdsr_msr(
+            &sg_today,
+            Decimal::ZERO,
+            MonthlyIncome::fixed(dec!(12_000)),
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(check.assessment_rate, MEDIUM_TERM_RATE_FLOOR);
+    }
+
+    #[test]
     fn bsd_matches_the_published_one_million_example() {
         // 1% * 180k + 2% * 180k + 3% * 640k = 1,800 + 3,600 + 19,200 = 24,600
         assert_eq!(buyers_stamp_duty(dec!(1_000_000)), dec!(24_600));
@@ -581,9 +647,17 @@ pub struct SgAffordabilityInput {
     /// CPF Ordinary Account balance usable for this purchase. Can cover the
     /// deposit above the cash floor, and nothing else here.
     pub cpf_oa_available: Decimal,
-    /// The borrower's own rate as a fraction. Servicing is assessed at the
-    /// higher of this and [`MEDIUM_TERM_RATE_FLOOR`].
+    /// The rate the loan opens at, as a fraction. What the borrower pays
+    /// first, and what the instalment shown to them is built from.
     pub annual_rate: Decimal,
+    /// The rate after the lock-in, for a package that steps up. `None` for a
+    /// rate that holds for the term.
+    ///
+    /// Servicing is assessed at the higher of this and
+    /// [`MEDIUM_TERM_RATE_FLOOR`] -- "thereafter" is the Notice's word, and
+    /// assessing on the promotional rate would pass borrowers a bank would
+    /// decline.
+    pub thereafter_annual_rate: Option<Decimal>,
     pub term_years: Decimal,
     pub borrower_age: Option<Decimal>,
     pub is_hdb_or_ec: bool,
@@ -716,7 +790,8 @@ pub fn max_affordable_sg(input: &SgAffordabilityInput) -> MortgageResult<SgAffor
 
     // 2. Turn that into a loan, priced at the assessed rate — the same floor
     //    a bank must apply, so capacity isn't overstated for a cheap quote.
-    let assessment_rate = assessment_rate(input.annual_rate);
+    let assessment_rate =
+        assessment_rate(input.thereafter_annual_rate.unwrap_or(input.annual_rate));
     let max_loan_by_income = loan_for_instalment(max_instalment, assessment_rate, input.term_years);
 
     let limit = ltv_limit(
@@ -794,6 +869,7 @@ mod capacity_tests {
     fn afford() -> SgAffordabilityInput {
         SgAffordabilityInput {
             income: MonthlyIncome::fixed(dec!(12_000)),
+            thereafter_annual_rate: None,
             other_monthly_debts: dec!(0),
             cash_available: dec!(500_000),
             cpf_oa_available: dec!(0),
@@ -984,6 +1060,7 @@ mod capacity_tests {
     fn rejects_non_positive_income_for_affordability() {
         assert!(max_affordable_sg(&SgAffordabilityInput {
             income: MonthlyIncome::fixed(dec!(0)),
+            thereafter_annual_rate: None,
             ..afford()
         })
         .is_err());
