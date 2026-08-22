@@ -4,7 +4,7 @@
   "description": "Mortgage payment, amortization, affordability and refinance calculators powered by Rust/WASM",
   "scripts": {
     "build:wasm": "cd ../crates/mortgage-wasm && wasm-pack build --target web --out-dir ../../www/pkg",
-    "start": "webpack serve --mode development",
+    "start": "npm run build:wasm && webpack serve --mode development",
     "build": "webpack --mode production",
     "deploy": "npm run build:wasm && npm run build",
     "test": "vitest run",

@@ -26,9 +26,16 @@ async function initWasm() {
   }
 }
 
-// Mock module for development/testing without a wasm-pack build. Mirrors
-// the shape of the real bindings (see crates/mortgage-wasm) closely enough
-// that `npm start` works before you've ever run `npm run build:wasm`.
+// Last-resort fallback for a machine without wasm-pack installed. `npm start`
+// now builds the wasm first, so this is no longer the normal development
+// path -- it exists so the page renders something rather than a blank screen
+// when the toolchain is missing.
+//
+// The mortgage math still in here is a known duplication of mortgage-calc and
+// is on its way out (see CLAUDE.md). Nothing new should be added to it: the
+// scenario figures, region detection and the Singapore rules all deliberately
+// have no copy here, and degrade visibly instead of quietly disagreeing with
+// the Rust core.
 function createMockModule() {
   console.warn('Using mock WASM module - run `npm run build:wasm` for full functionality');
 

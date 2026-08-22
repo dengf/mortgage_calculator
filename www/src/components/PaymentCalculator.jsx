@@ -6,7 +6,7 @@ import UnitedStatesPanel from './UnitedStatesPanel';
 import { PrincipalInterestSplit } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { allFilled, useSticky } from '../inputs';
-import { DEFAULT_SCENARIO, principalOf } from '../scenario';
+import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 import { useI18n } from '../i18n';
 
 const US_DEFAULTS = {
@@ -39,7 +39,7 @@ export default function PaymentCalculator({
   // Read from the shared scenario rather than local state, so a loan dialled
   // in here survives a move to Amortization or Compare.
   const { homePrice, rate, termYears, frequency } = scenario;
-  const principal = principalOf(scenario);
+  const { principal } = useScenarioSummary(wasmModule, scenario);
 
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
@@ -109,6 +109,7 @@ export default function PaymentCalculator({
   return (
     <section className="panel">
       <ScenarioFields
+        wasmModule={wasmModule}
         scenario={scenario}
         onChange={onScenarioChange}
         money={money}

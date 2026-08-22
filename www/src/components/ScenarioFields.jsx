@@ -1,7 +1,7 @@
 import React from 'react';
 import NumberField from './NumberField';
 import DownPaymentField from './DownPaymentField';
-import { principalOf } from '../scenario';
+import { useScenarioSummary } from '../scenario';
 import { useI18n } from '../i18n';
 
 /**
@@ -12,6 +12,7 @@ import { useI18n } from '../i18n';
  * per scenario row, so it takes only price, deposit and cadence.
  */
 export default function ScenarioFields({
+  wasmModule,
   scenario,
   onChange,
   money,
@@ -19,6 +20,7 @@ export default function ScenarioFields({
   fields = ['price', 'downPayment', 'rate', 'term', 'frequency'],
 }) {
   const { t } = useI18n();
+  const summary = useScenarioSummary(wasmModule, scenario);
   const set = (key) => (value) => onChange({ ...scenario, [key]: value });
   const has = (f) => fields.includes(f);
 
@@ -38,7 +40,9 @@ export default function ScenarioFields({
       {has('downPayment') && (
         <DownPaymentField
           label={t('field.downPayment')}
+          wasmModule={wasmModule}
           scenario={scenario}
+          percent={summary.downPaymentPercent}
           onChange={set('downPayment')}
           money={money}
         />
@@ -86,7 +90,7 @@ export default function ScenarioFields({
       {has('price') && has('downPayment') && (
         <div className="field field-derived">
           <span className="field-label">{t('field.loanAmount')}</span>
-          <span className="field-derived-value">{formatMoney(principalOf(scenario))}</span>
+          <span className="field-derived-value">{formatMoney(summary.principal)}</span>
         </div>
       )}
     </div>

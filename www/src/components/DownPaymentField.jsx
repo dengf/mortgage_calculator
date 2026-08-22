@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { downPaymentPercent } from '../scenario';
+import { useI18n } from '../i18n';
+import { downPaymentForPercent } from '../scenario';
 
 /**
  * Deposit entry that accepts either an amount or a percentage.
@@ -9,10 +10,17 @@ import { downPaymentPercent } from '../scenario';
  * had. The amount is the stored value either way, so the percentage view is
  * a lens rather than a second source of truth that could drift.
  */
-export default function DownPaymentField({ label, scenario, onChange, money }) {
+export default function DownPaymentField({
+  label,
+  wasmModule,
+  scenario,
+  percent,
+  onChange,
+  money,
+}) {
+  const { t } = useI18n();
   const [mode, setMode] = useState('amount');
   const [focused, setFocused] = useState(false);
-  const percent = downPaymentPercent(scenario);
 
   // Same focus-swap as NumberField: separators at rest, plain digits while
   // typing, so the caret is never repositioned mid-keystroke.
@@ -27,8 +35,11 @@ export default function DownPaymentField({ label, scenario, onChange, money }) {
   const handle = (value) => {
     if (value === '') return onChange('');
     if (mode === 'amount') return onChange(value);
-    const price = Number(scenario.homePrice) || 0;
-    return onChange(Math.round(price * (Number(value) / 100) * 100) / 100);
+    // The percentage is a lens on the amount, so typing one writes the
+    // amount it names. What that comes to -- including the rounding to whole
+    // cents -- is mortgage-calc's, not this component's.
+    const amount = downPaymentForPercent(wasmModule, scenario.homePrice, value);
+    return amount == null ? undefined : onChange(amount);
   };
 
   return (
@@ -75,7 +86,9 @@ export default function DownPaymentField({ label, scenario, onChange, money }) {
         <span className="field-suffix">{mode === 'amount' ? money : '%'}</span>
       </div>
       {mode === 'amount' && percent != null && (
-        <span className="field-hint">{percent.toFixed(1)}% of price</span>
+        <span className="field-hint">
+          {t('field.percentOfPrice', { percent: percent.toFixed(1) })}
+        </span>
       )}
     </label>
   );
