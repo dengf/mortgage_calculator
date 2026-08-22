@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
+import Intro from './components/Intro';
+import About from './components/About';
 import PaymentCalculator from './components/PaymentCalculator';
 import AmortizationSchedule from './components/AmortizationSchedule';
 import AffordabilityCalculator from './components/AffordabilityCalculator';
@@ -57,12 +59,14 @@ export function AppShell({ wasmModule }) {
         onRegionChange={setRegion}
       />
       <main className="app-main">
+        <Intro />
         <ActivePanel
           wasmModule={wasmModule}
           region={region}
           scenario={scenario}
           onScenarioChange={setScenario}
         />
+        <About />
       </main>
       <footer className="app-footer">
         {t('app.footer')}{' '}

@@ -10,6 +10,23 @@
 export default {
   // App shell
   'app.title': 'Mortgage Calculator',
+  'meta.title': 'Mortgage Calculator — Payments, Amortization, Affordability & Refinance',
+  'meta.ogTitle': 'Mortgage Calculator — nothing leaves your device',
+  'meta.description': 'Free mortgage calculator for payments, amortization, affordability and refinancing, with Singapore TDSR, CPF and stamp duty built in. Runs entirely in your browser — your numbers never leave your device.',
+  'intro.lead': 'Work out what a home really costs — payments, amortization, what you can afford, and whether refinancing pays off.',
+  'intro.privacy': 'Everything is calculated in your browser. Nothing you type is sent anywhere, stored, or logged.',
+  'intro.verify': "Don't take our word for it — open your browser's network tab and watch it stay empty.",
+  'intro.depth': 'US property tax by ZIP, PMI and conforming limits. Singapore TDSR, MSR, CPF, and BSD/ABSD stamp duty.',
+  'about.title': 'How these numbers are worked out',
+  'about.q1': 'What does the monthly payment include?',
+  'about.a1': 'The headline payment is principal and interest only. In the US region the panel below adds property tax (estimated from your ZIP code) and PMI where the deposit is under 20%, to give a full PITI figure.',
+  'about.q2': 'What are TDSR and MSR?',
+  'about.a2': 'Singapore caps how much of your income can go to debt. TDSR limits all debt repayments to 55% of gross monthly income; MSR limits the housing loan alone to 30%, and applies only to HDB flats and Executive Condominiums. Banks assess both at the higher of 4% or your actual rate, so the ratios here use that assessed figure rather than your quoted payment.',
+  'about.q3': 'Why is my Singapore affordability lower than I expected?',
+  'about.a3': 'Three rules usually bite before income does: the LTV ceiling caps the loan at 75% of price for a first housing loan, the minimum cash portion of the deposit cannot come from CPF, and both stamp duties fall due in cash within 14 days. Commission and bonus also count at only 70%.',
+  'about.q4': 'When does refinancing actually pay off?',
+  'about.a4': 'When you stay in the home past the break-even point — the month at which cumulative savings overtake the closing costs. Watch the term as well as the rate: refinancing into a fresh 30-year loan lowers the payment but can raise the total paid.',
+  'about.disclaimer': 'Estimates for planning, not financial advice or a loan offer. Property tax rates are state averages and vary by county; regulatory figures reflect published rules and can change.',
   'app.footer':
     'Calculations run entirely client-side, compiled from Rust to WebAssembly. Your numbers never leave your device.',
   'app.privacy': 'Privacy',

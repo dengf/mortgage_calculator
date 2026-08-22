@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import en from './en';
 import zhHans from './zh-Hans';
 import zhHant from './zh-Hant';
@@ -17,6 +17,8 @@ const CATALOGS = { en, 'zh-Hans': zhHans, 'zh-Hant': zhHant };
 
 export const DEFAULT_LOCALE = 'en';
 const STORAGE_KEY = 'mc:locale';
+const LANG_PARAM = 'lang';
+export const SITE_URL = 'https://dengf.github.io/mortgage_calculator/';
 
 /**
  * Maps a BCP-47 tag to one of our catalogs.
@@ -35,7 +37,23 @@ export function matchLocale(tag) {
   return /-(tw|hk|mo)\b/.test(lower) ? 'zh-Hant' : 'zh-Hans';
 }
 
+/** The `?lang=` value, when it names a catalog we actually have. */
+function localeFromUrl() {
+  try {
+    const requested = new URLSearchParams(window.location.search).get(LANG_PARAM);
+    if (requested && CATALOGS[requested]) return requested;
+    return requested ? matchLocale(requested) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function detectLocale() {
+  // A `?lang=` link wins over everything: it is how a search engine, or
+  // someone sharing the Chinese version, addresses a specific locale. Without
+  // it the Chinese app has no URL of its own and cannot be indexed at all.
+  const fromUrl = localeFromUrl();
+  if (fromUrl) return fromUrl;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && CATALOGS[stored]) return stored;
@@ -73,6 +91,31 @@ export function translate(locale, key, params) {
   return interpolate(template, params);
 }
 
+/** The indexable URL for a locale. */
+export function canonicalFor(locale) {
+  return locale === DEFAULT_LOCALE ? SITE_URL : `${SITE_URL}?${LANG_PARAM}=${locale}`;
+}
+
+function setMeta(attr, key, content) {
+  let tag = document.head.querySelector(`meta[${attr}="${key}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attr, key);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+}
+
+function setLink(rel, href) {
+  let tag = document.head.querySelector(`link[rel="${rel}"]`);
+  if (!tag) {
+    tag = document.createElement('link');
+    tag.setAttribute('rel', rel);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('href', href);
+}
+
 const I18nContext = createContext({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
@@ -89,10 +132,35 @@ export function I18nProvider({ initialLocale, children }) {
     } catch {
       // Preference just won't persist; the session still switches.
     }
-    // Assistive tech and browser features (translation prompts, hyphenation)
-    // key off this, so it has to track the choice.
-    document.documentElement.lang = next;
   }, []);
+
+  // Everything the document itself has to say about its language, applied on
+  // mount as well as on change.
+  //
+  // Doing this only in the setter left a real bug: a returning visitor with
+  // a stored Chinese preference got Chinese text under `<html lang="en">`,
+  // so a screen reader read the whole page with an English voice engine and
+  // crawlers saw an English page.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.title = translate(locale, 'meta.title');
+    setMeta('name', 'description', translate(locale, 'meta.description'));
+    setMeta('property', 'og:title', translate(locale, 'meta.ogTitle'));
+    setMeta('property', 'og:description', translate(locale, 'meta.description'));
+
+    // Give each locale a URL of its own so it can be linked, shared and
+    // indexed. English keeps the bare URL as the canonical default.
+    try {
+      const url = new URL(window.location.href);
+      if (locale === DEFAULT_LOCALE) url.searchParams.delete(LANG_PARAM);
+      else url.searchParams.set(LANG_PARAM, locale);
+      window.history.replaceState(null, '', url);
+      setLink('canonical', canonicalFor(locale));
+    } catch {
+      // A sandboxed or file:// context can refuse history writes; the app
+      // still works, it just doesn't get a shareable locale URL.
+    }
+  }, [locale]);
 
   const value = useMemo(
     () => ({ locale, setLocale, t: (key, params) => translate(locale, key, params) }),
