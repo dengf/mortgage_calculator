@@ -89,24 +89,25 @@ export default function ComparisonView({
   }, [wasmModule, principal, frequency, entries]);
 
   const rows = result?.rows ?? [];
-  const lowestBy = (key) =>
-    rows.length ? rows.reduce((best, r) => (r[key] < best[key] ? r : best)) : null;
-  const cheapestPayment = lowestBy('payment');
-  const cheapestInterest = lowestBy('total_interest');
-  const cheapestTotal = lowestBy('total_paid');
+  // Which row wins on each measure, and what the choice between them costs,
+  // are read off the comparison rather than recomputed here -- see
+  // mortgage-calc/src/comparison.rs. The verdict is absent for fewer than
+  // two rows, since "cheapest" of a one-line table says nothing.
+  const verdict = result?.verdict ?? null;
 
   // The classic fixed-term trade-off: the option that costs least overall
-  // usually costs most each month. Say which, and by how much.
+  // usually costs most each period. Rust says which and by how much; the
+  // sentence is composed here, in the reader's language.
   const tradeoff = (() => {
-    if (rows.length < 2 || !cheapestPayment || !cheapestInterest) return null;
-    if (cheapestPayment === cheapestInterest) {
-      return t('cmp.outright', { label: cheapestInterest.label });
+    if (!verdict) return null;
+    if (verdict.kind === 'outright') {
+      return t('cmp.outright', { label: rows[verdict.cheaper]?.label });
     }
     return t('cmp.tradeoff', {
-      cheaper: cheapestInterest.label,
-      lighter: cheapestPayment.label,
-      paymentDelta: formatMoney(cheapestInterest.payment - cheapestPayment.payment),
-      interestDelta: formatMoney(cheapestPayment.total_interest - cheapestInterest.total_interest),
+      cheaper: rows[verdict.cheaper]?.label,
+      lighter: rows[verdict.lighter]?.label,
+      paymentDelta: formatMoney(verdict.payment_delta),
+      interestDelta: formatMoney(verdict.interest_delta),
     });
   })();
 
@@ -176,18 +177,18 @@ export default function ComparisonView({
               </tr>
             </thead>
             <tbody>
-              {result.rows.map((row) => (
+              {result.rows.map((row, index) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
                   <td>{row.effective_rate_percent.toFixed(3)}%</td>
                   <td>{t('duration.years', { years: row.term_years })}</td>
-                  <td className={row === cheapestPayment ? 'best' : undefined}>
+                  <td className={index === verdict?.cheapest_payment ? 'best' : undefined}>
                     {formatMoney(row.payment)}
                   </td>
-                  <td className={row === cheapestTotal ? 'best' : undefined}>
+                  <td className={index === verdict?.cheapest_total_paid ? 'best' : undefined}>
                     {formatMoney(row.total_paid)}
                   </td>
-                  <td className={row === cheapestInterest ? 'best' : undefined}>
+                  <td className={index === verdict?.cheapest_interest ? 'best' : undefined}>
                     {formatMoney(row.total_interest)}
                   </td>
                 </tr>

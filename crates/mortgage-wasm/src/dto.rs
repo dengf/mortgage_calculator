@@ -20,6 +20,21 @@ pub struct LoanParams {
     pub frequency: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ComparisonVerdictDto {
+    pub cheapest_payment: usize,
+    pub cheapest_interest: usize,
+    pub cheapest_total_paid: usize,
+    /// `"outright"` when one row wins on both measures, `"split"` when the
+    /// cheaper loan costs more each period. A stable code, not a sentence:
+    /// the UI composes the wording in the reader's language.
+    pub kind: String,
+    pub cheaper: usize,
+    pub lighter: usize,
+    pub payment_delta: f64,
+    pub interest_delta: f64,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct PaymentSummaryResult {
     pub payment: Option<f64>,
@@ -193,6 +208,9 @@ pub struct ComparisonRowDto {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ComparisonResult {
     pub rows: Vec<ComparisonRowDto>,
+    /// Which row wins on each measure, and what the choice costs. `null` for
+    /// fewer than two rows -- there is no verdict to give on a single line.
+    pub verdict: Option<ComparisonVerdictDto>,
     pub error: Option<String>,
     /// The same failure as `error`, but as a code plus its values so a
     /// translated UI can compose the sentence itself.

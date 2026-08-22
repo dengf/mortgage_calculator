@@ -1,13 +1,15 @@
 //! `calculate_comparison` and `get_common_rate_presets`.
 
-use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput};
+use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput, Tradeoff};
 use wasm_bindgen::prelude::*;
 
 use crate::convert::{
     decimal_to_f64, f64_to_decimal, parse_frequency, rate_to_percent, rate_type_from_dto,
     rate_type_to_dto,
 };
-use crate::dto::{ComparisonParams, ComparisonResult, ComparisonRowDto, RatePresetDto};
+use crate::dto::{
+    ComparisonParams, ComparisonResult, ComparisonRowDto, ComparisonVerdictDto, RatePresetDto,
+};
 use crate::message::Message;
 
 #[wasm_bindgen]
@@ -61,6 +63,7 @@ fn comparison_from_params(params: ComparisonParams) -> ComparisonResult {
 
     match mortgage_calc::comparison::compare(&input, &entries) {
         Ok(rows) => ComparisonResult {
+            verdict: mortgage_calc::comparison::verdict(&rows).map(to_verdict_dto),
             rows: rows
                 .into_iter()
                 .map(|row| ComparisonRowDto {
@@ -80,6 +83,40 @@ fn comparison_from_params(params: ComparisonParams) -> ComparisonResult {
             error: Some(e.to_string()),
             ..Default::default()
         },
+    }
+}
+
+/// Flattens the verdict for the wire.
+///
+/// `Tradeoff` is an enum in Rust; JS gets a `kind` code plus the fields, so
+/// the UI can switch on a stable string rather than sniff which keys are
+/// present. `cheaper`/`lighter` collapse onto the single winning row when
+/// there is no trade-off to weigh, which keeps the shape uniform.
+fn to_verdict_dto(v: mortgage_calc::comparison::ComparisonVerdict) -> ComparisonVerdictDto {
+    let (kind, cheaper, lighter, payment_delta, interest_delta) = match v.tradeoff {
+        Tradeoff::Outright { row } => ("outright", row, row, 0.0, 0.0),
+        Tradeoff::Split {
+            cheaper,
+            lighter,
+            payment_delta,
+            interest_delta,
+        } => (
+            "split",
+            cheaper,
+            lighter,
+            decimal_to_f64(payment_delta),
+            decimal_to_f64(interest_delta),
+        ),
+    };
+    ComparisonVerdictDto {
+        cheapest_payment: v.cheapest_payment,
+        cheapest_interest: v.cheapest_interest,
+        cheapest_total_paid: v.cheapest_total_paid,
+        kind: kind.to_string(),
+        cheaper,
+        lighter,
+        payment_delta,
+        interest_delta,
     }
 }
 
