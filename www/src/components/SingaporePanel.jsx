@@ -40,6 +40,7 @@ export default function SingaporePanel({ inputs, onChange, result }) {
           onChange={set('fixed_monthly_income')}
           suffix="S$"
           min={0}
+          grouped
         />
         <NumberField
           label={t('sgaff.variableIncome')}
@@ -47,6 +48,7 @@ export default function SingaporePanel({ inputs, onChange, result }) {
           onChange={set('variable_monthly_income')}
           suffix="S$"
           min={0}
+          grouped
         />
         <NumberField
           label={t('sg.otherDebts')}
@@ -54,6 +56,7 @@ export default function SingaporePanel({ inputs, onChange, result }) {
           onChange={set('other_monthly_debts')}
           suffix="S$"
           min={0}
+          grouped
         />
         <NumberField
           label={t('sg.cpfAvailable')}
@@ -61,6 +64,7 @@ export default function SingaporePanel({ inputs, onChange, result }) {
           onChange={set('cpf_oa_available')}
           suffix="S$"
           min={0}
+          grouped
         />
         <label className="field">
           <span className="field-label">{t('sg.residency')}</span>
