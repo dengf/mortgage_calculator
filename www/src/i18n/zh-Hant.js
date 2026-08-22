@@ -270,6 +270,8 @@ export default {
   'err.invalidDti': '負債收入比須介於 0 與 1 之間（目前為 {value}）。',
   'err.invalidExtraPayment': '額外還款不得為負數（目前為 {value}）。',
   'err.parse': '無法辨識該輸入：{value}',
+  'err.engineUnavailable':
+    '計算引擎未能啟動。請重新整理頁面；若仍然如此，您的瀏覽器可能不支援 WebAssembly。',
   'err.badRequest': '有數值缺失或不是有效數字，請檢查上方輸入項。',
   'err.unknown': '計算時發生問題。',
 

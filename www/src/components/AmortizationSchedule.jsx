@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
+import CalcError from './CalcError';
 import ScenarioFields from './ScenarioFields';
 import SavedScenarios from './SavedScenarios';
 import { BalanceChart } from './Charts';
@@ -96,7 +97,7 @@ export default function AmortizationSchedule({
         </div>
       )}
 
-      {schedule?.error && <div className="error">{schedule.error}</div>}
+      <CalcError result={schedule} />
 
       {schedule?.rows?.length > 0 && (
         <BalanceChart

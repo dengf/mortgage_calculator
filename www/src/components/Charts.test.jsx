@@ -105,6 +105,7 @@ describe('PrincipalInterestSplit', () => {
       <PrincipalInterestSplit
         principal={400000}
         totalInterest={510177.2}
+        interestSharePercent={56.05}
         formatMoney={formatMoney}
       />,
     );
@@ -118,6 +119,7 @@ describe('PrincipalInterestSplit', () => {
       <PrincipalInterestSplit
         principal={300000}
         totalInterest={100000}
+        interestSharePercent={25}
         formatMoney={formatMoney}
       />,
     );
@@ -126,10 +128,31 @@ describe('PrincipalInterestSplit', () => {
     expect(container.querySelector('.split-bar-interest')).toHaveStyle({ width: '25%' });
   });
 
-  it('renders nothing when there is nothing to split', () => {
+  it('renders nothing when the core reported no share', () => {
+    // Absent, not zero: a bar at 0% asserts none of the money is interest,
+    // rather than that there is no money.
     const { container } = render(
-      <PrincipalInterestSplit principal={0} totalInterest={0} formatMoney={formatMoney} />,
+      <PrincipalInterestSplit
+        principal={0}
+        totalInterest={0}
+        interestSharePercent={null}
+        formatMoney={formatMoney}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('draws a real bar for a genuinely interest-free loan', () => {
+    const { container } = render(
+      <PrincipalInterestSplit
+        principal={12000}
+        totalInterest={0}
+        interestSharePercent={0}
+        formatMoney={formatMoney}
+      />,
+    );
+
+    expect(container.querySelector('.split-bar-principal')).toHaveStyle({ width: '100%' });
+    expect(container.querySelector('.split-bar-interest')).toHaveStyle({ width: '0%' });
   });
 });

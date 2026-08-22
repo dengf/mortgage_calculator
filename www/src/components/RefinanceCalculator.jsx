@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
+import CalcError from './CalcError';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
@@ -117,7 +118,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
       {termExtension && <div className="refi-term-warning">{termExtension}</div>}
 
       <div className="panel-results" aria-live="polite">
-        {result?.error && <div className="error">{result.error}</div>}
+        <CalcError result={result} />
         {result && !result.error && (
           <div className="stat-grid">
             <div className="stat">

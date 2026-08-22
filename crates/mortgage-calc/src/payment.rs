@@ -36,6 +36,24 @@ pub struct PaymentSummary {
     pub total_interest: Decimal,
 }
 
+impl PaymentSummary {
+    /// Interest as a percentage of everything the borrower hands over.
+    ///
+    /// The figure behind "where the money goes": on a long loan at a high
+    /// rate it is more than half, which is the single most surprising thing
+    /// a first-time buyer learns.
+    ///
+    /// `None` when nothing is paid at all -- a share of zero is undefined,
+    /// not zero percent, and a bar drawn at 0% would assert that none of the
+    /// money is interest rather than that there is no money.
+    pub fn interest_share(&self) -> Option<Decimal> {
+        if self.total_paid <= Decimal::ZERO {
+            return None;
+        }
+        Some(self.total_interest / self.total_paid * Decimal::ONE_HUNDRED)
+    }
+}
+
 /// Computes the payment amount plus total paid / total interest over the
 /// full, unmodified term of `loan`.
 pub fn summarize(loan: &Loan) -> PaymentSummary {
@@ -105,5 +123,43 @@ mod tests {
             round_currency(summary.payment * Decimal::from(summary.total_periods))
         );
         assert!(summary.total_interest > Decimal::ZERO);
+    }
+
+    #[test]
+    fn interest_share_is_the_part_of_the_total_that_is_not_the_house() {
+        let summary = PaymentSummary {
+            payment: dec!(2528.27),
+            total_periods: 360,
+            total_paid: dec!(910177.20),
+            total_interest: dec!(510177.20),
+        };
+
+        // More than half, which is the point of showing it.
+        let share = summary.interest_share().unwrap();
+        assert!(share > dec!(56) && share < dec!(57), "{share}");
+    }
+
+    #[test]
+    fn nothing_paid_has_no_share_rather_than_zero_percent() {
+        // A bar at 0% asserts that none of the money is interest. There is
+        // no money.
+        let empty = PaymentSummary {
+            payment: Decimal::ZERO,
+            total_periods: 0,
+            total_paid: Decimal::ZERO,
+            total_interest: Decimal::ZERO,
+        };
+        assert_eq!(empty.interest_share(), None);
+    }
+
+    #[test]
+    fn an_interest_free_loan_is_a_zero_share_not_an_absent_one() {
+        let free = PaymentSummary {
+            payment: dec!(1000),
+            total_periods: 12,
+            total_paid: dec!(12000),
+            total_interest: Decimal::ZERO,
+        };
+        assert_eq!(free.interest_share(), Some(Decimal::ZERO));
     }
 }
