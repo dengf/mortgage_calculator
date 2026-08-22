@@ -5,7 +5,7 @@ import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
-import { DEFAULT_SCENARIO, principalOf } from '../scenario';
+import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 
 let nextId = 0;
 const newId = () => `entry-${nextId++}`;
@@ -59,7 +59,7 @@ export default function ComparisonView({
   // Rate and term vary per comparison row, so only the amount and cadence
   // come from the shared scenario.
   const { frequency } = scenario;
-  const principal = principalOf(scenario);
+  const { principal } = useScenarioSummary(wasmModule, scenario);
   const [presets, setPresets] = useState([]);
   const [entries, setEntries] = useState([]);
 
@@ -121,6 +121,7 @@ export default function ComparisonView({
   return (
     <section className="panel">
       <ScenarioFields
+        wasmModule={wasmModule}
         scenario={scenario}
         onChange={onScenarioChange}
         money={money}

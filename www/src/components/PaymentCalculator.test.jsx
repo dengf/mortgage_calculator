@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import PaymentCalculator from './PaymentCalculator';
 import { renderControlled } from '../test/controlled';
+import { scenarioBindings } from '../test/wasm';
 
 // PaymentCalculator receives wasmModule as a prop rather than importing the
 // wasm-pack build directly, so it can be exercised here with a plain mock —
@@ -11,6 +12,7 @@ import { renderControlled } from '../test/controlled';
 // needs list_scenarios, since it calls it on mount.
 function mockWasmModule(overrides = {}) {
   return {
+    ...scenarioBindings(),
     calculate_payment: vi.fn(() => ({
       payment: 2528.27,
       total_periods: 360,

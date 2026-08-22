@@ -58,10 +58,6 @@ rather than a sign JavaScript is the right place.
 
 Named so they are not mistaken for precedent:
 
-- `www/src/scenario.js` -- `principalOf` (price minus deposit) and
-  `downPaymentPercent`
-- `www/src/components/DownPaymentField.jsx` -- percent to amount, with its own
-  cents rounding rule
 - `www/src/components/AmortizationSchedule.jsx` -- yearly aggregation of the
   schedule
 - `www/src/components/ComparisonView.jsx` -- picking the cheapest row and
@@ -72,7 +68,9 @@ Named so they are not mistaken for precedent:
 - `www/src/index.js` -- `createMockModule` is a **full parallel
   implementation** of payment, amortization, affordability, refinance and
   comparison in JavaScript. It already declines to reimplement the Singapore
-  rules, and says why; the rest should follow.
+  rules, the scenario figures and region detection, and says why; the rest
+  should follow. `npm start` now builds the wasm first, so this fallback only
+  runs on a machine without wasm-pack installed.
 
 ## Verification traps
 

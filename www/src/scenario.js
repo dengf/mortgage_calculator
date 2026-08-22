@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 /**
  * The one loan the Payment, Amortization and Compare tabs are all describing.
  *
@@ -22,16 +24,48 @@ export const DEFAULT_SCENARIO = {
   frequency: 'monthly',
 };
 
-/** The amount actually borrowed. Never negative, however the fields are set. */
-export function principalOf(scenario) {
-  const price = Number(scenario.homePrice) || 0;
-  const down = Number(scenario.downPayment) || 0;
-  return Math.max(0, price - down);
+// What an empty form summarizes to, and what is shown when there is no wasm
+// module to ask. Deriving these here instead would be a second answer to
+// "what is the loan amount" -- see mortgage-calc/src/scenario.rs.
+const EMPTY_SUMMARY = { principal: 0, downPaymentPercent: null };
+
+/** Coerces a form field, which may be an empty string mid-typing. */
+const num = (value) => Number(value) || 0;
+
+/**
+ * Principal and deposit percentage, computed by the Rust core.
+ *
+ * `downPaymentPercent` is `null` rather than `0` when there is no price to
+ * divide by: a buyer who hasn't entered a price has no deposit percentage,
+ * and "0.0% of price" would state something the inputs don't.
+ */
+export function summarizeScenario(wasmModule, scenario) {
+  if (!wasmModule?.summarize_scenario) return EMPTY_SUMMARY;
+  const result = wasmModule.summarize_scenario({
+    home_price: num(scenario.homePrice),
+    down_payment: num(scenario.downPayment),
+  });
+  return {
+    principal: result?.principal ?? 0,
+    downPaymentPercent: result?.down_payment_percent ?? null,
+  };
 }
 
-/** Deposit as a share of price, or `null` when there's no price to divide by. */
-export function downPaymentPercent(scenario) {
-  const price = Number(scenario.homePrice) || 0;
-  if (price <= 0) return null;
-  return ((Number(scenario.downPayment) || 0) / price) * 100;
+/** The deposit a percentage of the price comes to, in whole cents. */
+export function downPaymentForPercent(wasmModule, homePrice, percent) {
+  if (!wasmModule?.down_payment_for_percent) return null;
+  const result = wasmModule.down_payment_for_percent({
+    home_price: num(homePrice),
+    percent: num(percent),
+  });
+  return result?.down_payment ?? null;
+}
+
+/** Memoized so the boundary is crossed once per change, not once per render. */
+export function useScenarioSummary(wasmModule, scenario) {
+  const { homePrice, downPayment } = scenario;
+  return useMemo(
+    () => summarizeScenario(wasmModule, { homePrice, downPayment }),
+    [wasmModule, homePrice, downPayment],
+  );
 }

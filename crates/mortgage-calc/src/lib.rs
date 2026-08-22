@@ -7,6 +7,7 @@
 //! - [`amortization`] — full payment-by-payment schedule, extra-payment payoff impact
 //! - [`affordability`] — maximum affordable home price from income/debt inputs
 //! - [`refinance`] — refinance break-even and lifetime savings analysis
+//! - [`scenario`] — price, deposit and loan amount as three views of one loan
 //! - [`comparison`] — side-by-side scenario comparison across rate types and terms
 //! - [`singapore`] — CPF OA, MAS TDSR/MSR limits, and BSD/ABSD stamp duty
 //! - [`united_states`] — ZIP-code property tax, PMI trigger, tax-deduction savings
@@ -24,6 +25,7 @@ pub mod amortization;
 pub mod comparison;
 pub mod payment;
 pub mod refinance;
+pub mod scenario;
 pub mod singapore;
 pub mod united_states;
 

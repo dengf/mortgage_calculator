@@ -7,7 +7,7 @@ import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { formatDuration, payoffDate } from '../duration';
-import { DEFAULT_SCENARIO, principalOf } from '../scenario';
+import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
 
@@ -42,7 +42,7 @@ export default function AmortizationSchedule({
   const [showFullSchedule, setShowFullSchedule] = useState(false);
 
   const { rate, termYears, frequency } = scenario;
-  const principal = principalOf(scenario);
+  const { principal } = useScenarioSummary(wasmModule, scenario);
   const loan = { principal, annual_rate_percent: rate, term_years: termYears, frequency };
 
   const schedule = useMemo(() => {
@@ -67,6 +67,7 @@ export default function AmortizationSchedule({
   return (
     <section className="panel">
       <ScenarioFields
+        wasmModule={wasmModule}
         scenario={scenario}
         onChange={onScenarioChange}
         money={money}

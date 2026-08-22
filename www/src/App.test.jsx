@@ -4,9 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppShell } from './App';
 import { I18nProvider } from './i18n';
+import { scenarioBindings } from './test/wasm';
 
 function mockWasm() {
   return {
+    ...scenarioBindings(),
     calculate_payment: vi.fn(() => ({
       payment: 2528.27,
       total_periods: 360,
