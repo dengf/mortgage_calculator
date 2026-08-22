@@ -6,6 +6,24 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+# wasm-opt stays off, and this is a measured decision rather than an
+# inherited default.
+#
+# The vendored wasm-opt predates rustc emitting `memory.copy`, so it rejects
+# the module outright unless --enable-bulk-memory and four more feature flags
+# are passed. Supplying them works, but on top of `opt-level = "z"` it is
+# worth ~1.5% gzipped — the compressor already removes most of what -Oz
+# rewrites. That is not worth a build step that breaks whenever rustc starts
+# emitting a proposal the pinned binary has not heard of.
+# wasm-opt stays off, and this is now a measured decision rather than an
+# inherited default.
+#
+# The vendored wasm-opt predates rustc emitting `memory.copy`, so it rejects
+# the module outright unless --enable-bulk-memory and four further feature
+# flags are passed. Supplying them works, but on top of `opt-level = "z"` it
+# is worth about 1.5% gzipped — the compressor already removes most of what
+# -Oz rewrites. Not worth a build step that breaks whenever rustc starts
+# emitting a proposal the pinned binary has not heard of.
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
 
