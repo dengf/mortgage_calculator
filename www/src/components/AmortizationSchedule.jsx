@@ -11,21 +11,6 @@ import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
 
-function summarizeByYear(rows, periodsPerYear) {
-  const years = [];
-  for (let i = 0; i < rows.length; i += periodsPerYear) {
-    const chunk = rows.slice(i, i + periodsPerYear);
-    years.push({
-      year: years.length + 1,
-      paid: chunk.reduce((sum, r) => sum + r.payment, 0),
-      principal: chunk.reduce((sum, r) => sum + r.principal_portion, 0),
-      interest: chunk.reduce((sum, r) => sum + r.interest_portion, 0),
-      remaining_balance: chunk[chunk.length - 1].remaining_balance,
-    });
-  }
-  return years;
-}
-
 export default function AmortizationSchedule({
   wasmModule,
   region,
@@ -59,10 +44,9 @@ export default function AmortizationSchedule({
 
   const periodsPerYear = PERIODS_PER_YEAR[frequency] ?? 12;
 
-  const yearlyRows = useMemo(() => {
-    if (!schedule?.rows?.length) return [];
-    return summarizeByYear(schedule.rows, periodsPerYear);
-  }, [schedule, periodsPerYear]);
+  // Grouped by the same call that produced the rows, so the yearly totals and
+  // the periods they sum are never the output of two separate calculations.
+  const yearlyRows = schedule?.yearly ?? [];
 
   return (
     <section className="panel">

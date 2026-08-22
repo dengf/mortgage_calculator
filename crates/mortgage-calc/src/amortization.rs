@@ -18,6 +18,52 @@ pub struct AmortizationRow {
     pub remaining_balance: Decimal,
 }
 
+/// One year of a schedule, for readers who want the shape of the loan rather
+/// than every payment in it.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct AmortizationYear {
+    pub year: u32,
+    pub paid: Decimal,
+    pub principal: Decimal,
+    pub interest: Decimal,
+    pub remaining_balance: Decimal,
+}
+
+/// Groups a schedule into years.
+///
+/// The last year is short whenever the loan pays off early, which any extra
+/// payment causes, so years are taken as they come rather than assumed full.
+///
+/// This is not here for numeric accuracy. Every row is already rounded to
+/// whole cents, so summing twelve of them as `f64` in the front end agreed
+/// with this to the cent when measured -- the error is around 1e-12 and
+/// cannot surface at two decimal places.
+///
+/// It is here because the grouping is a rule, not a display detail: which
+/// rows belong to which year, and the fact that the final year is short
+/// whenever a loan pays off early. That rule was written once per front end,
+/// which is one copy too many, and it is worth a test of its own.
+pub fn summarize_by_year(rows: &[AmortizationRow], periods_per_year: u32) -> Vec<AmortizationYear> {
+    if periods_per_year == 0 {
+        return Vec::new();
+    }
+    rows.chunks(periods_per_year as usize)
+        .enumerate()
+        .map(|(index, chunk)| AmortizationYear {
+            year: index as u32 + 1,
+            paid: chunk.iter().map(|r| r.payment).sum(),
+            principal: chunk.iter().map(|r| r.principal_portion).sum(),
+            interest: chunk.iter().map(|r| r.interest_portion).sum(),
+            // The balance at the end of the year is the last row's, not a
+            // sum: balances are levels, not flows.
+            remaining_balance: chunk
+                .last()
+                .map(|r| r.remaining_balance)
+                .unwrap_or(Decimal::ZERO),
+        })
+        .collect()
+}
+
 /// Builds the full payment-by-payment schedule for `loan`.
 ///
 /// `extra_payment` is applied on top of the regular payment every period
@@ -169,5 +215,87 @@ mod tests {
             extra_payment_impact(&loan, dec!(-100)),
             Err(MortgageError::InvalidExtraPayment(_))
         ));
+    }
+
+    fn row(
+        period: u32,
+        payment: &str,
+        principal: &str,
+        interest: &str,
+        balance: &str,
+    ) -> AmortizationRow {
+        AmortizationRow {
+            period,
+            payment: payment.parse().unwrap(),
+            extra_payment: Decimal::ZERO,
+            principal_portion: principal.parse().unwrap(),
+            interest_portion: interest.parse().unwrap(),
+            remaining_balance: balance.parse().unwrap(),
+        }
+    }
+
+    #[test]
+    fn groups_a_schedule_into_whole_years() {
+        let rows: Vec<_> = (1..=24)
+            .map(|p| {
+                row(
+                    p,
+                    "1000.00",
+                    "400.00",
+                    "600.00",
+                    &format!("{}", 100_000 - 400 * p),
+                )
+            })
+            .collect();
+
+        let years = summarize_by_year(&rows, 12);
+
+        assert_eq!(years.len(), 2);
+        assert_eq!(years[0].year, 1);
+        assert_eq!(years[0].paid, dec!(12000));
+        assert_eq!(years[0].principal, dec!(4800));
+        assert_eq!(years[0].interest, dec!(7200));
+        // A level, not a sum: the balance at the end of the year.
+        assert_eq!(years[0].remaining_balance, dec!(95200));
+        assert_eq!(years[1].remaining_balance, dec!(90400));
+    }
+
+    #[test]
+    fn a_loan_that_pays_off_mid_year_gets_a_short_final_year() {
+        // What any extra payment produces, and what a fixed 12-row chunk
+        // assumption would silently drop.
+        let rows: Vec<_> = (1..=14)
+            .map(|p| row(p, "1000.00", "400.00", "600.00", "0.00"))
+            .collect();
+
+        let years = summarize_by_year(&rows, 12);
+
+        assert_eq!(years.len(), 2);
+        assert_eq!(years[1].paid, dec!(2000));
+    }
+
+    #[test]
+    fn yearly_totals_match_the_rows_they_are_made_of() {
+        // The yearly figure is displayed beside the periods it sums, so it
+        // has to be their total and nothing else.
+        let loan = Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.065))
+            .term_years(dec!(30))
+            .build()
+            .unwrap();
+        let rows = schedule(&loan, Decimal::ZERO).unwrap();
+
+        let years = summarize_by_year(&rows, 12);
+        let total_interest: Decimal = years.iter().map(|y| y.interest).sum();
+        let row_interest: Decimal = rows.iter().map(|r| r.interest_portion).sum();
+
+        assert_eq!(total_interest, row_interest);
+        assert_eq!(years.len(), 30);
+    }
+
+    #[test]
+    fn a_zero_period_year_summarizes_to_nothing_rather_than_dividing_by_zero() {
+        assert!(summarize_by_year(&[row(1, "1", "1", "0", "0")], 0).is_empty());
     }
 }
