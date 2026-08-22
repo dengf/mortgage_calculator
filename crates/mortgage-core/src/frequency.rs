@@ -31,6 +31,27 @@ impl PaymentFrequency {
         annual_rate / Decimal::from(self.periods_per_year())
     }
 
+    /// Whole months a count of payment periods spans.
+    ///
+    /// The inverse of [`Self::periods_in_years`], in the unit people
+    /// actually think in. Nobody plans around "127 payments"; the emotional
+    /// payload of an extra-payment calculator is "you finish ten and a half
+    /// years early", and a payment count throws that away.
+    ///
+    /// Rounded, because 26 fortnightly payments do not divide into months
+    /// evenly and a borrower does not care about the remainder.
+    pub fn periods_to_months(self, periods: u32) -> u32 {
+        (self.periods_to_years(periods) * Decimal::from(12))
+            .round()
+            .to_u32()
+            .unwrap_or(0)
+    }
+
+    /// Years, as a fraction, that a count of payment periods spans.
+    pub fn periods_to_years(self, periods: u32) -> Decimal {
+        Decimal::from(periods) / Decimal::from(self.periods_per_year())
+    }
+
     /// Converts a term expressed in years into a number of payment periods.
     pub fn periods_in_years(self, years: Decimal) -> u32 {
         (years * Decimal::from(self.periods_per_year()))
@@ -91,5 +112,40 @@ mod tests {
             PaymentFrequency::Weekly.periods_in_years(dec!(999_999_999)),
             0
         );
+    }
+
+    #[test]
+    fn periods_convert_back_to_the_months_they_span() {
+        assert_eq!(PaymentFrequency::Monthly.periods_to_months(360), 360);
+        assert_eq!(PaymentFrequency::Weekly.periods_to_months(52), 12);
+        // 26 fortnightly payments are a year; 13 are half of one.
+        assert_eq!(PaymentFrequency::BiWeekly.periods_to_months(26), 12);
+        assert_eq!(PaymentFrequency::BiWeekly.periods_to_months(13), 6);
+    }
+
+    #[test]
+    fn an_uneven_period_count_rounds_to_the_nearer_month() {
+        // 27 fortnights is 12.46 months. A borrower does not care about the
+        // remainder, but must not be told a year and a half.
+        assert_eq!(PaymentFrequency::BiWeekly.periods_to_months(27), 12);
+        assert_eq!(PaymentFrequency::BiWeekly.periods_to_months(30), 14);
+    }
+
+    #[test]
+    fn no_periods_is_no_time_rather_than_a_panic() {
+        assert_eq!(PaymentFrequency::Monthly.periods_to_months(0), 0);
+        assert_eq!(PaymentFrequency::Monthly.periods_to_years(0), Decimal::ZERO);
+    }
+
+    #[test]
+    fn months_round_trip_through_the_periods_that_span_them() {
+        for freq in [
+            PaymentFrequency::Monthly,
+            PaymentFrequency::BiWeekly,
+            PaymentFrequency::Weekly,
+        ] {
+            let periods = freq.periods_in_years(dec!(30));
+            assert_eq!(freq.periods_to_months(periods), 360, "{freq:?}");
+        }
     }
 }

@@ -124,3 +124,48 @@ describe('AmortizationSchedule yearly summary', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });
+
+// Moved here from Charts when the chart stopped deriving its own span: the
+// axis must reflect the schedule actually plotted, not the nominal term. A
+// 30-year loan paid off early used to reach zero under a "Year 30" label --
+// mislabelling precisely the fact the user added extra payments to see.
+describe('AmortizationSchedule balance chart', () => {
+  const row = (period) => ({
+    period,
+    payment: 3028,
+    extra_payment: 500,
+    principal_portion: 2000,
+    interest_portion: 1028,
+    remaining_balance: 400000 - period * 2000,
+  });
+
+  it('labels the axis from the schedule plotted, not the term entered', async () => {
+    const describe_duration = vi.fn(({ periods }) => ({
+      years: Math.floor(periods / 12),
+      months: periods % 12,
+      total_months: periods,
+      years_exact: periods / 12,
+      periods_per_year: 12,
+    }));
+
+    renderControlled(AmortizationSchedule, {
+      wasmModule: {
+        ...scenarioBindings(),
+        describe_duration,
+        // 233 periods of a nominal 360-period term.
+        calculate_amortization_schedule: vi.fn(() => ({
+          rows: Array.from({ length: 233 }, (_, i) => row(i + 1)),
+          yearly: [],
+          error: null,
+        })),
+        calculate_extra_payment_impact: vi.fn(() => ({ error: null })),
+        list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+      },
+      region: 'US',
+    });
+
+    expect(await screen.findByText('Year 19.4')).toBeInTheDocument();
+    expect(screen.queryByText('Year 30')).not.toBeInTheDocument();
+    expect(describe_duration).toHaveBeenCalledWith({ periods: 233, frequency: 'monthly' });
+  });
+});

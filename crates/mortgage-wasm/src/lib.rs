@@ -12,6 +12,7 @@
 //! - [`singapore`] — `calculate_singapore`
 //! - [`united_states`] — `calculate_united_states`
 //! - [`region`] — `detect_region`
+//! - [`duration`] — `describe_duration`
 //! - [`scenario`] — `summarize_scenario`, `down_payment_for_percent`
 //! - [`storage`] (wasm32 only) — `init_storage`, `save_scenario`,
 //!   `list_scenarios`, `load_scenario`, `delete_scenario`, backed by
@@ -34,6 +35,7 @@ pub mod amortization;
 pub mod comparison;
 pub mod convert;
 pub mod dto;
+pub mod duration;
 pub mod loan;
 pub mod message;
 pub mod payment;
@@ -143,7 +145,8 @@ pub mod region;
 pub mod scenario;\n";
         let wasm = "pub mod payment;\npub mod refinance;
 pub mod region;
-pub mod scenario;\npub mod dto;\n";
+pub mod scenario;\npub mod dto;
+pub mod duration;\n";
 
         assert!(unbridged(calc, wasm).is_empty());
     }
