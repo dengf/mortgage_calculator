@@ -146,6 +146,8 @@ export default {
   'sg.absd': '额外买方印花税',
   'sg.downPayment': '首付',
   'sg.cashAtCompletion': '成交时所需现金',
+  'sg.assessedAt': '按 {rate}% 评估（{instalment}/月）',
+  'sg.assessedNote': '新加坡金管局要求银行按 4% 与您的利率两者取高来测算 TDSR 和 MSR，因此以上比率使用 {instalment}/月，而非您的实际月供。',
 
   'us.title': '美国费用与 PMI',
   'us.homePrice': '房价',
@@ -178,6 +180,7 @@ export default {
   'err.invalidDti': '债务收入比须介于 0 与 1 之间（当前为 {value}）。',
   'err.invalidExtraPayment': '额外还款不能为负数（当前为 {value}）。',
   'err.parse': '无法识别该输入：{value}',
+  'err.badRequest': '有数值缺失或不是有效数字，请检查上方输入项。',
   'err.unknown': '计算时出现问题。',
 
   'warn.tdsrExceeded': '超出金管局总偿债比率 55% 的上限。',

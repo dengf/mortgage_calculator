@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::convert::{decimal_to_f64, f64_to_decimal, parse_frequency, percent_to_rate};
 use crate::dto::{RefinanceParams, RefinanceResultDto};
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_refinance(params: JsValue) -> JsValue {
@@ -15,10 +16,14 @@ pub fn calculate_refinance(params: JsValue) -> JsValue {
 fn calculate_refinance_impl(params: JsValue) -> RefinanceResultDto {
     match serde_wasm_bindgen::from_value(params) {
         Ok(params) => refinance_from_params(params),
-        Err(e) => RefinanceResultDto {
-            error: Some(format!("Failed to parse refinance parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            RefinanceResultDto {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 

@@ -8,6 +8,7 @@ use crate::convert::{
     rate_type_to_dto,
 };
 use crate::dto::{ComparisonParams, ComparisonResult, ComparisonRowDto, RatePresetDto};
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_comparison(params: JsValue) -> JsValue {
@@ -18,10 +19,14 @@ pub fn calculate_comparison(params: JsValue) -> JsValue {
 fn calculate_comparison_impl(params: JsValue) -> ComparisonResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(params) => comparison_from_params(params),
-        Err(e) => ComparisonResult {
-            error: Some(format!("Failed to parse comparison parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            ComparisonResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 

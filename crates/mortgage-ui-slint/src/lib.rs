@@ -328,7 +328,17 @@ fn blank_sg_limits(ui: &AppWindow) {
 /// price input and don't. `principal` feeds the down payment (home price
 /// minus loan amount) that upfront costs get added to for the total cash
 /// figure.
-fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Option<Decimal>) {
+///
+/// Takes the `loan` rather than just its payment because TDSR/MSR are
+/// assessed at MAS's medium-term rate floor, which means repricing the loan
+/// — see `mortgage_calc::singapore::check_tdsr_msr`. The CPF split still
+/// uses `monthly_payment`, the instalment actually owed.
+fn recompute_payment_sg(
+    ui: &AppWindow,
+    principal: Decimal,
+    loan: Option<&mortgage_calc::Loan>,
+    monthly_payment: Option<Decimal>,
+) {
     let wants_hdb_loan = ui.get_sg_loan_type() == "HDB Loan";
     if wants_hdb_loan && !singapore::hdb_loan_eligible(ui.get_sg_is_hdb()) {
         ui.set_sg_loan_type_warning(
@@ -338,13 +348,13 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
         ui.set_sg_loan_type_warning("".into());
     }
 
-    match monthly_payment {
-        Some(payment) => {
+    match (loan, monthly_payment) {
+        (Some(loan), Some(payment)) => {
             let income = Decimal::from_str(ui.get_sg_gross_income().as_str()).unwrap_or_default();
             let other_debts =
                 Decimal::from_str(ui.get_sg_other_debts().as_str()).unwrap_or_default();
 
-            match singapore::check_tdsr_msr(payment, other_debts, income, ui.get_sg_is_hdb()) {
+            match singapore::check_tdsr_msr(loan, other_debts, income, ui.get_sg_is_hdb()) {
                 Ok(check) => {
                     ui.set_sg_tdsr_label(
                         format!("{}%", format_percent(check.tdsr.ratio, 1)).into(),
@@ -384,7 +394,7 @@ fn recompute_payment_sg(ui: &AppWindow, principal: Decimal, monthly_payment: Opt
             ui.set_sg_cpf_used_label(format!("${}", format_money(split.cpf_used)).into());
             ui.set_sg_cash_required_label(format!("${}", format_money(split.cash_required)).into());
         }
-        None => {
+        _ => {
             blank_sg_limits(ui);
             ui.set_sg_cpf_used_label("".into());
             ui.set_sg_cash_required_label("".into());
@@ -522,7 +532,7 @@ fn recompute_payment(ui: &AppWindow) {
                 format!("${}", format_money(summary.total_interest)).into(),
             );
             if is_sg {
-                recompute_payment_sg(ui, loan.principal(), Some(summary.payment));
+                recompute_payment_sg(ui, loan.principal(), Some(&loan), Some(summary.payment));
             }
             if is_us {
                 let first_period_interest = loan.principal() * loan.periodic_rate();
@@ -538,7 +548,7 @@ fn recompute_payment(ui: &AppWindow) {
             ui.set_has_error(true);
             ui.set_error_text(reason.into());
             if is_sg {
-                recompute_payment_sg(ui, Decimal::ZERO, None);
+                recompute_payment_sg(ui, Decimal::ZERO, None, None);
             }
             if is_us {
                 recompute_payment_us(ui, Decimal::ZERO, None, None);

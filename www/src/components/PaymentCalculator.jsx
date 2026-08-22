@@ -5,6 +5,7 @@ import SingaporePanel from './SingaporePanel';
 import UnitedStatesPanel from './UnitedStatesPanel';
 import { PrincipalInterestSplit } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
+import { allFilled, useSticky } from '../inputs';
 import { useI18n } from '../i18n';
 
 
@@ -39,15 +40,29 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
 
-  const result = useMemo(() => {
+  // A blank field is an input mid-edit, not an error: don't cross the wasm
+  // boundary with it. serde would reject `''` where it wants an f64, and
+  // that failure used to surface as a raw parse error on the page.
+  const liveResult = useMemo(() => {
     if (!wasmModule) return null;
-    return wasmModule.calculate_payment({
+    if (!allFilled(principal, rate, termYears)) return null;
+    return {
+      summary: wasmModule.calculate_payment({
+        principal,
+        annual_rate_percent: rate,
+        term_years: termYears,
+        frequency,
+      }),
+      // Carried alongside so the split chart is drawn from the same inputs
+      // as the figures beside it. Reading live state there would mix a held
+      // result with an in-flight principal and render a 100%-interest loan.
       principal,
-      annual_rate_percent: rate,
-      term_years: termYears,
-      frequency,
-    });
+    };
   }, [wasmModule, principal, rate, termYears, frequency]);
+
+  const { value: held, stale } = useSticky(liveResult);
+  const result = held?.summary ?? null;
+  const shownPrincipal = held?.principal ?? principal;
 
   // TDSR/MSR and the CPF split are monthly ceilings, so a non-monthly
   // schedule has no meaningful payment to test against them. Stamp duty
@@ -57,20 +72,24 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
     // hold a cached wasm build from before a binding existed, and calling a
     // missing export would take down the whole tab rather than one panel.
     if (!wasmModule?.calculate_singapore || region !== 'SG') return null;
+    if (!allFilled(principal, rate, termYears)) return null;
     const monthlyPayment =
       result && !result.error && frequency === 'monthly' ? result.payment : null;
     return wasmModule.calculate_singapore({
       ...sgInputs,
       monthly_payment: monthlyPayment,
       principal,
+      annual_rate_percent: rate,
+      term_years: termYears,
     });
-  }, [wasmModule, region, sgInputs, result, frequency, principal]);
+  }, [wasmModule, region, sgInputs, result, frequency, principal, rate, termYears]);
 
   // PITI, PMI and the deduction estimate are all monthly figures, so like
   // the Singapore panel they only apply to a monthly schedule. Property tax
   // and PMI price off the home price and loan amount and still compute.
   const usResult = useMemo(() => {
     if (!wasmModule?.calculate_united_states || region !== 'US') return null;
+    if (!allFilled(principal, rate, termYears)) return null;
     const monthlyPi =
       result && !result.error && frequency === 'monthly' ? result.payment : null;
     return wasmModule.calculate_united_states({
@@ -97,7 +116,7 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
         </label>
       </div>
 
-      <div className="panel-results">
+      <div className={stale ? 'panel-results stale' : 'panel-results'}>
         {result?.error && (
           <div className="error">
             {result.error_message
@@ -124,11 +143,13 @@ export default function PaymentCalculator({ wasmModule, region = 'US' }) {
       </div>
 
       {result && !result.error && (
-        <PrincipalInterestSplit
-          principal={principal}
-          totalInterest={result.total_interest}
-          formatMoney={formatMoney}
-        />
+        <div className={stale ? 'stale' : undefined}>
+          <PrincipalInterestSplit
+            principal={shownPrincipal}
+            totalInterest={result.total_interest}
+            formatMoney={formatMoney}
+          />
+        </div>
       )}
 
       {region === 'US' && (

@@ -212,6 +212,9 @@ pub struct ScenarioDto {
 pub struct SaveScenarioResult {
     pub id: Option<String>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -272,6 +275,9 @@ pub struct UnitedStatesResult {
     pub monthly_tax_savings: Option<f64>,
     pub net_monthly_cost: Option<f64>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }
 
 /// Inputs for the Singapore regulatory panel.
@@ -286,6 +292,12 @@ pub struct SingaporeParams {
     pub monthly_payment: Option<f64>,
     /// The loan amount, used with `home_price` to derive the down payment.
     pub principal: f64,
+    /// The borrower's own rate, e.g. `4.5` for 4.5%. TDSR/MSR are assessed
+    /// at the higher of this and MAS's 4% floor, so the terms have to cross
+    /// the boundary — a pre-computed `monthly_payment` alone can't be
+    /// repriced.
+    pub annual_rate_percent: f64,
+    pub term_years: f64,
     pub home_price: f64,
     pub gross_monthly_income: f64,
     pub other_monthly_debts: f64,
@@ -312,6 +324,14 @@ pub struct SingaporeResult {
     pub msr_ratio_percent: Option<f64>,
     pub msr_exceeded: bool,
     pub msr_near_limit: bool,
+    /// The rate the ratios were assessed at, as a percentage — MAS's 4%
+    /// floor unless the borrower's own rate is higher.
+    pub assessment_rate_percent: Option<f64>,
+    /// The monthly instalment the ratios were computed from. Above the
+    /// borrower's actual payment whenever they're quoted under the floor;
+    /// the UI shows both so the difference is explained rather than
+    /// mysterious.
+    pub assessed_monthly_instalment: Option<f64>,
     pub cpf_used: Option<f64>,
     pub cash_required: Option<f64>,
     pub bsd: f64,
@@ -328,4 +348,7 @@ pub struct SingaporeResult {
     /// The same breaches as translation codes, in the same order.
     pub warning_codes: Vec<String>,
     pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
 }

@@ -51,6 +51,25 @@ impl Message {
         params.insert("value".to_string(), value.into());
         Self::new(code, params, text)
     }
+
+    /// The values a caller sent could not be read into the expected shape —
+    /// a blank field, a non-numeric string, a missing key.
+    ///
+    /// Deliberately carries nothing from the underlying
+    /// `serde_wasm_bindgen::Error`. That error wraps a JS `Error` object, so
+    /// its `Debug` rendering includes a live JavaScript stack trace, and
+    /// every caller writes this message straight into the DOM. Formatting it
+    /// with `{e:?}` put bundle paths and raw `wasm-function[N]:0x…` offsets
+    /// on the page the moment anyone cleared a numeric field — which is the
+    /// first thing a visitor does, since they have to clear the default
+    /// before typing their own. A reader needs one sentence about their
+    /// input, not a backtrace.
+    pub fn bad_request() -> Self {
+        Message::bare(
+            "err.badRequest",
+            "Some values are missing or aren't valid numbers. Check the fields above.",
+        )
+    }
 }
 
 impl From<&MortgageError> for Message {
@@ -153,5 +172,62 @@ mod tests {
         // same sentence.
         assert_eq!(codes.len(), all.len());
         assert!(codes.iter().all(|c| c.starts_with("err.")));
+    }
+}
+
+/// Guards the boundary against leaking a foreign error's `Debug` output to
+/// the page.
+///
+/// `serde_wasm_bindgen::Error` wraps a JS `Error`, so `{e:?}` renders a live
+/// JavaScript stack trace — bundle paths and raw `wasm-function[N]:0x…`
+/// offsets. Every binding writes its `error` field straight into the DOM,
+/// so formatting a parse failure that way put a wasm backtrace on screen the
+/// moment anyone cleared a numeric field.
+///
+/// This is a source-level check rather than a behavioural one because a
+/// `JsValue` can't be constructed off the wasm32 target, so the failing path
+/// can't be exercised from a normal `cargo test`.
+#[cfg(test)]
+mod no_debug_formatted_errors {
+    /// Every module that converts a `JsValue` into a result DTO.
+    const BINDINGS: &[(&str, &str)] = &[
+        ("payment.rs", include_str!("payment.rs")),
+        ("amortization.rs", include_str!("amortization.rs")),
+        ("affordability.rs", include_str!("affordability.rs")),
+        ("refinance.rs", include_str!("refinance.rs")),
+        ("comparison.rs", include_str!("comparison.rs")),
+        ("united_states.rs", include_str!("united_states.rs")),
+        ("singapore.rs", include_str!("singapore.rs")),
+        ("storage.rs", include_str!("storage.rs")),
+    ];
+
+    #[test]
+    fn no_binding_debug_formats_an_error_into_a_user_facing_field() {
+        let mut offenders = Vec::new();
+        for (name, source) in BINDINGS {
+            for (i, line) in source.lines().enumerate() {
+                let code = line.split("//").next().unwrap_or(line);
+                if code.contains("{e:?}") || code.contains("{err:?}") {
+                    offenders.push(format!("{name}:{}", i + 1));
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "these lines Debug-format an error that reaches the DOM: {offenders:?}. \
+             A serde_wasm_bindgen::Error carries a JS stack trace, so this puts a wasm \
+             backtrace on the page. Use Message::bad_request() instead."
+        );
+    }
+
+    #[test]
+    fn the_bad_request_message_names_no_internals() {
+        let text = super::Message::bad_request().text;
+        for leak in ["wasm", "Error(", "JsValue", "f64", ".js:", "0x"] {
+            assert!(
+                !text.contains(leak),
+                "bad_request text leaks {leak:?} to the reader: {text}"
+            );
+        }
     }
 }

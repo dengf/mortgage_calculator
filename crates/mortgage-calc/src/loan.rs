@@ -37,6 +37,10 @@ impl Loan {
         self.frequency
     }
 
+    pub fn term_years(&self) -> Decimal {
+        self.term_years
+    }
+
     /// Interest rate charged per payment period.
     pub fn periodic_rate(&self) -> Decimal {
         self.frequency.periodic_rate(self.annual_rate)

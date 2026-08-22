@@ -13,6 +13,7 @@ use rust_decimal::Decimal;
 
 use crate::convert::{decimal_to_f64, f64_to_decimal};
 use crate::dto::{SingaporeParams, SingaporeResult};
+use crate::message::Message;
 
 #[wasm_bindgen]
 pub fn calculate_singapore(params: JsValue) -> JsValue {
@@ -23,10 +24,14 @@ pub fn calculate_singapore(params: JsValue) -> JsValue {
 fn calculate_singapore_impl(params: JsValue) -> SingaporeResult {
     match serde_wasm_bindgen::from_value(params) {
         Ok(p) => singapore_from_params(p),
-        Err(e) => SingaporeResult {
-            error: Some(format!("Failed to parse Singapore parameters: {e:?}")),
-            ..Default::default()
-        },
+        Err(_) => {
+            let message = Message::bad_request();
+            SingaporeResult {
+                error: Some(message.text.clone()),
+                error_message: Some(message),
+                ..Default::default()
+            }
+        }
     }
 }
 
@@ -70,10 +75,26 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
         let income = f64_to_decimal(p.gross_monthly_income);
         let other_debts = f64_to_decimal(p.other_monthly_debts);
 
-        if let Ok(check) = singapore::check_tdsr_msr(payment, other_debts, income, p.is_hdb_or_ec) {
+        // The ratios are assessed on this loan repriced at MAS's medium-term
+        // rate floor, so `check_tdsr_msr` needs the terms, not the payment.
+        // The CPF split below stays on the real payment — CPF services what
+        // the borrower actually owes, not the stressed figure.
+        let assessed_loan = mortgage_calc::Loan::builder()
+            .principal(f64_to_decimal(p.principal))
+            .annual_rate(f64_to_decimal(p.annual_rate_percent) / Decimal::from(100))
+            .term_years(f64_to_decimal(p.term_years))
+            .frequency(mortgage_core::PaymentFrequency::Monthly)
+            .build();
+
+        if let Ok(check) = assessed_loan
+            .and_then(|loan| singapore::check_tdsr_msr(&loan, other_debts, income, p.is_hdb_or_ec))
+        {
             result.tdsr_ratio_percent = Some(to_percent(check.tdsr.ratio));
             result.tdsr_exceeded = check.tdsr.exceeded;
             result.tdsr_near_limit = check.tdsr.near_limit;
+            result.assessment_rate_percent = Some(to_percent(check.assessment_rate));
+            result.assessed_monthly_instalment =
+                Some(decimal_to_f64(check.assessed_monthly_instalment));
             if check.tdsr.exceeded {
                 result.warnings.push("Exceeds MAS TDSR limit (55%).".into());
                 result.warning_codes.push("warn.tdsrExceeded".into());
@@ -122,6 +143,8 @@ mod tests {
         SingaporeParams {
             monthly_payment: Some(3_000.0),
             principal: 800_000.0,
+            annual_rate_percent: 4.0,
+            term_years: 30.0,
             home_price: 1_000_000.0,
             gross_monthly_income: 10_000.0,
             other_monthly_debts: 0.0,
@@ -136,10 +159,38 @@ mod tests {
     #[test]
     fn reports_tdsr_and_leaves_msr_unset_for_private_property() {
         let r = singapore_from_params(params());
-        assert_eq!(r.tdsr_ratio_percent, Some(30.0));
+        // Derived from the loan repriced at the assessment rate, not from
+        // the `monthly_payment` the caller passed in: $800k over 30y at 4%
+        // is ~$3,819/mo against $10,000 income.
+        let ratio = r.tdsr_ratio_percent.unwrap();
+        assert!((38.0..38.5).contains(&ratio), "got {ratio}");
         assert!(!r.tdsr_exceeded);
         assert!(r.msr_ratio_percent.is_none());
         assert!(r.warnings.is_empty());
+    }
+
+    #[test]
+    fn ratios_ignore_the_quoted_payment_and_use_the_mas_floor() {
+        // A borrower quoted 1.5% still gets assessed at 4%. Passing a
+        // matching low `monthly_payment` must not soften the ratio — that
+        // was the bug: the panel reported a payment-derived TDSR a bank
+        // would never have accepted.
+        let r = singapore_from_params(SingaporeParams {
+            annual_rate_percent: 1.5,
+            monthly_payment: Some(2_761.0),
+            ..params()
+        });
+
+        assert_eq!(r.assessment_rate_percent, Some(4.0));
+        let assessed = r.assessed_monthly_instalment.unwrap();
+        assert!(
+            assessed > 2_761.0,
+            "assessed {assessed} should exceed the quoted payment"
+        );
+
+        // CPF still services the real instalment, not the stressed one.
+        assert_eq!(r.cpf_used, Some(1_200.0));
+        assert_eq!(r.cash_required, Some(2_761.0 - 1_200.0));
     }
 
     #[test]

@@ -72,7 +72,11 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
         )}
       </div>
 
-      {result?.error && <div className="error">{result.error}</div>}
+      {result?.error && (
+        <div className="error">
+          {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
+        </div>
+      )}
 
       {result?.property_tax_rate_percent == null && inputs.zip.length > 0 && (
         <div className="error">{t('us.unknownZip', { zip: inputs.zip })}</div>

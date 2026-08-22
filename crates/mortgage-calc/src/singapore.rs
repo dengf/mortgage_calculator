@@ -11,10 +11,12 @@
 //! those depend on the property's valuation history rather than anything
 //! this calculator otherwise tracks.
 
-use mortgage_core::{round_currency, MortgageError, MortgageResult};
+use mortgage_core::{round_currency, MortgageError, MortgageResult, PaymentFrequency};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+
+use crate::loan::Loan;
 
 /// How much of a monthly payment CPF Ordinary Account funds can cover,
 /// versus how much cash is still required.
@@ -45,6 +47,27 @@ pub const TDSR_LIMIT: Decimal = dec!(0.55);
 /// flats and Executive Condominiums.
 pub const MSR_LIMIT: Decimal = dec!(0.30);
 
+/// MAS's medium-term interest rate floor for residential property loans.
+///
+/// TDSR and MSR are *not* computed on the instalment a borrower is quoted.
+/// MAS Notice 645 (last revised 21 August 2025) para 6(b) requires a bank to
+/// "base its calculation of the monthly interest payable under the credit
+/// facility on a medium-term interest rate", which for the purchase of
+/// residential property is the "[h]igher of 4% or the thereafter interest
+/// rate" — in force for options to purchase granted on or after
+/// 30 September 2022.
+///
+/// Testing the contract instalment instead understates both ratios for
+/// anyone quoted under 4%, which is precisely the borrower closest to the
+/// ceiling. So the ratios here are always computed on a repriced loan.
+pub const MEDIUM_TERM_RATE_FLOOR: Decimal = dec!(0.04);
+
+/// The rate a bank must assess a residential property loan at: the
+/// borrower's own rate, or the MAS floor, whichever is higher.
+pub fn assessment_rate(contract_annual_rate: Decimal) -> Decimal {
+    contract_annual_rate.max(MEDIUM_TERM_RATE_FLOOR)
+}
+
 /// A ratio's standing against its regulatory ceiling: exceeded outright,
 /// within a warning band below it, or comfortably clear.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -68,12 +91,26 @@ pub struct TdsrMsrCheck {
     pub tdsr: LimitStatus,
     /// `None` when the property isn't an HDB flat/EC, since MSR doesn't apply.
     pub msr: Option<LimitStatus>,
+    /// The rate the ratios were assessed at — [`MEDIUM_TERM_RATE_FLOOR`]
+    /// unless the borrower's own rate is higher.
+    pub assessment_rate: Decimal,
+    /// The instalment the ratios were computed from: this loan repriced at
+    /// `assessment_rate`. Differs from what the borrower actually pays
+    /// whenever they're quoted under the floor, so the UI can show both and
+    /// explain the gap.
+    pub assessed_monthly_instalment: Decimal,
 }
 
-/// Checks a loan's monthly payment against the MAS TDSR (always) and MSR
-/// (HDB/EC only) ceilings.
+/// Checks a loan against the MAS TDSR (always) and MSR (HDB/EC only)
+/// ceilings.
+///
+/// Takes the loan rather than a payment on purpose. The ratios must be
+/// computed on the instalment at [`MEDIUM_TERM_RATE_FLOOR`], not the one the
+/// borrower is quoted, and a caller handed a payment has no way to tell
+/// which it holds — so the repricing happens here, where it can't be
+/// skipped.
 pub fn check_tdsr_msr(
-    monthly_housing_payment: Decimal,
+    loan: &Loan,
     other_monthly_debts: Decimal,
     gross_monthly_income: Decimal,
     is_hdb_or_ec: bool,
@@ -84,13 +121,25 @@ pub fn check_tdsr_msr(
         ));
     }
 
-    let tdsr_ratio = (monthly_housing_payment + other_monthly_debts) / gross_monthly_income;
-    let msr = is_hdb_or_ec
-        .then(|| limit_status(monthly_housing_payment / gross_monthly_income, MSR_LIMIT));
+    let assessment_rate = assessment_rate(loan.annual_rate());
+    let assessed = Loan::builder()
+        .principal(loan.principal())
+        .annual_rate(assessment_rate)
+        .term_years(loan.term_years())
+        // TDSR and MSR are monthly ceilings, so the assessed instalment is a
+        // monthly one regardless of how the borrower actually repays.
+        .frequency(PaymentFrequency::Monthly)
+        .build()?;
+    let instalment = crate::payment::payment_amount(&assessed);
+
+    let tdsr_ratio = (instalment + other_monthly_debts) / gross_monthly_income;
+    let msr = is_hdb_or_ec.then(|| limit_status(instalment / gross_monthly_income, MSR_LIMIT));
 
     Ok(TdsrMsrCheck {
         tdsr: limit_status(tdsr_ratio, TDSR_LIMIT),
         msr,
+        assessment_rate,
+        assessed_monthly_instalment: round_currency(instalment),
     })
 }
 
@@ -208,23 +257,101 @@ mod tests {
         assert_eq!(split.cash_required, dec!(0));
     }
 
+    /// A loan whose instalment lands wherever the test needs it. `rate` is a
+    /// fraction, matching `Loan::annual_rate`.
+    fn loan_of(principal: Decimal, rate: Decimal, years: Decimal) -> Loan {
+        Loan::builder()
+            .principal(principal)
+            .annual_rate(rate)
+            .term_years(years)
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap()
+    }
+
     #[test]
     fn tdsr_flags_when_total_debt_exceeds_55_percent() {
-        let check = check_tdsr_msr(dec!(5000), dec!(1000), dec!(10000), false).unwrap();
+        // ~$5,057/mo assessed, plus $1,000 other debt, against $10,000 income.
+        let check = check_tdsr_msr(
+            &loan_of(dec!(1_000_000), dec!(0.045), dec!(30)),
+            dec!(1000),
+            dec!(10_000),
+            false,
+        )
+        .unwrap();
         assert!(check.tdsr.exceeded);
         assert!(check.msr.is_none());
     }
 
     #[test]
     fn msr_only_applies_to_hdb_and_is_tighter_than_tdsr() {
-        let check = check_tdsr_msr(dec!(3200), dec!(0), dec!(10000), true).unwrap();
+        // ~$3,341/mo: clear of TDSR's 55%, over MSR's 30%.
+        let check = check_tdsr_msr(
+            &loan_of(dec!(700_000), dec!(0.04), dec!(30)),
+            dec!(0),
+            dec!(10_000),
+            true,
+        )
+        .unwrap();
         assert!(!check.tdsr.exceeded);
         assert!(check.msr.unwrap().exceeded);
     }
 
     #[test]
     fn rejects_non_positive_income() {
-        assert!(check_tdsr_msr(dec!(1000), dec!(0), dec!(0), false).is_err());
+        assert!(check_tdsr_msr(
+            &loan_of(dec!(500_000), dec!(0.04), dec!(25)),
+            dec!(0),
+            dec!(0),
+            false
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn assesses_a_cheap_loan_at_the_mas_floor_rather_than_its_own_rate() {
+        // MAS Notice 645 para 6(b): residential loans are assessed at the
+        // higher of 4% and the contract rate. At 1.5% this borrower looks far
+        // more affordable than a bank is permitted to find them.
+        // $1.2M at 1.5% is ~$4,141/mo — 41% of income, comfortably inside
+        // TDSR. Repriced at the 4% floor it is ~$5,728/mo, or 57%, which is
+        // not. A bank would decline this borrower; so must the calculator.
+        let loan = loan_of(dec!(1_200_000), dec!(0.015), dec!(30));
+        let check = check_tdsr_msr(&loan, dec!(0), dec!(10_000), false).unwrap();
+
+        assert_eq!(check.assessment_rate, MEDIUM_TERM_RATE_FLOOR);
+
+        let contract_instalment = crate::payment::payment_amount(&loan);
+        assert!(
+            check.assessed_monthly_instalment > contract_instalment,
+            "assessed {} should exceed the contract instalment {}",
+            check.assessed_monthly_instalment,
+            contract_instalment
+        );
+
+        // The whole point: the stress is what pushes this over the ceiling.
+        assert!(check.tdsr.exceeded);
+        let unstressed_ratio = contract_instalment / dec!(10_000);
+        assert!(unstressed_ratio < TDSR_LIMIT);
+    }
+
+    #[test]
+    fn leaves_a_loan_above_the_floor_at_its_own_rate() {
+        let loan = loan_of(dec!(500_000), dec!(0.065), dec!(25));
+        let check = check_tdsr_msr(&loan, dec!(0), dec!(20_000), false).unwrap();
+
+        assert_eq!(check.assessment_rate, dec!(0.065));
+        assert_eq!(
+            check.assessed_monthly_instalment,
+            round_currency(crate::payment::payment_amount(&loan))
+        );
+    }
+
+    #[test]
+    fn assessment_rate_takes_the_higher_of_the_floor_and_the_contract_rate() {
+        assert_eq!(assessment_rate(dec!(0.015)), MEDIUM_TERM_RATE_FLOOR);
+        assert_eq!(assessment_rate(dec!(0.04)), MEDIUM_TERM_RATE_FLOOR);
+        assert_eq!(assessment_rate(dec!(0.072)), dec!(0.072));
     }
 
     #[test]
