@@ -64,6 +64,15 @@ impl Message {
     /// first thing a visitor does, since they have to clear the default
     /// before typing their own. A reader needs one sentence about their
     /// input, not a backtrace.
+    /// A message with several interpolated values.
+    pub fn with_params(
+        code: &str,
+        params: impl IntoIterator<Item = (String, String)>,
+        text: String,
+    ) -> Self {
+        Self::new(code, params.into_iter().collect(), text)
+    }
+
     pub fn bad_request() -> Self {
         Message::bare(
             "err.badRequest",

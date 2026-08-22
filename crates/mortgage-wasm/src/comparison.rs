@@ -1,6 +1,9 @@
 //! `calculate_comparison` and `get_common_rate_presets`.
 
 use mortgage_calc::comparison::{ComparisonEntry, ComparisonInput, Tradeoff};
+use mortgage_calc::PresetLabel;
+use mortgage_core::Region;
+use rust_decimal::Decimal;
 use wasm_bindgen::prelude::*;
 
 use crate::convert::{
@@ -120,14 +123,57 @@ fn to_verdict_dto(v: mortgage_calc::comparison::ComparisonVerdict) -> Comparison
     }
 }
 
+/// Formats a spread for display, e.g. `0.005` as `"0.50"`.
+fn spread_percent(spread: Decimal) -> String {
+    format!("{:.2}", rate_to_percent(spread))
+}
+
+/// The preset's name, as a code plus its values and an English rendering.
+fn label_message(label: PresetLabel) -> Message {
+    match label {
+        PresetLabel::Fixed { years } => Message::with_params(
+            "preset.fixed",
+            [("years".to_string(), years.to_string())],
+            format!("{years}-Year Fixed"),
+        ),
+        PresetLabel::Floating { index, spread } => {
+            let (index, spread) = (index.as_str().to_string(), spread_percent(spread));
+            Message::with_params(
+                "preset.floating",
+                [
+                    ("index".to_string(), index.clone()),
+                    ("spread".to_string(), spread.clone()),
+                ],
+                format!("Floating: {index} + {spread}%"),
+            )
+        }
+        PresetLabel::HdbConcessionary => {
+            Message::bare("preset.hdbConcessionary", "HDB concessionary")
+        }
+    }
+}
+
+/// Starting points for the market the buyer is shopping in.
+///
+/// Takes a region because the floating index is a fact about that market
+/// rather than a preference -- see `mortgage_calc::rate::RateIndex`. An
+/// unrecognized or absent region falls back to the default rather than
+/// erroring: this seeds a comparison, and an empty quick-add list would look
+/// like a broken tab.
 #[wasm_bindgen]
-pub fn get_common_rate_presets() -> JsValue {
-    let presets: Vec<RatePresetDto> = mortgage_calc::common_presets()
+pub fn get_common_rate_presets(region: Option<String>) -> JsValue {
+    let region = region.as_deref().map(Region::parse).unwrap_or_default();
+
+    let presets: Vec<RatePresetDto> = mortgage_calc::common_presets(region)
         .into_iter()
-        .map(|preset| RatePresetDto {
-            label: preset.label.to_string(),
-            rate_type: rate_type_to_dto(&preset.rate_type),
-            term_years: decimal_to_f64(preset.term_years),
+        .map(|preset| {
+            let message = label_message(preset.label);
+            RatePresetDto {
+                label: message.text.clone(),
+                label_message: message,
+                rate_type: rate_type_to_dto(&preset.rate_type),
+                term_years: decimal_to_f64(preset.term_years),
+            }
         })
         .collect();
 
