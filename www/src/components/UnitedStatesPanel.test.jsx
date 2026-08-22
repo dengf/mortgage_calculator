@@ -44,8 +44,9 @@ describe('UnitedStatesPanel', () => {
   it('tells the user what would remove PMI when it applies', () => {
     render(
       <UnitedStatesPanel
-        inputs={{ ...inputs, home_price: 440000 }}
+        inputs={inputs}
         onChange={() => {}}
+        homePrice={440000}
         result={{ ...result, pmi_required: true, monthly_pmi: 250, down_payment_percent: 9.1 }}
       />,
     );

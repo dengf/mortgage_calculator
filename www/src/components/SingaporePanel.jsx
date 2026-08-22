@@ -35,13 +35,6 @@ export default function SingaporePanel({ inputs, onChange, result }) {
 
       <div className="panel-form sg-panel-form">
         <NumberField
-          label={t('sg.propertyPrice')}
-          value={inputs.home_price}
-          onChange={set('home_price')}
-          suffix="S$"
-          min={0}
-        />
-        <NumberField
           label={t('sgaff.fixedIncome')}
           value={inputs.fixed_monthly_income}
           onChange={set('fixed_monthly_income')}

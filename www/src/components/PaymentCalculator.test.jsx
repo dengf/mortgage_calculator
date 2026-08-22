@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import PaymentCalculator from './PaymentCalculator';
+import { renderControlled } from '../test/controlled';
 
 // PaymentCalculator receives wasmModule as a prop rather than importing the
 // wasm-pack build directly, so it can be exercised here with a plain mock —
@@ -37,20 +38,20 @@ describe('PaymentCalculator', () => {
     // serde as `''` where an f64 was expected, and the resulting parse error
     // printed a wasm stack trace onto the page.
     const wasmModule = mockWasmModule();
-    render(<PaymentCalculator wasmModule={wasmModule} />);
+    renderControlled(PaymentCalculator, { wasmModule });
     await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
 
     const callsBefore = wasmModule.calculate_payment.mock.calls.length;
-    await userEvent.clear(screen.getByDisplayValue('400000'));
+    await userEvent.clear(screen.getByDisplayValue('500000'));
 
     expect(wasmModule.calculate_payment.mock.calls.length).toBe(callsBefore);
   });
 
   it('holds the last result rather than erroring when a field is cleared', async () => {
-    render(<PaymentCalculator wasmModule={mockWasmModule()} />);
+    renderControlled(PaymentCalculator, { wasmModule: mockWasmModule() });
     expect(await screen.findByText('$2,528.27')).toBeInTheDocument();
 
-    await userEvent.clear(screen.getByDisplayValue('400000'));
+    await userEvent.clear(screen.getByDisplayValue('500000'));
 
     // Figures stay on screen (dimmed) instead of vanishing or being replaced
     // by an error.
@@ -86,7 +87,7 @@ describe('PaymentCalculator', () => {
 
   it('recomputes when an input changes', async () => {
     const wasmModule = mockWasmModule();
-    render(<PaymentCalculator wasmModule={wasmModule} />);
+    renderControlled(PaymentCalculator, { wasmModule });
     await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
 
     // NumberField's label wraps both the label text and the suffix span

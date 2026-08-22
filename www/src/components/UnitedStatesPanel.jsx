@@ -15,7 +15,7 @@ const formatUsd = makeFormatMoney('US');
  * Every figure comes from `mortgage_calc::united_states` through the
  * `calculate_united_states` binding — no US rules are reimplemented here.
  */
-export default function UnitedStatesPanel({ inputs, onChange, result }) {
+export default function UnitedStatesPanel({ inputs, onChange, result, homePrice }) {
   const { t } = useI18n();
   const set = (key) => (value) => onChange({ ...inputs, [key]: value });
 
@@ -24,13 +24,6 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
       <h3 className="sg-panel-title">{t('us.title')}</h3>
 
       <div className="panel-form sg-panel-form">
-        <NumberField
-          label={t('us.homePrice')}
-          value={inputs.home_price}
-          onChange={set('home_price')}
-          suffix="$"
-          min={0}
-        />
         <label className="field">
           <span className="field-label">{t('us.zip')}</span>
           <div className="field-input">
@@ -135,7 +128,7 @@ export default function UnitedStatesPanel({ inputs, onChange, result }) {
 
           {result.pmi_required && (
             <p className="chart-note">
-              {t('us.pmiHint', { amount: formatUsd(inputs.home_price * 0.2) })}
+              {t('us.pmiHint', { amount: formatUsd((Number(homePrice) || 0) * 0.2) })}
             </p>
           )}
         </>

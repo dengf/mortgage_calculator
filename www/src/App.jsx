@@ -7,6 +7,7 @@ import SingaporeAffordability from './components/SingaporeAffordability';
 import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
+import { DEFAULT_SCENARIO } from './scenario';
 
 const PANELS = {
   payment: PaymentCalculator,
@@ -37,9 +38,13 @@ function detectRegion() {
   return locales.some((l) => typeof l === 'string' && l.toUpperCase().endsWith('-SG')) ? 'SG' : 'US';
 }
 
-function AppShell({ wasmModule }) {
+/// Exported so tests can drive the real tab wiring — the shared scenario
+/// only means anything across a tab switch, which App owns.
+export function AppShell({ wasmModule }) {
   const [activeTab, setActiveTab] = useState('payment');
   const [region, setRegion] = useState(detectRegion);
+  // One loan, described from several angles — see src/scenario.js.
+  const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
   const { t } = useI18n();
   const ActivePanel = panelFor(activeTab, region);
 
@@ -52,7 +57,12 @@ function AppShell({ wasmModule }) {
         onRegionChange={setRegion}
       />
       <main className="app-main">
-        <ActivePanel wasmModule={wasmModule} region={region} />
+        <ActivePanel
+          wasmModule={wasmModule}
+          region={region}
+          scenario={scenario}
+          onScenarioChange={setScenario}
+        />
       </main>
       <footer className="app-footer">
         {t('app.footer')}{' '}

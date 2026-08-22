@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import NumberField from './NumberField';
+import ScenarioFields from './ScenarioFields';
 import ComparisonEntryRow from './ComparisonEntryRow';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
+import { DEFAULT_SCENARIO, principalOf } from '../scenario';
 
 
 let nextId = 0;
@@ -43,12 +44,19 @@ function toWasmEntry(entry) {
   return { label: entry.label, rate_type, term_years: entry.termYears };
 }
 
-export default function ComparisonView({ wasmModule, region }) {
+export default function ComparisonView({
+  wasmModule,
+  region,
+  scenario = DEFAULT_SCENARIO,
+  onScenarioChange,
+}) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
-  const [principal, setPrincipal] = useState(400000);
-  const [frequency, setFrequency] = useState('monthly');
+  // Rate and term vary per comparison row, so only the amount and cadence
+  // come from the shared scenario.
+  const { frequency } = scenario;
+  const principal = principalOf(scenario);
   const [presets, setPresets] = useState([]);
   const [entries, setEntries] = useState([]);
 
@@ -69,7 +77,7 @@ export default function ComparisonView({ wasmModule, region }) {
 
   const result = useMemo(() => {
     if (!wasmModule || entries.length === 0) return null;
-    if (!allFilled(principal)) return null;
+    if (!allFilled(scenario.homePrice, scenario.downPayment)) return null;
     return wasmModule.calculate_comparison({
       principal,
       frequency,
@@ -87,17 +95,13 @@ export default function ComparisonView({ wasmModule, region }) {
 
   return (
     <section className="panel">
-      <div className="panel-form">
-        <NumberField label={t('field.loanAmount')} value={principal} onChange={setPrincipal} suffix={money} min={0} />
-        <label className="field">
-          <span className="field-label">{t('field.paymentFrequency')}</span>
-          <select className="field-select" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="monthly">{t('freq.monthly')}</option>
-            <option value="biweekly">{t('freq.biweekly')}</option>
-            <option value="weekly">{t('freq.weekly')}</option>
-          </select>
-        </label>
-      </div>
+      <ScenarioFields
+        scenario={scenario}
+        onChange={onScenarioChange}
+        money={money}
+        formatMoney={formatMoney}
+        fields={['price', 'downPayment', 'frequency']}
+      />
 
       <div className="comparison-presets">
         <span className="field-label">{t('cmp.quickAdd')}</span>

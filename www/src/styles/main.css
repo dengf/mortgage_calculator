@@ -719,3 +719,53 @@ body {
   line-height: 1.5;
   color: var(--text-muted, #c2ccd8);
 }
+
+/* Unit toggle inside the deposit field's label — buyers hold the figure as
+   both an amount and a percentage, so both can be typed. */
+.field-unit-toggle {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.field-unit {
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  font-family: inherit;
+  color: var(--muted, #8b98a9);
+  background: transparent;
+  border: 1px solid var(--border, #263041);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.field-unit.active {
+  color: #fff;
+  background: var(--accent, #4f8cff);
+  border-color: var(--accent, #4f8cff);
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--muted, #8b98a9);
+}
+
+/* The loan amount: derived from price minus deposit, never typed. Styled as
+   a readout rather than an input so it doesn't invite editing. */
+.field-derived {
+  justify-content: flex-start;
+}
+
+.field-derived-value {
+  display: block;
+  margin-top: 6px;
+  padding: 9px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text, #e6ecf3);
+}

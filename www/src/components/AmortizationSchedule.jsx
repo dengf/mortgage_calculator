@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import NumberField from './NumberField';
+import ScenarioFields from './ScenarioFields';
 import SavedScenarios from './SavedScenarios';
 import { BalanceChart } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
+import { DEFAULT_SCENARIO, principalOf } from '../scenario';
 
 
 const PERIODS_PER_YEAR = { monthly: 12, biweekly: 26, weekly: 52 };
@@ -24,28 +26,34 @@ function summarizeByYear(rows, periodsPerYear) {
   return years;
 }
 
-export default function AmortizationSchedule({ wasmModule, region }) {
+export default function AmortizationSchedule({
+  wasmModule,
+  region,
+  scenario = DEFAULT_SCENARIO,
+  onScenarioChange,
+}) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
-  const [principal, setPrincipal] = useState(400000);
-  const [rate, setRate] = useState(6.5);
-  const [termYears, setTermYears] = useState(30);
-  const [frequency, setFrequency] = useState('monthly');
+  // Extra payment stays local: it's a question about this loan, not part of
+  // its terms, and carrying it onto the Payment tab would silently change
+  // the headline figure there.
   const [extraPayment, setExtraPayment] = useState(0);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
 
+  const { rate, termYears, frequency } = scenario;
+  const principal = principalOf(scenario);
   const loan = { principal, annual_rate_percent: rate, term_years: termYears, frequency };
 
   const schedule = useMemo(() => {
     if (!wasmModule) return null;
-    if (!allFilled(principal, rate, termYears)) return null;
+    if (!allFilled(scenario.homePrice, scenario.downPayment, rate, termYears)) return null;
     return wasmModule.calculate_amortization_schedule({ loan, extra_payment: extraPayment || 0 });
   }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
 
   const impact = useMemo(() => {
     if (!wasmModule || !extraPayment) return null;
-    if (!allFilled(principal, rate, termYears)) return null;
+    if (!allFilled(scenario.homePrice, scenario.downPayment, rate, termYears)) return null;
     return wasmModule.calculate_extra_payment_impact({ loan, extra_payment: extraPayment });
   }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
 
@@ -56,18 +64,14 @@ export default function AmortizationSchedule({ wasmModule, region }) {
 
   return (
     <section className="panel">
+      <ScenarioFields
+        scenario={scenario}
+        onChange={onScenarioChange}
+        money={money}
+        formatMoney={formatMoney}
+      />
+
       <div className="panel-form">
-        <NumberField label={t('field.loanAmount')} value={principal} onChange={setPrincipal} suffix={money} min={0} />
-        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
-        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
-        <label className="field">
-          <span className="field-label">{t('field.paymentFrequency')}</span>
-          <select className="field-select" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="monthly">{t('freq.monthly')}</option>
-            <option value="biweekly">{t('freq.biweekly')}</option>
-            <option value="weekly">{t('freq.weekly')}</option>
-          </select>
-        </label>
         <NumberField
           label={t('amort.extraPayment')}
           value={extraPayment}
