@@ -99,14 +99,16 @@ describe('PaymentCalculator', () => {
 
     await waitFor(() =>
       expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith(
-        expect.objectContaining({ annual_rate_percent: 7 })
-      )
+        expect.objectContaining({ annual_rate_percent: 7 }),
+      ),
     );
   });
 
   it('shows the error message instead of stale results when the wasm module reports one', async () => {
     const wasmModule = mockWasmModule({
-      calculate_payment: vi.fn(() => ({ error: 'loan term is unreasonably long, got 5200001 payment periods' })),
+      calculate_payment: vi.fn(() => ({
+        error: 'loan term is unreasonably long, got 5200001 payment periods',
+      })),
     });
     render(<PaymentCalculator wasmModule={wasmModule} />);
 

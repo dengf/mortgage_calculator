@@ -99,8 +99,9 @@ describe('SingaporeAffordability', () => {
     await userEvent.selectOptions(select, 'FTA');
     // A buyer who assumes it applies at the counter will be short the whole
     // foreigner ABSD on completion day.
-    expect(await screen.findByText(/claimed from IRAS, not applied automatically/i))
-      .toBeInTheDocument();
+    expect(
+      await screen.findByText(/claimed from IRAS, not applied automatically/i),
+    ).toBeInTheDocument();
   });
 
   it('degrades to a message rather than crashing on a cached wasm without the binding', async () => {

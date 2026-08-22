@@ -52,8 +52,19 @@ export default function SingaporeAffordability({ wasmModule }) {
       outstanding_housing_loans: outstandingLoans,
     });
   }, [
-    wasmModule, fixedIncome, variableIncome, debts, cash, cpf, rate, termYears, age,
-    isHdb, residency, propertyCount, outstandingLoans,
+    wasmModule,
+    fixedIncome,
+    variableIncome,
+    debts,
+    cash,
+    cpf,
+    rate,
+    termYears,
+    age,
+    isHdb,
+    residency,
+    propertyCount,
+    outstandingLoans,
   ]);
 
   const ok = result && !result.error;
@@ -61,18 +72,75 @@ export default function SingaporeAffordability({ wasmModule }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label={t('sgaff.fixedIncome')} value={fixedIncome} onChange={setFixedIncome} suffix="S$" min={0} grouped />
-        <NumberField label={t('sgaff.variableIncome')} value={variableIncome} onChange={setVariableIncome} suffix="S$" min={0} grouped />
-        <NumberField label={t('sg.otherDebts')} value={debts} onChange={setDebts} suffix="S$" min={0} grouped />
-        <NumberField label={t('sgaff.cash')} value={cash} onChange={setCash} suffix="S$" min={0} grouped />
-        <NumberField label={t('sgaff.cpf')} value={cpf} onChange={setCpf} suffix="S$" min={0} grouped />
-        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
-        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
-        <NumberField label={t('sgaff.age')} value={age} onChange={setAge} suffix={t('sgaff.yearsOld')} min={18} />
+        <NumberField
+          label={t('sgaff.fixedIncome')}
+          value={fixedIncome}
+          onChange={setFixedIncome}
+          suffix="S$"
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('sgaff.variableIncome')}
+          value={variableIncome}
+          onChange={setVariableIncome}
+          suffix="S$"
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('sg.otherDebts')}
+          value={debts}
+          onChange={setDebts}
+          suffix="S$"
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('sgaff.cash')}
+          value={cash}
+          onChange={setCash}
+          suffix="S$"
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('sgaff.cpf')}
+          value={cpf}
+          onChange={setCpf}
+          suffix="S$"
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('field.interestRate')}
+          value={rate}
+          onChange={setRate}
+          suffix="%"
+          min={0}
+        />
+        <NumberField
+          label={t('field.loanTerm')}
+          value={termYears}
+          onChange={setTermYears}
+          suffix={t('field.years')}
+          min={1}
+        />
+        <NumberField
+          label={t('sgaff.age')}
+          value={age}
+          onChange={setAge}
+          suffix={t('sgaff.yearsOld')}
+          min={18}
+        />
 
         <label className="field">
           <span className="field-label">{t('sg.propertyType')}</span>
-          <select className="field-select" value={isHdb ? 'hdb' : 'private'} onChange={(e) => setIsHdb(e.target.value === 'hdb')}>
+          <select
+            className="field-select"
+            value={isHdb ? 'hdb' : 'private'}
+            onChange={(e) => setIsHdb(e.target.value === 'hdb')}
+          >
             <option value="private">{t('sg.private')}</option>
             <option value="hdb">{t('sg.hdb')}</option>
           </select>
@@ -80,7 +148,11 @@ export default function SingaporeAffordability({ wasmModule }) {
 
         <label className="field">
           <span className="field-label">{t('sg.residency')}</span>
-          <select className="field-select" value={residency} onChange={(e) => setResidency(e.target.value)}>
+          <select
+            className="field-select"
+            value={residency}
+            onChange={(e) => setResidency(e.target.value)}
+          >
             <option value="Citizen">{t('sg.citizen')}</option>
             <option value="PR">{t('sg.pr')}</option>
             <option value="Foreigner">{t('sg.foreigner')}</option>
@@ -90,7 +162,11 @@ export default function SingaporeAffordability({ wasmModule }) {
 
         <label className="field">
           <span className="field-label">{t('sg.propertyCount')}</span>
-          <select className="field-select" value={propertyCount} onChange={(e) => setPropertyCount(e.target.value)}>
+          <select
+            className="field-select"
+            value={propertyCount}
+            onChange={(e) => setPropertyCount(e.target.value)}
+          >
             <option value="1st">{t('sg.first')}</option>
             <option value="2nd">{t('sg.second')}</option>
             <option value="3rd+">{t('sg.thirdPlus')}</option>
@@ -117,7 +193,9 @@ export default function SingaporeAffordability({ wasmModule }) {
       <div className="panel-results" aria-live="polite">
         {result?.error && (
           <div className="error">
-            {result.error_message ? t(result.error_message.code, result.error_message.params) : result.error}
+            {result.error_message
+              ? t(result.error_message.code, result.error_message.params)
+              : result.error}
           </div>
         )}
 
@@ -151,16 +229,12 @@ export default function SingaporeAffordability({ wasmModule }) {
             {/* Naming the binding rule is the actionable part: it tells the
                 buyer whether earning more or saving more would move the
                 number. */}
-            <div className="sg-constraint">
-              {t(`sgaff.bound.${result.binding_constraint}`)}
-            </div>
+            <div className="sg-constraint">{t(`sgaff.bound.${result.binding_constraint}`)}</div>
 
             {/* The FTA remission is claimed from IRAS, not applied at the
                 counter — saying so matters, because a buyer who assumes it
                 is automatic will be short S$276k on completion day. */}
-            {residency === 'FTA' && (
-              <div className="sg-constraint">{t('sgaff.ftaNote')}</div>
-            )}
+            {residency === 'FTA' && <div className="sg-constraint">{t('sgaff.ftaNote')}</div>}
 
             <div className="stat-grid">
               <div className="stat">
@@ -196,8 +270,18 @@ export default function SingaporeAffordability({ wasmModule }) {
         wasmModule={wasmModule}
         calculatorKind="affordability"
         getCurrentInputs={() => ({
-          fixedIncome, variableIncome, debts, cash, cpf, rate, termYears, age,
-          isHdb, residency, propertyCount, outstandingLoans,
+          fixedIncome,
+          variableIncome,
+          debts,
+          cash,
+          cpf,
+          rate,
+          termYears,
+          age,
+          isHdb,
+          residency,
+          propertyCount,
+          outstandingLoans,
         })}
         onLoad={(inputs) => {
           setFixedIncome(inputs.fixedIncome);

@@ -5,7 +5,6 @@ import { currencySymbol, makeFormatEstimate, makeFormatMoney } from '../currency
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 
-
 export default function AffordabilityCalculator({ wasmModule, region }) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
@@ -42,15 +41,74 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label={t('aff.income')} value={income} onChange={setIncome} suffix={money} min={0} grouped />
-        <NumberField label={t('aff.debts')} value={debts} onChange={setDebts} suffix={money} min={0} grouped />
-        <NumberField label={t('aff.downPayment')} value={downPayment} onChange={setDownPayment} suffix={money} min={0} grouped />
-        <NumberField label={t('field.interestRate')} value={rate} onChange={setRate} suffix="%" min={0} />
-        <NumberField label={t('field.loanTerm')} value={termYears} onChange={setTermYears} suffix={t('field.years')} min={1} />
-        <NumberField label={t('aff.maxDti')} value={maxDti} onChange={setMaxDti} suffix="%" min={1} />
-        <NumberField label={t('aff.propertyTaxRate')} value={taxRate} onChange={setTaxRate} suffix="%/yr" min={0} />
-        <NumberField label={t('aff.insurance')} value={insurance} onChange={setInsurance} suffix={money} min={0} grouped />
-        <NumberField label={t('aff.hoa')} value={hoa} onChange={setHoa} suffix={money} min={0} grouped />
+        <NumberField
+          label={t('aff.income')}
+          value={income}
+          onChange={setIncome}
+          suffix={money}
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('aff.debts')}
+          value={debts}
+          onChange={setDebts}
+          suffix={money}
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('aff.downPayment')}
+          value={downPayment}
+          onChange={setDownPayment}
+          suffix={money}
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('field.interestRate')}
+          value={rate}
+          onChange={setRate}
+          suffix="%"
+          min={0}
+        />
+        <NumberField
+          label={t('field.loanTerm')}
+          value={termYears}
+          onChange={setTermYears}
+          suffix={t('field.years')}
+          min={1}
+        />
+        <NumberField
+          label={t('aff.maxDti')}
+          value={maxDti}
+          onChange={setMaxDti}
+          suffix="%"
+          min={1}
+        />
+        <NumberField
+          label={t('aff.propertyTaxRate')}
+          value={taxRate}
+          onChange={setTaxRate}
+          suffix="%/yr"
+          min={0}
+        />
+        <NumberField
+          label={t('aff.insurance')}
+          value={insurance}
+          onChange={setInsurance}
+          suffix={money}
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('aff.hoa')}
+          value={hoa}
+          onChange={setHoa}
+          suffix={money}
+          min={0}
+          grouped
+        />
       </div>
 
       <div className="panel-results" aria-live="polite">

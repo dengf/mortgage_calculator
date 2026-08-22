@@ -6,7 +6,6 @@ import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { formatDuration } from '../duration';
 
-
 export default function RefinanceCalculator({ wasmModule, region }) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
@@ -20,7 +19,9 @@ export default function RefinanceCalculator({ wasmModule, region }) {
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
-    if (!allFilled(currentBalance, currentRate, remainingPeriods, newRate, newTermYears, closingCosts))
+    if (
+      !allFilled(currentBalance, currentRate, remainingPeriods, newRate, newTermYears, closingCosts)
+    )
       return null;
     return wasmModule.calculate_refinance({
       current_balance: currentBalance,
@@ -31,7 +32,15 @@ export default function RefinanceCalculator({ wasmModule, region }) {
       closing_costs: closingCosts,
       frequency: 'monthly',
     });
-  }, [wasmModule, currentBalance, currentRate, remainingPeriods, newRate, newTermYears, closingCosts]);
+  }, [
+    wasmModule,
+    currentBalance,
+    currentRate,
+    remainingPeriods,
+    newRate,
+    newTermYears,
+    closingCosts,
+  ]);
 
   // Refinancing into a fresh 30-year loan when 25 years remain lowers the
   // payment and lengthens the debt. Both facts matter.
@@ -48,8 +57,21 @@ export default function RefinanceCalculator({ wasmModule, region }) {
   return (
     <section className="panel">
       <div className="panel-form">
-        <NumberField label={t('refi.currentBalance')} value={currentBalance} onChange={setCurrentBalance} suffix={money} min={0} grouped />
-        <NumberField label={t('refi.currentRate')} value={currentRate} onChange={setCurrentRate} suffix="%" min={0} />
+        <NumberField
+          label={t('refi.currentBalance')}
+          value={currentBalance}
+          onChange={setCurrentBalance}
+          suffix={money}
+          min={0}
+          grouped
+        />
+        <NumberField
+          label={t('refi.currentRate')}
+          value={currentRate}
+          onChange={setCurrentRate}
+          suffix="%"
+          min={0}
+        />
         <NumberField
           label={t('refi.remainingPeriods')}
           value={remainingPeriods}
@@ -58,9 +80,28 @@ export default function RefinanceCalculator({ wasmModule, region }) {
           min={1}
           step="1"
         />
-        <NumberField label={t('refi.newRate')} value={newRate} onChange={setNewRate} suffix="%" min={0} />
-        <NumberField label={t('refi.newTerm')} value={newTermYears} onChange={setNewTermYears} suffix={t('field.years')} min={1} />
-        <NumberField label={t('refi.closingCosts')} value={closingCosts} onChange={setClosingCosts} suffix={money} min={0} grouped />
+        <NumberField
+          label={t('refi.newRate')}
+          value={newRate}
+          onChange={setNewRate}
+          suffix="%"
+          min={0}
+        />
+        <NumberField
+          label={t('refi.newTerm')}
+          value={newTermYears}
+          onChange={setNewTermYears}
+          suffix={t('field.years')}
+          min={1}
+        />
+        <NumberField
+          label={t('refi.closingCosts')}
+          value={closingCosts}
+          onChange={setClosingCosts}
+          suffix={money}
+          min={0}
+          grouped
+        />
       </div>
 
       {/* "Lifetime savings" is honest as total cash out the door, but it

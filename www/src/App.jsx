@@ -37,7 +37,9 @@ function panelFor(tab, region) {
  */
 function detectRegion() {
   const locales = navigator.languages?.length ? navigator.languages : [navigator.language];
-  return locales.some((l) => typeof l === 'string' && l.toUpperCase().endsWith('-SG')) ? 'SG' : 'US';
+  return locales.some((l) => typeof l === 'string' && l.toUpperCase().endsWith('-SG'))
+    ? 'SG'
+    : 'US';
 }
 
 /// Exported so tests can drive the real tab wiring — the shared scenario
@@ -69,8 +71,7 @@ export function AppShell({ wasmModule }) {
         <About region={region} />
       </main>
       <footer className="app-footer">
-        {t('app.footer')}{' '}
-        {/* Relative so it resolves under a GitHub Pages project subpath. */}
+        {t('app.footer')} {/* Relative so it resolves under a GitHub Pages project subpath. */}
         <a href="privacy.html">{t('app.privacy')}</a>
         {' · '}
         <a href="https://github.com/dengf/mortgage_calculator">{t('app.source')}</a>

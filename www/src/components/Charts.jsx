@@ -120,7 +120,9 @@ export function BalanceChart({ rows, principal, periodsPerYear, formatMoney }) {
             nominal term. With extra payments the curve retires early — it
             used to reach zero under a label reading "Year 30", which is
             exactly the fact the user added extra payments to see. */}
-        <span>{t('chart.axisEnd', { n: Math.round((rows.length / periodsPerYear) * 10) / 10 })}</span>
+        <span>
+          {t('chart.axisEnd', { n: Math.round((rows.length / periodsPerYear) * 10) / 10 })}
+        </span>
       </div>
       <p className="chart-note">
         {t('chart.sharedScale', { min: formatMoney(0), max: formatMoney(max) })}
@@ -152,18 +154,17 @@ export function PrincipalInterestSplit({ principal, totalInterest, formatMoney }
           percent: interestShare.toFixed(0),
         })}
       >
-        <span
-          className="split-bar-principal"
-          style={{ width: `${100 - interestShare}%` }}
-        />
+        <span className="split-bar-principal" style={{ width: `${100 - interestShare}%` }} />
         <span className="split-bar-interest" style={{ width: `${interestShare}%` }} />
       </div>
       <div className="chart-legend">
         <span className="chart-key">
-          <i style={{ background: BLUE }} /> {t('chart.principalLegend', { amount: formatMoney(principal) })}
+          <i style={{ background: BLUE }} />{' '}
+          {t('chart.principalLegend', { amount: formatMoney(principal) })}
         </span>
         <span className="chart-key">
-          <i style={{ background: AMBER }} /> {t('chart.interestLegend', { amount: formatMoney(totalInterest) })}
+          <i style={{ background: AMBER }} />{' '}
+          {t('chart.interestLegend', { amount: formatMoney(totalInterest) })}
         </span>
       </div>
       <p className="chart-note">

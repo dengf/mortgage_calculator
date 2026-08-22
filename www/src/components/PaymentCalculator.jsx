@@ -9,7 +9,6 @@ import { allFilled, useSticky } from '../inputs';
 import { DEFAULT_SCENARIO, principalOf } from '../scenario';
 import { useI18n } from '../i18n';
 
-
 const US_DEFAULTS = {
   zip: '90210',
   pmi_rate_percent: 0.75,
@@ -97,8 +96,7 @@ export default function PaymentCalculator({
   const usResult = useMemo(() => {
     if (!wasmModule?.calculate_united_states || region !== 'US') return null;
     if (!allFilled(homePrice, scenario.downPayment, rate, termYears)) return null;
-    const monthlyPi =
-      result && !result.error && frequency === 'monthly' ? result.payment : null;
+    const monthlyPi = result && !result.error && frequency === 'monthly' ? result.payment : null;
     return wasmModule.calculate_united_states({
       ...usInputs,
       home_price: homePrice,
@@ -117,10 +115,7 @@ export default function PaymentCalculator({
         formatMoney={formatMoney}
       />
 
-      <div
-        className={stale ? 'panel-results stale' : 'panel-results'}
-        aria-live="polite"
-      >
+      <div className={stale ? 'panel-results stale' : 'panel-results'} aria-live="polite">
         {result?.error && (
           <div className="error">
             {result.error_message
@@ -135,7 +130,9 @@ export default function PaymentCalculator({
               <span className="stat-value">{formatMoney(result.payment)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">{t('payment.totalOf', { count: result.total_periods })}</span>
+              <span className="stat-label">
+                {t('payment.totalOf', { count: result.total_periods })}
+              </span>
               <span className="stat-value">{formatMoney(result.total_paid)}</span>
             </div>
             <div className="stat">

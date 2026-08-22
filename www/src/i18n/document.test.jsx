@@ -9,7 +9,9 @@ function Probe() {
   return (
     <div>
       <span data-testid="locale">{locale}</span>
-      <button type="button" onClick={() => setLocale('zh-Hans')}>switch</button>
+      <button type="button" onClick={() => setLocale('zh-Hans')}>
+        switch
+      </button>
     </div>
   );
 }
@@ -60,16 +62,18 @@ describe('document language metadata', () => {
       </I18nProvider>,
     );
     await waitFor(() =>
-      expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href'))
-        .toBe(canonicalFor('en')),
+      expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+        canonicalFor('en'),
+      ),
     );
     expect(window.location.search).not.toMatch(/lang=/);
 
     await userEvent.click(screen.getByRole('button', { name: 'switch' }));
 
     await waitFor(() => expect(window.location.search).toBe('?lang=zh-Hans'));
-    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href'))
-      .toBe(canonicalFor('zh-Hans'));
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      canonicalFor('zh-Hans'),
+    );
   });
 
   it('honours ?lang= over a stored preference, so shared links land right', () => {

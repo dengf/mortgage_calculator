@@ -98,7 +98,9 @@ describe('UnitedStatesPanel', () => {
 
   it('strips non-digits from the ZIP rather than sending them to the binding', async () => {
     const onChange = vi.fn();
-    render(<UnitedStatesPanel inputs={{ ...inputs, zip: '' }} onChange={onChange} result={result} />);
+    render(
+      <UnitedStatesPanel inputs={{ ...inputs, zip: '' }} onChange={onChange} result={result} />,
+    );
 
     await userEvent.type(screen.getByLabelText('ZIP code'), '9a');
 

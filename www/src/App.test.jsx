@@ -8,14 +8,23 @@ import { I18nProvider } from './i18n';
 function mockWasm() {
   return {
     calculate_payment: vi.fn(() => ({
-      payment: 2528.27, total_periods: 360, total_paid: 910177.2,
-      total_interest: 510177.2, error: null,
+      payment: 2528.27,
+      total_periods: 360,
+      total_paid: 910177.2,
+      total_interest: 510177.2,
+      error: null,
     })),
     calculate_amortization_schedule: vi.fn(() => ({ rows: [], error: null })),
     calculate_united_states: vi.fn(() => ({
-      loan_type: 'Conforming', property_tax_rate_percent: 0.7, monthly_property_tax: 291.67,
-      down_payment: 100000, down_payment_percent: 20, pmi_required: false, monthly_pmi: 0,
-      monthly_piti: 2819.94, error: null,
+      loan_type: 'Conforming',
+      property_tax_rate_percent: 0.7,
+      monthly_property_tax: 291.67,
+      down_payment: 100000,
+      down_payment_percent: 20,
+      pmi_required: false,
+      monthly_pmi: 0,
+      monthly_piti: 2819.94,
+      error: null,
     })),
     get_common_rate_presets: vi.fn(() => []),
     list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),

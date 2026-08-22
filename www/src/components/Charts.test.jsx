@@ -106,7 +106,11 @@ describe('PrincipalInterestSplit', () => {
 
   it('sizes the two segments in proportion', () => {
     const { container } = render(
-      <PrincipalInterestSplit principal={300000} totalInterest={100000} formatMoney={formatMoney} />,
+      <PrincipalInterestSplit
+        principal={300000}
+        totalInterest={100000}
+        formatMoney={formatMoney}
+      />,
     );
 
     expect(container.querySelector('.split-bar-principal')).toHaveStyle({ width: '75%' });
