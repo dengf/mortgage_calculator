@@ -41,6 +41,7 @@ pub mod message;
 pub mod payment;
 pub mod refinance;
 pub mod region;
+pub mod report;
 pub mod scenario;
 pub mod sg_affordability;
 pub mod singapore;
@@ -140,13 +141,8 @@ mod bridge_coverage {
 
     #[test]
     fn the_guard_is_quiet_when_everything_is_bridged() {
-        let calc = "pub mod payment;\npub mod refinance;
-pub mod region;
-pub mod scenario;\n";
-        let wasm = "pub mod payment;\npub mod refinance;
-pub mod region;
-pub mod scenario;\npub mod dto;
-pub mod duration;\n";
+        let calc = "pub mod payment;\npub mod refinance;\npub mod scenario;\n";
+        let wasm = "pub mod payment;\npub mod refinance;\npub mod scenario;\npub mod dto;\npub mod duration;\n";
 
         assert!(unbridged(calc, wasm).is_empty());
     }

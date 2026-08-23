@@ -67,7 +67,7 @@ fn schedule_from_params(params: AmortizationParams) -> AmortizationResult {
     }
 }
 
-fn to_year_dto(year: mortgage_calc::amortization::AmortizationYear) -> AmortizationYearDto {
+pub fn to_year_dto(year: mortgage_calc::amortization::AmortizationYear) -> AmortizationYearDto {
     AmortizationYearDto {
         year: year.year,
         paid: decimal_to_f64(year.paid),
