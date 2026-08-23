@@ -67,6 +67,7 @@ export default {
   'nav.affordability': 'Affordability',
   'nav.refinance': 'Refinance',
   'nav.compare': 'Compare',
+  'nav.report': 'Report',
 
   // Shared field labels
   'field.loanAmount': 'Home loan amount',
@@ -182,6 +183,70 @@ export default {
   'cmp.totalInterest': 'Total interest',
   'rate.percent': '%',
   'rate.yrs': 'yrs',
+
+  // The printable illustration. `ref.*` label the authorities the Rust
+  // report cites; the codes come from mortgage-calc's `Authority`.
+  'report.title': 'Mortgage illustration',
+  'report.print': 'Print or save as PDF',
+  'report.printNote':
+    'Your browser’s print dialog makes the PDF — choose “Save as PDF” as the destination. Nothing is uploaded to produce it.',
+  'report.recipients': 'Email to',
+  'report.recipientsPlaceholder': 'name@example.com, another@example.com',
+  'report.recipientsBad': 'Check these — they do not look like addresses: {addresses}',
+  'report.email': 'Open in mail app ({count})',
+  'report.emailNote':
+    'Opens your own mail app with the recipients and a summary filled in — nothing is sent from this page, and nothing you type here leaves your device. A mail link cannot carry an attachment, so save the PDF above and attach it yourself.',
+  'report.confirmTitle': 'Open your mail app addressed to these people?',
+  'report.confirmBody':
+    'Your mail app opens with a summary already written. Nothing is sent until you send it yourself, and nothing is sent from this page at any point. Remember to attach the PDF.',
+  'report.confirmSend': 'Yes, open my mail app',
+  'report.confirmCancel': 'Not yet',
+  'report.mailSubject': 'Mortgage illustration',
+  'report.mailBody':
+    'Here is the illustration we discussed: {payment} a month on a {principal} loan over {years} years.',
+  'report.mailSteps': 'That instalment holds for {years} yr and then rises to {payment}.',
+  'report.mailAttach': 'The full document is attached as a PDF.',
+  'report.subtitle': 'A worked estimate, prepared for discussion.',
+  'report.watermark': 'For reference only',
+  'report.prepared': 'Prepared',
+  'report.market': 'Market',
+  'region.US': 'United States',
+  'region.SG': 'Singapore',
+  'report.terms': 'Loan terms',
+  'report.item': 'Item',
+  'report.value': 'Value',
+  'report.canChange': 'Can this change?',
+  'report.no': 'No',
+  'report.ratePlan': 'Yes — steps up after {years} yr, to {rate}',
+  'report.paymentPlan': 'Yes — rises after {years} yr, to {payment}',
+  'report.overTime': 'What you pay, over time',
+  'report.period': 'Period',
+  'report.instalment': 'Monthly instalment',
+  'report.yearRange': 'Years {from}–{to}',
+  'report.totalPaid': 'Total paid over the term',
+  'report.interestShare': 'Interest as a share of everything paid',
+  'report.ifRatesRise': 'If rates rise',
+  'report.ifRatesRiseNote':
+    'Measured against the rate this loan runs at once any lock-in has ended, since that is the rate a rise would move. Each line reprices the balance still owed at that point over the term remaining.',
+  'report.increase': 'Rise',
+  'report.monthlyIncrease': 'More per month',
+  'report.plusPoints': '+{points}%',
+  'report.schedule': 'Yearly schedule',
+  'report.referenceOnly':
+    'For reference only. This is an illustration produced by a calculator, not a loan offer, a quotation, or a regulated disclosure from any lender. No bank has seen these figures or agreed to them.',
+  'report.sources': 'Where the rules come from',
+  'report.workedAt': 'Every figure here can be reproduced, and the working inspected, at',
+  'ref.MasNotice632': 'MAS Notice 632 — loan-to-value limits and the cash component of the deposit',
+  'ref.MasNotice632a':
+    'MAS Notice 632A — the Residential Property Loan Fact Sheet a bank must issue. This document follows its shape and is not one.',
+  'ref.MasNotice645': 'MAS Notice 645 — TDSR and MSR, and the rate servicing is assessed at',
+  'ref.MasSora': 'MAS — SORA, the benchmark Singapore packages are quoted over',
+  'ref.Iras': "IRAS — Buyer's Stamp Duty and Additional Buyer's Stamp Duty",
+  'ref.CpfBoard': 'CPF Board — Ordinary Account interest and the HDB concessionary rate',
+  'ref.Cfpb':
+    'CFPB — the Loan Estimate a lender must issue. This document follows its shape and is not one.',
+  'ref.Fhfa': 'FHFA — the conforming loan limit',
+  'ref.FederalReserveH15': 'Federal Reserve H.15 — published Prime and SOFR rates',
 
   // Saved scenarios
   'saved.title': 'Saved scenarios',

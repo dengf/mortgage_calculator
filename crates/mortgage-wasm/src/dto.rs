@@ -530,6 +530,22 @@ pub struct RateRiseRowDto {
     pub payment_increase: f64,
 }
 
+/// One authority a report cites, as a stable code plus somewhere to check
+/// it. The code is the catalog key; the URL is the authority's own.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReferenceDto {
+    pub code: String,
+    pub url: String,
+}
+
+/// A loan illustration, plus the loan terms it was built from.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReportParams {
+    pub loan: LoanParams,
+    /// `"US" | "SG"`. Decides which authorities the document cites.
+    pub region: Option<String>,
+}
+
 /// The figures a client-facing loan illustration states.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ReportResult {
@@ -548,6 +564,9 @@ pub struct ReportResult {
     pub bands: Vec<PaymentBandDto>,
     pub rate_rise: Vec<RateRiseRowDto>,
     pub yearly: Vec<AmortizationYearDto>,
+    /// Who set the rules the figures follow. The document cites these
+    /// rather than asserting the numbers on its own authority.
+    pub references: Vec<ReferenceDto>,
     pub error: Option<String>,
     /// The same failure as `error`, but as a code plus its values so a
     /// translated UI can compose the sentence itself.

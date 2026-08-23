@@ -64,6 +64,7 @@ export default {
   'nav.affordability': '購屋力',
   'nav.refinance': '轉貸',
   'nav.compare': '方案比較',
+  'nav.report': '報告',
 
   'field.loanAmount': '貸款金額',
   'field.homePrice': '房價',
@@ -171,6 +172,70 @@ export default {
   'cmp.totalInterest': '利息總額',
   'rate.percent': '%',
   'rate.yrs': '年',
+
+  // 可列印的測算報告。
+  'report.title': '房貸測算報告',
+  'report.print': '列印或另存為 PDF',
+  'report.printNote':
+    'PDF 由瀏覽器的列印對話框產生 —— 請在目的地選擇「另存為 PDF」。產生過程不會上傳任何內容。',
+  'report.recipients': '寄送給',
+  'report.recipientsPlaceholder': 'name@example.com, another@example.com',
+  'report.recipientsBad': '以下地址似乎有誤，請檢查：{addresses}',
+  'report.email': '在郵件應用程式中開啟（{count}）',
+  'report.emailNote':
+    '將在您自己的郵件應用程式中開啟，並預先填入收件人與摘要 —— 本頁不會傳送任何內容，您在此輸入的資訊也不會離開您的裝置。郵件連結無法夾帶附件，請先儲存上方的 PDF 再自行加入。',
+  'report.confirmTitle': '確認向以下收件人開啟郵件應用程式？',
+  'report.confirmBody':
+    '郵件應用程式將開啟並已填好摘要。在您親自點擊傳送之前不會寄出，本頁面自始至終也不會傳送任何內容。請記得加入 PDF 附件。',
+  'report.confirmSend': '確認，開啟郵件應用程式',
+  'report.confirmCancel': '暫不',
+  'report.mailSubject': '房貸測算報告',
+  'report.mailBody':
+    '這是我們討論過的測算結果：貸款 {principal}，年期 {years} 年，每月還款 {payment}。',
+  'report.mailSteps': '該還款額維持 {years} 年，之後升至 {payment}。',
+  'report.mailAttach': '完整報告見附件 PDF。',
+  'report.subtitle': '供討論使用的測算結果。',
+  'report.watermark': '僅供參考',
+  'report.prepared': '製作日期',
+  'report.market': '適用市場',
+  'region.US': '美國',
+  'region.SG': '新加坡',
+  'report.terms': '貸款條件',
+  'report.item': '項目',
+  'report.value': '數值',
+  'report.canChange': '是否會變動？',
+  'report.no': '否',
+  'report.ratePlan': '會 —— {years} 年後升至 {rate}',
+  'report.paymentPlan': '會 —— {years} 年後升至 {payment}',
+  'report.overTime': '各階段還款',
+  'report.period': '期間',
+  'report.instalment': '每月供款',
+  'report.yearRange': '第 {from}–{to} 年',
+  'report.totalPaid': '全期還款總額',
+  'report.interestShare': '利息佔還款總額比例',
+  'report.ifRatesRise': '若利率上升',
+  'report.ifRatesRiseNote':
+    '以鎖定期結束後本貸款適用的利率為基準計算，因為利率上升影響的正是該利率。每一行按屆時尚欠本金與剩餘年期重新計算供款。',
+  'report.increase': '升幅',
+  'report.monthlyIncrease': '每月增加',
+  'report.plusPoints': '+{points}%',
+  'report.schedule': '逐年還款表',
+  'report.referenceOnly':
+    '僅供參考。本文件為計算器產生的測算結果，並非貸款要約、報價，也不是任何銀行出具的法定披露文件。沒有任何銀行審閱或認可過以上數字。',
+  'report.sources': '規則依據',
+  'report.workedAt': '以上每項數字均可自行複算，計算過程可於此查閱：',
+  'ref.MasNotice632': '新加坡金融管理局第 632 號通知 —— 貸款成數上限與首付中的現金部分',
+  'ref.MasNotice632a':
+    '新加坡金融管理局第 632A 號通知 —— 銀行須出具的住宅房產貸款情況說明書。本文件參照其結構編排，但並非該說明書。',
+  'ref.MasNotice645':
+    '新加坡金融管理局第 645 號通知 —— 總償債比率、房貸償還比率，以及償債能力評估利率',
+  'ref.MasSora': '新加坡金融管理局 —— SORA，新加坡房貸報價所參照的基準利率',
+  'ref.Iras': '新加坡稅務局 —— 買方印花稅與額外買方印花稅',
+  'ref.CpfBoard': '公積金局 —— 普通帳戶利率及與之掛鉤的建屋局優惠利率',
+  'ref.Cfpb':
+    '美國消費者金融保護局 —— 貸款機構須出具的貸款估算書。本文件參照其結構編排，但並非該估算書。',
+  'ref.Fhfa': '美國聯邦住房金融局 —— 合規貸款上限',
+  'ref.FederalReserveH15': '美聯儲 H.15 —— 公布的最優惠利率與 SOFR',
 
   'saved.title': '已儲存方案',
   'saved.empty': '尚未儲存任何方案。',
