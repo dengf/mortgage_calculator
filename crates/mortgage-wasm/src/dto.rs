@@ -505,3 +505,51 @@ pub struct SgAffordabilityResultDto {
     /// translated UI can compose the sentence itself.
     pub error_message: Option<Message>,
 }
+
+/// A stretch of the loan over which the instalment does not change.
+///
+/// The year-band idea the CFPB's Loan Estimate uses for an adjustable loan
+/// ("Years 1-5 | Years 6-8 | ..."), because a package that steps up cannot
+/// be honestly described by one headline figure.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct PaymentBandDto {
+    pub from_year: f64,
+    pub to_year: f64,
+    pub annual_rate_percent: f64,
+    pub payment: f64,
+}
+
+/// One line of the rate-change illustration MAS requires a fact sheet to
+/// carry: what a rise in the benchmark does to the instalment.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct RateRiseRowDto {
+    /// Percentage points added to the rate that lasts, e.g. `1.0` for +1%.
+    pub increase_percent: f64,
+    pub annual_rate_percent: f64,
+    pub payment: f64,
+    pub payment_increase: f64,
+}
+
+/// The figures a client-facing loan illustration states.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ReportResult {
+    pub principal: Option<f64>,
+    pub term_years: Option<f64>,
+    pub initial_rate_percent: Option<f64>,
+    pub initial_payment: Option<f64>,
+    /// The rate the loan spends most of its life at. Equal to
+    /// `initial_rate_percent` unless it steps up.
+    pub final_rate_percent: Option<f64>,
+    pub payment_after_reversion: Option<f64>,
+    pub lock_in_years: Option<f64>,
+    pub total_paid: Option<f64>,
+    pub total_interest: Option<f64>,
+    pub interest_share_percent: Option<f64>,
+    pub bands: Vec<PaymentBandDto>,
+    pub rate_rise: Vec<RateRiseRowDto>,
+    pub yearly: Vec<AmortizationYearDto>,
+    pub error: Option<String>,
+    /// The same failure as `error`, but as a code plus its values so a
+    /// translated UI can compose the sentence itself.
+    pub error_message: Option<Message>,
+}
