@@ -11,7 +11,7 @@ use mortgage_calc::singapore;
 use mortgage_core::round_currency;
 use rust_decimal::Decimal;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal, to_js};
+use crate::convert::{decimal_to_f64, f64_to_decimal, rate_type_from_dto, to_js};
 use crate::dto::{SingaporeParams, SingaporeResult};
 use crate::message::Message;
 
@@ -87,15 +87,24 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
         // rate floor, so `check_tdsr_msr` needs the terms, not the payment.
         // The CPF split below stays on the real payment — CPF services what
         // the borrower actually owes, not the stressed figure.
-        let assessed_loan = mortgage_calc::Loan::builder()
-            .principal(f64_to_decimal(p.principal))
-            .annual_rate(f64_to_decimal(p.annual_rate_percent) / Decimal::from(100))
-            .term_years(f64_to_decimal(p.term_years))
-            .frequency(mortgage_core::PaymentFrequency::Monthly)
-            .build();
+        //
+        // Built from the rate's shape, so a package that steps up arrives
+        // here carrying its reversion. `check_tdsr_msr` assesses on
+        // `final_annual_rate()` -- the thereafter rate, per Notice 645 para
+        // 6(b) -- and handed a flat rate it would have assessed the
+        // promotional one, passing borrowers a bank would decline.
+        let assessed_loan = rate_type_from_dto(&p.rate).ok().and_then(|rate| {
+            mortgage_calc::Loan::builder()
+                .principal(f64_to_decimal(p.principal))
+                .rate_type(rate)
+                .term_years(f64_to_decimal(p.term_years))
+                .frequency(mortgage_core::PaymentFrequency::Monthly)
+                .build()
+                .ok()
+        });
 
-        if let Ok(check) = assessed_loan
-            .and_then(|loan| singapore::check_tdsr_msr(&loan, other_debts, income, p.is_hdb_or_ec))
+        if let Some(Ok(check)) = assessed_loan
+            .map(|loan| singapore::check_tdsr_msr(&loan, other_debts, income, p.is_hdb_or_ec))
         {
             result.tdsr_ratio_percent = Some(to_percent(check.tdsr.ratio));
             result.tdsr_exceeded = check.tdsr.exceeded;
@@ -147,12 +156,13 @@ fn singapore_from_params(p: SingaporeParams) -> SingaporeResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dto::RateTypeDto;
 
     fn params() -> SingaporeParams {
         SingaporeParams {
             monthly_payment: Some(3_000.0),
             principal: 800_000.0,
-            annual_rate_percent: 4.0,
+            rate: RateTypeDto::Fixed { rate_percent: 4.0 },
             term_years: 30.0,
             home_price: 1_000_000.0,
             fixed_monthly_income: 10_000.0,
@@ -186,7 +196,7 @@ mod tests {
         // was the bug: the panel reported a payment-derived TDSR a bank
         // would never have accepted.
         let r = singapore_from_params(SingaporeParams {
-            annual_rate_percent: 1.5,
+            rate: RateTypeDto::Fixed { rate_percent: 1.5 },
             monthly_payment: Some(2_761.0),
             ..params()
         });
@@ -283,5 +293,40 @@ mod tests {
         });
         assert!(r.tdsr_ratio_percent.is_none());
         assert!(r.cpf_used.is_none());
+    }
+
+    #[test]
+    fn a_package_is_assessed_on_the_rate_it_reverts_to() {
+        // The Payment tab's own version of the Notice 645 para 6(b) bug.
+        // A package opening at 1.42% and reverting to 5.62% must be
+        // assessed at 5.62%, not at the floor -- assessing the promotional
+        // rate here passed borrowers their bank would decline, and stayed
+        // invisible for exactly as long as rates stayed under 4%.
+        let r = singapore_from_params(SingaporeParams {
+            rate: RateTypeDto::Reverting {
+                base_rate_percent: 1.12,
+                initial_spread_percent: 0.3,
+                initial_years: 2.0,
+                thereafter_spread_percent: 4.5,
+            },
+            ..params()
+        });
+
+        assert_eq!(r.assessment_rate_percent, Some(5.62));
+    }
+
+    #[test]
+    fn a_package_reverting_below_the_floor_is_still_assessed_at_the_floor() {
+        let r = singapore_from_params(SingaporeParams {
+            rate: RateTypeDto::Reverting {
+                base_rate_percent: 1.12,
+                initial_spread_percent: 0.3,
+                initial_years: 2.0,
+                thereafter_spread_percent: 0.6,
+            },
+            ..params()
+        });
+
+        assert_eq!(r.assessment_rate_percent, Some(4.0));
     }
 }

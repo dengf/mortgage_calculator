@@ -9,6 +9,7 @@ import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { describeDuration, formatDuration, payoffDate } from '../duration';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
+import { normalizeRate, rateValues, toRateTypeDto } from '../rate';
 
 export default function AmortizationSchedule({
   wasmModule,
@@ -27,19 +28,27 @@ export default function AmortizationSchedule({
 
   const { rate, termYears, frequency } = scenario;
   const { principal } = useScenarioSummary(wasmModule, scenario);
-  const loan = { principal, annual_rate_percent: rate, term_years: termYears, frequency };
+  // The package crosses the boundary whole, so the schedule re-amortizes at
+  // the reset the way the bank does: the instalment steps up and the rows
+  // after the lock-in are priced at the thereafter rate. Sending a single
+  // rate produced a schedule that quietly charged the teaser for 25 years.
+  const rateType = toRateTypeDto(rate);
+  const rateKey = JSON.stringify(rateType);
+  const loan = { principal, rate: rateType, term_years: termYears, frequency };
 
   const schedule = useMemo(() => {
     if (!wasmModule) return null;
-    if (!allFilled(scenario.homePrice, scenario.downPayment, rate, termYears)) return null;
+    if (!allFilled(scenario.homePrice, scenario.downPayment, ...rateValues(rate), termYears))
+      return null;
     return wasmModule.calculate_amortization_schedule({ loan, extra_payment: extraPayment || 0 });
-  }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
+  }, [wasmModule, principal, rateKey, termYears, frequency, extraPayment]);
 
   const impact = useMemo(() => {
     if (!wasmModule || !extraPayment) return null;
-    if (!allFilled(scenario.homePrice, scenario.downPayment, rate, termYears)) return null;
+    if (!allFilled(scenario.homePrice, scenario.downPayment, ...rateValues(rate), termYears))
+      return null;
     return wasmModule.calculate_extra_payment_impact({ loan, extra_payment: extraPayment });
-  }, [wasmModule, principal, rate, termYears, frequency, extraPayment]);
+  }, [wasmModule, principal, rateKey, termYears, frequency, extraPayment]);
 
   // Cadence and every period-to-time conversion come from the core rather
   // than a table kept here -- see mortgage-core/src/frequency.rs.
@@ -163,7 +172,8 @@ export default function AmortizationSchedule({
             ...scenario,
             homePrice: legacy ? inputs.principal : inputs.homePrice,
             downPayment: legacy ? 0 : inputs.downPayment,
-            rate: inputs.rate ?? scenario.rate,
+            // A record saved before a rate was a shape holds a bare number.
+            rate: normalizeRate(inputs.rate ?? scenario.rate),
             termYears: inputs.termYears ?? scenario.termYears,
             frequency: inputs.frequency ?? scenario.frequency,
           });

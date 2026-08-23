@@ -1,10 +1,11 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import AmortizationSchedule from './AmortizationSchedule';
 import { renderControlled } from '../test/controlled';
 import { scenarioBindings } from '../test/wasm';
+import { DEFAULT_SCENARIO } from '../scenario';
 
 // Same defect as ComparisonView's: `onLoad` called setters that stopped
 // existing when price, rate and term moved into the shared scenario. Every
@@ -167,5 +168,46 @@ describe('AmortizationSchedule balance chart', () => {
     expect(await screen.findByText('Year 19.4')).toBeInTheDocument();
     expect(screen.queryByText('Year 30')).not.toBeInTheDocument();
     expect(describe_duration).toHaveBeenCalledWith({ periods: 233, frequency: 'monthly' });
+  });
+});
+
+describe('AmortizationSchedule, on a package that steps up', () => {
+  it('sends the package whole, so the schedule re-amortizes at the reset', async () => {
+    // A bank reprices the instalment when the lock-in ends and re-amortizes
+    // over what is left. Sending one rate produced a schedule that charged
+    // the promotional rate for twenty-five years -- every row after year
+    // two wrong, and wrong in the borrower's favour.
+    const wasmModule = mockWasm({});
+    renderControlled(
+      AmortizationSchedule,
+      { wasmModule },
+      {
+        ...DEFAULT_SCENARIO,
+        rate: {
+          kind: 'reverting',
+          baseRatePercent: 1.12,
+          initialSpreadPercent: 0.3,
+          initialYears: 2,
+          thereafterSpreadPercent: 0.6,
+        },
+        termYears: 25,
+      },
+    );
+
+    await waitFor(() => expect(wasmModule.calculate_amortization_schedule).toHaveBeenCalled());
+    expect(wasmModule.calculate_amortization_schedule).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        loan: expect.objectContaining({
+          rate: {
+            kind: 'reverting',
+            base_rate_percent: 1.12,
+            initial_spread_percent: 0.3,
+            initial_years: 2,
+            thereafter_spread_percent: 0.6,
+          },
+          term_years: 25,
+        }),
+      }),
+    );
   });
 });

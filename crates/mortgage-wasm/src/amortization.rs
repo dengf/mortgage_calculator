@@ -145,12 +145,12 @@ fn extra_payment_impact_from_params(params: AmortizationParams) -> ExtraPaymentI
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dto::LoanParams;
+    use crate::dto::{LoanParams, RateTypeDto};
 
     fn valid_loan() -> LoanParams {
         LoanParams {
             principal: 400_000.0,
-            annual_rate_percent: 6.5,
+            rate: RateTypeDto::Fixed { rate_percent: 6.5 },
             term_years: 30.0,
             frequency: None,
         }

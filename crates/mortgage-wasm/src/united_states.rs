@@ -9,10 +9,10 @@
 use wasm_bindgen::prelude::*;
 
 use mortgage_calc::united_states;
-use mortgage_core::round_currency;
+use mortgage_core::{round_currency, PaymentFrequency};
 use rust_decimal::Decimal;
 
-use crate::convert::{decimal_to_f64, f64_to_decimal, to_js};
+use crate::convert::{decimal_to_f64, f64_to_decimal, rate_type_from_dto, to_js};
 use crate::dto::{UnitedStatesParams, UnitedStatesResult};
 use crate::message::Message;
 
@@ -96,9 +96,14 @@ fn united_states_from_params(p: UnitedStatesParams) -> UnitedStatesResult {
         if p.use_tax_deduction {
             // The first period's interest is the whole balance times the
             // periodic rate. Deriving it here rather than in JS keeps the
-            // formula on the Rust side with the rest of the math.
-            let periodic_rate =
-                f64_to_decimal(p.annual_rate_percent) / Decimal::from(100) / Decimal::from(12);
+            // formula on the Rust side with the rest of the math -- and the
+            // rate is resolved from the quote's shape here too, so a
+            // floating quote's "base + spread" is never added up in JS.
+            let rate = match rate_type_from_dto(&p.rate) {
+                Ok(rate) => rate.effective_rate(),
+                Err(_) => Decimal::ZERO,
+            };
+            let periodic_rate = PaymentFrequency::Monthly.periodic_rate(rate);
             let first_period_interest = round_currency(principal * periodic_rate);
             let savings = united_states::monthly_tax_savings(
                 first_period_interest,
@@ -115,13 +120,14 @@ fn united_states_from_params(p: UnitedStatesParams) -> UnitedStatesResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dto::RateTypeDto;
 
     fn params() -> UnitedStatesParams {
         UnitedStatesParams {
             monthly_pi: Some(2_528.27),
             principal: 400_000.0,
             home_price: 500_000.0,
-            annual_rate_percent: 6.5,
+            rate: RateTypeDto::Fixed { rate_percent: 6.5 },
             zip: "90210".into(),
             pmi_rate_percent: None,
             use_tax_deduction: false,

@@ -7,6 +7,7 @@ import { PrincipalInterestSplit } from './Charts';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { allFilled, useSticky } from '../inputs';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
+import { normalizeRate, rateValues, toRateTypeDto } from '../rate';
 import { useI18n } from '../i18n';
 
 const US_DEFAULTS = {
@@ -40,6 +41,14 @@ export default function PaymentCalculator({
   // in here survives a move to Amortization or Compare.
   const { homePrice, rate, termYears, frequency } = scenario;
   const { principal } = useScenarioSummary(wasmModule, scenario);
+  // The quote as the core wants it. Built once here so every panel on this
+  // tab prices the same package, rather than one of them seeing a rate and
+  // another seeing a rate-shaped object.
+  const rateType = toRateTypeDto(rate);
+  const rateFilled = rateValues(rate);
+  // A fresh object every render, so it can't be a dependency itself. What
+  // actually changed is the quote it describes.
+  const rateKey = JSON.stringify(rateType);
 
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
@@ -50,11 +59,11 @@ export default function PaymentCalculator({
   // that failure used to surface as a raw parse error on the page.
   const liveResult = useMemo(() => {
     if (!wasmModule) return null;
-    if (!allFilled(homePrice, scenario.downPayment, rate, termYears)) return null;
+    if (!allFilled(homePrice, scenario.downPayment, ...rateFilled, termYears)) return null;
     return {
       summary: wasmModule.calculate_payment({
         principal,
-        annual_rate_percent: rate,
+        rate: rateType,
         term_years: termYears,
         frequency,
       }),
@@ -63,7 +72,7 @@ export default function PaymentCalculator({
       // result with an in-flight principal and render a 100%-interest loan.
       principal,
     };
-  }, [wasmModule, principal, rate, termYears, frequency]);
+  }, [wasmModule, principal, rateKey, termYears, frequency]);
 
   const { value: held, stale } = useSticky(liveResult);
   const result = held?.summary ?? null;
@@ -77,7 +86,7 @@ export default function PaymentCalculator({
     // hold a cached wasm build from before a binding existed, and calling a
     // missing export would take down the whole tab rather than one panel.
     if (!wasmModule?.calculate_singapore || region !== 'SG') return null;
-    if (!allFilled(homePrice, scenario.downPayment, rate, termYears)) return null;
+    if (!allFilled(homePrice, scenario.downPayment, ...rateFilled, termYears)) return null;
     const monthlyPayment =
       result && !result.error && frequency === 'monthly' ? result.payment : null;
     return wasmModule.calculate_singapore({
@@ -85,26 +94,30 @@ export default function PaymentCalculator({
       home_price: homePrice,
       monthly_payment: monthlyPayment,
       principal,
-      annual_rate_percent: rate,
+      // The package, not the promotional rate. TDSR and MSR are assessed on
+      // the rate the loan *ends* on (MAS Notice 645 para 6(b)), and this
+      // panel used to hand over the teaser -- passing borrowers on a
+      // servicing check their own bank would have failed them on.
+      rate: rateType,
       term_years: termYears,
     });
-  }, [wasmModule, region, sgInputs, result, frequency, principal, rate, termYears]);
+  }, [wasmModule, region, sgInputs, result, frequency, principal, rateKey, termYears]);
 
   // PITI, PMI and the deduction estimate are all monthly figures, so like
   // the Singapore panel they only apply to a monthly schedule. Property tax
   // and PMI price off the home price and loan amount and still compute.
   const usResult = useMemo(() => {
     if (!wasmModule?.calculate_united_states || region !== 'US') return null;
-    if (!allFilled(homePrice, scenario.downPayment, rate, termYears)) return null;
+    if (!allFilled(homePrice, scenario.downPayment, ...rateFilled, termYears)) return null;
     const monthlyPi = result && !result.error && frequency === 'monthly' ? result.payment : null;
     return wasmModule.calculate_united_states({
       ...usInputs,
       home_price: homePrice,
       monthly_pi: monthlyPi,
       principal,
-      annual_rate_percent: rate,
+      rate: rateType,
     });
-  }, [wasmModule, region, usInputs, result, frequency, principal, rate]);
+  }, [wasmModule, region, usInputs, result, frequency, principal, rateKey]);
 
   return (
     <section className="panel">
@@ -129,6 +142,17 @@ export default function PaymentCalculator({
             <div className="stat stat-primary">
               <span className="stat-label">{t('payment.payment')}</span>
               <span className="stat-value">{formatMoney(result.payment)}</span>
+              {/* On a package that steps up, the headline figure is the
+                  promotional instalment and it expires. Showing it alone is
+                  how a buyer budgets for two years of a twenty-five year
+                  loan. */}
+              {result.payment_after_reversion != null && (
+                <span className="stat-note">
+                  {t('rate.thenPayment', {
+                    payment: formatMoney(result.payment_after_reversion),
+                  })}
+                </span>
+              )}
             </div>
             <div className="stat">
               <span className="stat-label">
@@ -180,6 +204,10 @@ export default function PaymentCalculator({
             ...inputs,
             homePrice: inputs.homePrice ?? inputs.principal ?? scenario.homePrice,
             downPayment: inputs.homePrice == null ? 0 : inputs.downPayment,
+            // Records saved before a rate was a shape hold a bare number.
+            // That record describes a loan the user really entered, and it
+            // still loads -- as the flat rate it was quoted at.
+            rate: normalizeRate(inputs.rate ?? scenario.rate),
           });
         }}
       />

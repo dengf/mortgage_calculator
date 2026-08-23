@@ -519,12 +519,19 @@ body {
   flex: 1;
 }
 
-.comparison-entry-kind {
+/* The shape picker, wherever a rate is entered: the compact Compare rows
+   and the panel forms on Payment, Amortization and Refinance. */
+.rate-kind {
   display: flex;
   gap: 4px;
   background: #0f1720;
+  border: 1px solid #2a3546;
   border-radius: 8px;
   padding: 3px;
+}
+
+.comparison-entry .rate-kind {
+  border-color: transparent;
 }
 
 .kind-toggle {

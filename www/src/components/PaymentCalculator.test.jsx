@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import PaymentCalculator from './PaymentCalculator';
 import { renderControlled } from '../test/controlled';
 import { scenarioBindings } from '../test/wasm';
+import { DEFAULT_SCENARIO } from '../scenario';
 
 // PaymentCalculator receives wasmModule as a prop rather than importing the
 // wasm-pack build directly, so it can be exercised here with a plain mock —
@@ -79,9 +80,11 @@ describe('PaymentCalculator', () => {
     render(<PaymentCalculator wasmModule={wasmModule} />);
 
     await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
+    // The rate crosses as a shape, so a package that steps up can too. A
+    // bare `annual_rate_percent` could only ever describe a flat loan.
     expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith({
       principal: 400000,
-      annual_rate_percent: 6.5,
+      rate: { kind: 'fixed', rate_percent: 6.5 },
       term_years: 30,
       frequency: 'monthly',
     });
@@ -93,15 +96,16 @@ describe('PaymentCalculator', () => {
     await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
 
     // NumberField's label wraps both the label text and the suffix span
-    // ("%"), so the accessible name is "Interest rate %", not an exact
-    // match of the label text alone.
-    const rateInput = screen.getByLabelText(/Interest rate/);
+    // ("%"), so the accessible name is "Rate %", not an exact match of the
+    // label text alone. "Interest rate" now names the group of shapes above
+    // it -- fixed, steps up, floating -- rather than a single input.
+    const rateInput = screen.getByLabelText(/^Rate/);
     await userEvent.clear(rateInput);
     await userEvent.type(rateInput, '7');
 
     await waitFor(() =>
       expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith(
-        expect.objectContaining({ annual_rate_percent: 7 }),
+        expect.objectContaining({ rate: { kind: 'fixed', rate_percent: 7 } }),
       ),
     );
   });
@@ -123,5 +127,153 @@ describe('PaymentCalculator', () => {
   it('renders nothing for the result panel until the wasm module is ready', () => {
     render(<PaymentCalculator wasmModule={null} />);
     expect(screen.queryByText('Payment')).not.toBeInTheDocument();
+  });
+});
+
+describe('PaymentCalculator, on a package that steps up', () => {
+  // The shape of every Singapore home loan: a promotional spread over SORA
+  // for two or three years, then a higher one for the remaining twenty-odd.
+  const SG_PACKAGE = {
+    ...DEFAULT_SCENARIO,
+    rate: {
+      kind: 'reverting',
+      baseRatePercent: 1.12,
+      initialSpreadPercent: 0.3,
+      initialYears: 2,
+      thereafterSpreadPercent: 0.6,
+    },
+    termYears: 25,
+  };
+
+  function packageModule(overrides = {}) {
+    return {
+      ...scenarioBindings(),
+      calculate_payment: vi.fn(() => ({
+        payment: 1584.75,
+        payment_after_reversion: 1800.53,
+        total_periods: 300,
+        total_paid: 534979.6,
+        total_interest: 134979.6,
+        error: null,
+      })),
+      list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+      ...overrides,
+    };
+  }
+
+  it('sends the whole package across, not the promotional rate alone', async () => {
+    const wasmModule = packageModule();
+    renderControlled(PaymentCalculator, { wasmModule }, SG_PACKAGE);
+
+    await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
+    expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith({
+      principal: 400000,
+      rate: {
+        kind: 'reverting',
+        base_rate_percent: 1.12,
+        initial_spread_percent: 0.3,
+        initial_years: 2,
+        thereafter_spread_percent: 0.6,
+      },
+      term_years: 25,
+      frequency: 'monthly',
+    });
+  });
+
+  it('names the instalment the lock-in ends on, beside the one it opens on', async () => {
+    // The headline figure expires after two years of a twenty-five year
+    // loan. Showing it alone is how a buyer budgets for the wrong number.
+    renderControlled(PaymentCalculator, { wasmModule: packageModule() }, SG_PACKAGE);
+
+    expect(await screen.findByText('$1,584.75')).toBeInTheDocument();
+    expect(screen.getByText('then $1,800.53')).toBeInTheDocument();
+  });
+
+  it('assesses Singapore servicing on the package, not on the teaser', async () => {
+    // MAS Notice 645 para 6(b) assesses at the higher of 4% and the
+    // *thereafter* rate. This panel used to hand `calculate_singapore` a
+    // single rate, which could only ever be the promotional one — passing
+    // borrowers a servicing check their own bank would fail them on.
+    const wasmModule = packageModule({
+      calculate_singapore: vi.fn(() => ({ warnings: [], warning_codes: [] })),
+    });
+    renderControlled(PaymentCalculator, { wasmModule, region: 'SG' }, SG_PACKAGE);
+
+    await waitFor(() => expect(wasmModule.calculate_singapore).toHaveBeenCalled());
+    expect(wasmModule.calculate_singapore).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        rate: expect.objectContaining({
+          kind: 'reverting',
+          thereafter_spread_percent: 0.6,
+        }),
+      }),
+    );
+  });
+
+  it('lets the buyer edit the spread it steps up to', async () => {
+    // Every field of a package is negotiated, and the thereafter spread is
+    // the one that decides most of the interest.
+    const wasmModule = packageModule();
+    renderControlled(PaymentCalculator, { wasmModule }, SG_PACKAGE);
+    await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
+
+    const spread = screen.getByLabelText(/Thereafter spread/);
+    await userEvent.clear(spread);
+    await userEvent.type(spread, '1.5');
+
+    await waitFor(() =>
+      expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          rate: expect.objectContaining({ thereafter_spread_percent: 1.5 }),
+        }),
+      ),
+    );
+  });
+
+  it('loads a scenario saved before a rate was a shape', async () => {
+    // Those records store `rate: 6.5`. They describe a loan the user really
+    // entered, and dropping them would lose it.
+    const wasmModule = packageModule({
+      load_scenario: vi.fn(async () => ({
+        scenario: {
+          id: '1',
+          inputs_json: JSON.stringify({
+            homePrice: 500000,
+            downPayment: 100000,
+            rate: 6.5,
+            termYears: 30,
+            frequency: 'monthly',
+          }),
+        },
+        error: null,
+      })),
+      list_scenarios: vi.fn(async () => ({
+        scenarios: [
+          {
+            id: '1',
+            name: 'Old record',
+            calculator: 'payment',
+            created_at: 0,
+            inputs_json: JSON.stringify({
+              homePrice: 500000,
+              downPayment: 100000,
+              rate: 6.5,
+              termYears: 30,
+              frequency: 'monthly',
+            }),
+          },
+        ],
+        error: null,
+      })),
+    });
+    renderControlled(PaymentCalculator, { wasmModule }, SG_PACKAGE);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Load' }));
+
+    await waitFor(() =>
+      expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith(
+        expect.objectContaining({ rate: { kind: 'fixed', rate_percent: 6.5 } }),
+      ),
+    );
   });
 });

@@ -59,11 +59,12 @@ fn payment_from_params(loan_params: LoanParams) -> PaymentSummaryResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dto::RateTypeDto;
 
     fn valid_params() -> LoanParams {
         LoanParams {
             principal: 400_000.0,
-            annual_rate_percent: 6.5,
+            rate: RateTypeDto::Fixed { rate_percent: 6.5 },
             term_years: 30.0,
             frequency: None,
         }
@@ -80,7 +81,7 @@ mod tests {
     #[test]
     fn reports_the_specific_reason_for_an_invalid_loan_instead_of_a_generic_error() {
         let result = payment_from_params(LoanParams {
-            annual_rate_percent: -1.0,
+            rate: RateTypeDto::Fixed { rate_percent: -1.0 },
             ..valid_params()
         });
         assert!(result.payment.is_none());
