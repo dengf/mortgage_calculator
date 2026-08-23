@@ -1044,6 +1044,35 @@ body {
   color: #555;
 }
 
+/* A wide table scrolls inside its own box rather than pushing the page
+   sideways. On a phone the yearly schedule is five currency columns and
+   will not fit any width a phone has -- the choice is between scrolling it
+   and dropping a column, and dropping one changes what the document says.
+
+   Print undoes this: a scroll container can clip at a page boundary, and
+   on paper there is nothing to scroll. */
+.report-table-wrap {
+  overflow-x: auto;
+  /* Two pairs of layers: the white ones scroll *with* the content
+     (`local`), the shadows stay pinned to the box (`scroll`). At the left
+     end the white layer sits over the left shadow and hides it; scroll
+     right and it slides away, uncovering it. So a shadow appears on
+     exactly the side that has more to reach, with no script and no state.
+
+     Without it a table that runs past its box is indistinguishable from
+     one that has been cut off, which is how the yearly schedule read on a
+     phone: the balance column was simply missing. */
+  background:
+    linear-gradient(to right, #ffffff 40%, rgba(255, 255, 255, 0)) left center / 28px 100% no-repeat
+      local,
+    linear-gradient(to left, #ffffff 40%, rgba(255, 255, 255, 0)) right center / 28px 100% no-repeat
+      local,
+    radial-gradient(farthest-side at 0 50%, rgba(22, 32, 44, 0.24), rgba(22, 32, 44, 0)) left
+      center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(22, 32, 44, 0.24), rgba(22, 32, 44, 0)) right
+      center / 12px 100% no-repeat scroll;
+}
+
 .report-table {
   width: 100%;
   border-collapse: collapse;
@@ -1242,6 +1271,91 @@ body {
 
   a[href]::after {
     content: '';
+  }
+
+  /* On paper there is nothing to scroll and nothing to hint at, and a
+     scroll container can clip at a page boundary. */
+  .report-table-wrap {
+    overflow: visible;
+    background: none;
+  }
+}
+
+/* --- The document on a phone -------------------------------------------
+   The report is a printed page shown on screen, so it starts at A4
+   proportions: generous margins, three totals across, five schedule
+   columns. At 375px that left 279px of usable width for a table needing
+   467, and the balance column simply fell off the right-hand edge --
+   clipped, not scrollable, so a reader had no way to reach it.
+
+   These recover the width rather than hiding anything: the margins come
+   in, the header and totals stack, and what still cannot fit scrolls
+   inside its own box.
+
+   Scoped to `screen` deliberately, and it is not decoration: an A4 page at
+   12mm margins is about 703 CSS px, so a bare `max-width: 720px` fires when
+   printing. These rules sit after the print block and would have won --
+   putting phone margins, a stacked header and tightened cells on every PDF
+   anyone makes. */
+@media screen and (max-width: 720px) {
+  .report {
+    padding: 20px 16px;
+  }
+
+  .report-head {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Stacked under the title now, so it reads left-to-right with everything
+     else rather than hugging an edge that is no longer there. */
+  .report-meta {
+    text-align: left;
+    gap: 28px;
+  }
+
+  .report-totals {
+    flex-wrap: wrap;
+    gap: 14px 28px;
+  }
+
+  .report-table th,
+  .report-table td {
+    padding: 6px 5px;
+  }
+
+  /* The year stays put while its figures scroll under it. Without this,
+     reaching the balance column pushed the year off the left and left the
+     reader holding a row of numbers belonging to no year.
+
+     The schedule only: it is the one table that cannot be made to fit a
+     phone. The three that already fit would gain nothing and still pay the
+     redraw. The opaque background is load-bearing -- without it the
+     scrolling columns show through the pinned one. */
+  .report-schedule tbody th,
+  .report-schedule thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #ffffff;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .report {
+    padding: 16px 12px;
+    font-size: 0.85rem;
+  }
+
+  .report-table {
+    font-size: 0.78rem;
+  }
+
+  /* "For reference only" is one unbreakable line rotated 32 degrees, so at
+     the desktop floor of 2.5rem it was half a phone wide and spilled off
+     both sides -- the reader saw "For reference o". */
+  .report-watermark span {
+    font-size: 1.9rem;
   }
 }
 
