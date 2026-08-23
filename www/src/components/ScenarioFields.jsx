@@ -53,7 +53,9 @@ export default function ScenarioFields({
           index, a promotional spread, how long it lasts, and the spread it
           steps up to. A single "Interest rate" box could only ever describe
           the first few years of one. */}
-      {has('rate') && <RateFields rate={scenario.rate} onChange={set('rate')} />}
+      {has('rate') && (
+        <RateFields rate={scenario.rate} onChange={set('rate')} wasmModule={wasmModule} />
+      )}
 
       {has('term') && (
         <NumberField

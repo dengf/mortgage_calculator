@@ -205,6 +205,8 @@ mod no_debug_formatted_errors {
         ("affordability.rs", include_str!("affordability.rs")),
         ("refinance.rs", include_str!("refinance.rs")),
         ("comparison.rs", include_str!("comparison.rs")),
+        ("rate.rs", include_str!("rate.rs")),
+        ("report.rs", include_str!("report.rs")),
         ("united_states.rs", include_str!("united_states.rs")),
         ("singapore.rs", include_str!("singapore.rs")),
         ("storage.rs", include_str!("storage.rs")),

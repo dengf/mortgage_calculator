@@ -170,6 +170,9 @@ export default {
   'rate.rate': 'Rate',
   'cmp.term': 'Term',
   'rate.base': 'Base',
+  'rate.baseFloats': 'Base rate floats',
+  'note.floatingBase':
+    'These figures assume the base rate stays at {base}%. It is a published benchmark that moves, this calculator does not track it, and every amount shown moves with it.',
   'rate.spread': 'Spread',
   'cmp.tradeoff':
     '{cheaper} costs {paymentDelta} more each month than {lighter}, and saves {interestDelta} in interest over the life of the loan.',
@@ -218,6 +221,7 @@ export default {
   'report.canChange': 'Can this change?',
   'report.no': 'No',
   'report.ratePlan': 'Yes — steps up after {years} yr, to {rate}',
+  'report.andWithBenchmark': 'and whenever the benchmark moves',
   'report.paymentPlan': 'Yes — rises after {years} yr, to {payment}',
   'report.overTime': 'What you pay, over time',
   'report.period': 'Period',

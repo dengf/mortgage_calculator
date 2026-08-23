@@ -39,6 +39,7 @@ pub mod duration;
 pub mod loan;
 pub mod message;
 pub mod payment;
+pub mod rate;
 pub mod refinance;
 pub mod region;
 pub mod report;

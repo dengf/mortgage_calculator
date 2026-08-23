@@ -203,6 +203,7 @@ mod tests {
         let result = analyze_refinance(&RefinanceInput {
             new_rate: RateType::Reverting {
                 base_rate: dec!(0.0112),
+                base_floats: true,
                 initial_spread: dec!(0.003),
                 initial_years: dec!(2),
                 thereafter_spread: dec!(0.006),
@@ -232,6 +233,7 @@ mod tests {
             current_annual_rate: dec!(0.04),
             new_rate: RateType::Reverting {
                 base_rate: dec!(0.01),
+                base_floats: true,
                 initial_spread: dec!(0.005),
                 initial_years: dec!(2),
                 thereafter_spread: dec!(0.05),

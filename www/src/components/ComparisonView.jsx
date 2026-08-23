@@ -51,6 +51,32 @@ function blankEntry(t) {
   return { ...EMPTY_ENTRY, id: newId(), label: t('cmp.customScenario'), labelEdited: true };
 }
 
+/**
+ * What the rows on this table assumed, once each.
+ *
+ * Rows are compared side by side, so a caveat repeated under every SORA
+ * package would be read as decoration. Two rows quoted over the same
+ * benchmark share one note; two quoted over different ones get their own,
+ * because the figure held still is the whole content of the sentence.
+ *
+ * Which rows have anything to disclose is Rust's answer, asked per row --
+ * see `rate_note`.
+ */
+function rateNotes(wasmModule, entries) {
+  if (!wasmModule?.rate_note) return [];
+  const seen = new Map();
+  for (const entry of entries) {
+    let note = null;
+    try {
+      note = wasmModule.rate_note(toRateTypeDto(entry));
+    } catch {
+      note = null;
+    }
+    if (note && !seen.has(note.text)) seen.set(note.text, note);
+  }
+  return [...seen.values()];
+}
+
 function toWasmEntry(entry) {
   // An entry is a rate with a name and a term on it, so the rate travels the
   // same way it does from every other tab.
@@ -114,6 +140,8 @@ export default function ComparisonView({
       entries: entries.map(toWasmEntry),
     });
   }, [wasmModule, principal, frequency, entries]);
+
+  const notes = useMemo(() => rateNotes(wasmModule, entries), [wasmModule, entries]);
 
   const rows = result?.rows ?? [];
   // Which row wins on each measure, and what the choice between them costs,
@@ -208,6 +236,12 @@ export default function ComparisonView({
         ))}
         {entries.length === 0 && <p className="saved-scenarios-empty">{t('cmp.addScenario')}</p>}
       </div>
+
+      {notes.map((note) => (
+        <p className="rate-note" role="note" key={note.text}>
+          {t(note.code, note.params) || note.text}
+        </p>
+      ))}
 
       <CalcError result={result} />
 

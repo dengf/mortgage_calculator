@@ -159,6 +159,9 @@ export default {
   'rate.rate': '利率',
   'cmp.term': '年限',
   'rate.base': '基準',
+  'rate.baseFloats': '基準利率浮動',
+  'note.floatingBase':
+    '以下數字假設基準利率維持在 {base}%。該基準由外部公布並會浮動，本計算器不追蹤其變動，所有金額都會隨之改變。',
   'rate.spread': '加碼',
   'cmp.tradeoff':
     '{cheaper} 每月比 {lighter} 多付 {paymentDelta}，但在整個貸款期內可少付 {interestDelta} 利息。',
@@ -206,6 +209,7 @@ export default {
   'report.canChange': '是否會變動？',
   'report.no': '否',
   'report.ratePlan': '會 —— {years} 年後升至 {rate}',
+  'report.andWithBenchmark': '並會隨基準利率變動',
   'report.paymentPlan': '會 —— {years} 年後升至 {payment}',
   'report.overTime': '各階段還款',
   'report.period': '期間',

@@ -118,7 +118,12 @@ export default function RefinanceCalculator({ wasmModule, region }) {
           min={1}
           step="1"
         />
-        <RateFields rate={newRate} onChange={setNewRate} label="refi.newRate" />
+        <RateFields
+          rate={newRate}
+          onChange={setNewRate}
+          label="refi.newRate"
+          wasmModule={wasmModule}
+        />
         <NumberField
           label={t('refi.newTerm')}
           value={newTermYears}

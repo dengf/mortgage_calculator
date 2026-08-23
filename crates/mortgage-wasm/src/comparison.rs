@@ -316,6 +316,7 @@ mod tests {
         let described = describe(&describe_params(
             RateTypeDto::Reverting {
                 base_rate_percent: 1.12,
+                base_floats: true,
                 initial_spread_percent: 0.3,
                 initial_years: 2.0,
                 thereafter_spread_percent: 1.5,

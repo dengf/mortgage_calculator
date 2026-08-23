@@ -259,6 +259,36 @@ body {
   color: #9fb0c3;
 }
 
+/* A yes/no answer, not a value: the control sits beside its label rather
+   than under it, the way the stacked `.field` rows do. */
+.field-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.field-check input {
+  accent-color: #4c8dff;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+/* What a figure assumed, printed under the figure. Quiet enough not to
+   compete with the answer above it and close enough to be read as part of
+   it -- a caveat parked at the bottom of a panel is a caveat nobody reads. */
+.rate-note {
+  margin: -2px 0 0;
+  padding: 8px 10px;
+  border-left: 2px solid #3a4a5e;
+  background: #131c26;
+  border-radius: 0 6px 6px 0;
+  color: #9fb0c3;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .field-input {
   display: flex;
   align-items: center;
@@ -570,6 +600,13 @@ body {
 
 .comparison-entry-field .unit {
   color: #5c6b7d;
+}
+
+.comparison-entry-check input {
+  accent-color: #4c8dff;
+  width: 15px;
+  height: 15px;
+  margin: 0;
 }
 
 /* --- Responsive ---------------------------------------------------------
@@ -987,6 +1024,24 @@ body {
   margin: 0 0 10px;
   color: #5c6b7d;
   font-size: 0.82rem;
+}
+
+/* The one note on the page that is not commentary: without it the tables
+   above it are a projection presented as a quotation. It sits under the
+   terms it qualifies and prints in the same ink as the document, not the
+   grey the other notes use. */
+.report-assumption {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 2px solid #999;
+  color: #333;
+}
+
+/* A second answer in the "Can this change?" column, on its own line so it
+   is not read as a continuation of the step-up schedule. */
+.report-can-change {
+  display: block;
+  color: #555;
 }
 
 .report-table {

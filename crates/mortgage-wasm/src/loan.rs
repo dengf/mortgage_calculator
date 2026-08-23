@@ -64,6 +64,7 @@ mod tests {
         let loan = build_loan(&LoanParams {
             rate: RateTypeDto::Reverting {
                 base_rate_percent: 1.12,
+                base_floats: true,
                 initial_spread_percent: 0.3,
                 initial_years: 2.0,
                 thereafter_spread_percent: 0.6,

@@ -32,6 +32,9 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
   if (!report || report.error) return null;
 
   const steps = report.payment_after_reversion != null;
+  // Rust decided whether anything was held still to produce these figures,
+  // and wrote the sentence saying so. See `mortgage_calc::report::Report`.
+  const floats = report.floating_base_percent != null;
 
   return (
     <article className="report" lang={locale}>
@@ -98,6 +101,13 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
                       rate: pct(report.final_rate_percent),
                     })
                   : t('report.no')}
+                {/* A rate that steps up on a schedule and a rate that moves
+                    with a benchmark are two different answers to this
+                    column, and a package can give both. Printing only the
+                    schedule would let "then 1.720%" read as the last word. */}
+                {floats && (
+                  <span className="report-can-change">{t('report.andWithBenchmark')}</span>
+                )}
               </td>
             </tr>
             <tr>
@@ -110,10 +120,22 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
                       payment: money(report.payment_after_reversion),
                     })
                   : t('report.no')}
+                {/* The instalment moves for the same reason the rate does.
+                    Saying it of the rate alone reads as though the payment
+                    settles at the thereafter figure and stays there. */}
+                {floats && (
+                  <span className="report-can-change">{t('report.andWithBenchmark')}</span>
+                )}
               </td>
             </tr>
           </tbody>
         </table>
+
+        {report.rate_note && (
+          <p className="report-note report-assumption">
+            {t(report.rate_note.code, report.rate_note.params) || report.rate_note.text}
+          </p>
+        )}
       </section>
 
       {/* The CFPB's year bands. A loan whose payment moves is described

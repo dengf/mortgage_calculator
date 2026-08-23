@@ -90,6 +90,27 @@ ran for twenty-five years. The Payment tab then assessed TDSR on that rate and
 passed borrowers a bank would decline (MAS Notice 645 para 6(b) assesses on
 the *thereafter* rate). Nothing looked broken.
 
+### Carry what a figure assumed, next to the figure
+
+A calculated amount and the assumption it rests on travel together, and both
+are decided in Rust. `RateType::floating_base` answers "was anything held
+still to produce this?"; `Loan` carries the answer through the builder for
+the same reason it carries `Reversion`, and `Report` prints it.
+
+The failure it prevents is quiet. A Singapore package is quoted over 3M SORA,
+which MAS publishes and this app has no feed for, so the instalment, the
+totals and the twenty-five year schedule are all exact *given* one number
+nobody here controls. Rendered without that sentence, a page of exact figures
+reads as a quotation rather than a projection -- and the closer the document
+gets to the shape of a real disclosure, the more convincingly it reads that
+way. MAS makes a bank admit the same thing on a Notice 632A fact sheet.
+
+Note that the disclosure changes no arithmetic. `report.rs` has a test
+asserting exactly that: the bands, the stress rows and the totals are
+identical whether or not the base is declared to float. If disclosing
+something starts changing a number, the model has been mixed up with the
+copy.
+
 ## Verification traps
 
 Each of these produces a wrong result that looks like a correct one.
