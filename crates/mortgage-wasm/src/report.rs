@@ -6,7 +6,7 @@
 use wasm_bindgen::prelude::*;
 
 use crate::convert::{decimal_to_f64, rate_to_percent, to_js};
-use crate::dto::{LoanParams, PaymentBandDto, RateRiseRowDto, ReportResult};
+use crate::dto::{PaymentBandDto, RateRiseRowDto, ReferenceDto, ReportParams, ReportResult};
 use crate::loan::build_loan;
 use crate::message::Message;
 
@@ -18,7 +18,7 @@ pub fn build_report(params: JsValue) -> JsValue {
 
 fn build_report_impl(params: JsValue) -> ReportResult {
     match serde_wasm_bindgen::from_value(params) {
-        Ok(loan_params) => report_from_params(loan_params),
+        Ok(params) => report_from_params(params),
         Err(_) => failed(Message::bad_request()),
     }
 }
@@ -33,13 +33,22 @@ fn failed(message: Message) -> ReportResult {
 
 /// JsValue-free core — see the matching comment on
 /// `payment::payment_from_params`.
-fn report_from_params(loan_params: LoanParams) -> ReportResult {
-    let loan = match build_loan(&loan_params) {
+fn report_from_params(params: ReportParams) -> ReportResult {
+    let loan = match build_loan(&params.loan) {
         Ok(loan) => loan,
         Err(e) => return failed(e),
     };
 
-    let report = match mortgage_calc::report::report(&loan) {
+    // An unrecognized or absent region falls back to the default rather
+    // than failing: a document with the wrong citations is a bug, but a
+    // document that refuses to exist is worse.
+    let region = params
+        .region
+        .as_deref()
+        .and_then(mortgage_core::Region::try_parse)
+        .unwrap_or_default();
+
+    let report = match mortgage_calc::report::report(&loan, region) {
         Ok(report) => report,
         Err(e) => return failed(Message::from(&e)),
     };
@@ -80,6 +89,14 @@ fn report_from_params(loan_params: LoanParams) -> ReportResult {
             .into_iter()
             .map(crate::amortization::to_year_dto)
             .collect(),
+        references: report
+            .references
+            .into_iter()
+            .map(|authority| ReferenceDto {
+                code: format!("ref.{authority:?}"),
+                url: authority.url().to_string(),
+            })
+            .collect(),
         error: None,
         error_message: None,
     }
@@ -88,19 +105,22 @@ fn report_from_params(loan_params: LoanParams) -> ReportResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dto::RateTypeDto;
+    use crate::dto::{LoanParams, RateTypeDto};
 
-    fn package() -> LoanParams {
-        LoanParams {
-            principal: 400_000.0,
-            rate: RateTypeDto::Reverting {
-                base_rate_percent: 1.12,
-                initial_spread_percent: 0.3,
-                initial_years: 2.0,
-                thereafter_spread_percent: 0.6,
+    fn package() -> ReportParams {
+        ReportParams {
+            region: Some("SG".to_string()),
+            loan: LoanParams {
+                principal: 400_000.0,
+                rate: RateTypeDto::Reverting {
+                    base_rate_percent: 1.12,
+                    initial_spread_percent: 0.3,
+                    initial_years: 2.0,
+                    thereafter_spread_percent: 0.6,
+                },
+                term_years: 25.0,
+                frequency: None,
             },
-            term_years: 25.0,
-            frequency: None,
         }
     }
 
@@ -129,13 +149,37 @@ mod tests {
 
     #[test]
     fn reports_a_bad_loan_in_band_rather_than_returning_an_empty_document() {
-        let r = report_from_params(LoanParams {
-            term_years: 0.0,
+        let r = report_from_params(ReportParams {
+            loan: LoanParams {
+                term_years: 0.0,
+                ..package().loan
+            },
             ..package()
         });
 
         assert!(r.error.is_some());
         assert!(r.bands.is_empty());
         assert!(r.principal.is_none());
+    }
+
+    #[test]
+    fn cites_the_market_the_document_will_be_read_in() {
+        let sg = report_from_params(package());
+        let us = report_from_params(ReportParams {
+            region: Some("US".to_string()),
+            ..package()
+        });
+
+        let codes = |r: &ReportResult| {
+            r.references
+                .iter()
+                .map(|x| x.code.clone())
+                .collect::<Vec<_>>()
+        };
+
+        assert!(codes(&sg).contains(&"ref.MasNotice645".to_string()));
+        assert!(codes(&us).contains(&"ref.Fhfa".to_string()));
+        assert!(!codes(&us).contains(&"ref.MasNotice645".to_string()));
+        assert!(sg.references.iter().all(|r| r.url.starts_with("https://")));
     }
 }

@@ -36,7 +36,7 @@
 //! planning illustration produced by a calculator, and the front end is
 //! responsible for saying so on the document.
 
-use mortgage_core::{round_currency, MortgageResult, PaymentFrequency};
+use mortgage_core::{round_currency, MortgageResult, PaymentFrequency, Region};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,86 @@ use serde::{Deserialize, Serialize};
 use crate::amortization::AmortizationYear;
 use crate::payment::{payment_factor, summarize};
 use crate::Loan;
+
+/// A published authority the figures in a report rest on.
+///
+/// Carried by the report rather than written into the template, because
+/// which authorities apply is a fact about the market the loan is in. A
+/// document that states a 55% servicing ceiling and a 75% LTV cap without
+/// saying who set them is asking to be taken as the lender's own word.
+///
+/// The doc comments through this crate cite these same authorities against
+/// the individual rules. This list is the machine-readable half, and it is
+/// the one the reader sees.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Authority {
+    /// LTV ceilings, the cash component of the deposit, and the tenure
+    /// thresholds that tighten them.
+    MasNotice632,
+    /// The Residential Property Loan Fact Sheet a bank must give a
+    /// borrower. This illustration follows its shape and is not one.
+    MasNotice632a,
+    /// TDSR and MSR, and the medium-term rate floor servicing is assessed
+    /// at.
+    MasNotice645,
+    /// SORA, the benchmark Singapore packages are quoted over.
+    MasSora,
+    /// Buyer's Stamp Duty and Additional Buyer's Stamp Duty.
+    Iras,
+    /// CPF Ordinary Account interest, and the HDB concessionary rate pegged
+    /// above it.
+    CpfBoard,
+    /// The Loan Estimate this illustration follows the shape of, and is
+    /// not.
+    Cfpb,
+    /// The conforming loan limit that separates conforming from jumbo.
+    Fhfa,
+    /// The published Prime and SOFR benchmarks.
+    FederalReserveH15,
+}
+
+impl Authority {
+    /// Where a reader checks it.
+    ///
+    /// A citation nobody can follow is decoration. These are the landing
+    /// pages rather than deep links to a particular PDF, which move.
+    pub fn url(self) -> &'static str {
+        match self {
+            Authority::MasNotice632 => "https://www.mas.gov.sg/regulation/notices/notice-632",
+            Authority::MasNotice632a => "https://www.mas.gov.sg/regulation/notices/notice-632a",
+            Authority::MasNotice645 => "https://www.mas.gov.sg/regulation/notices/notice-645",
+            Authority::MasSora => "https://www.mas.gov.sg/monetary-policy/sora",
+            Authority::Iras => "https://www.iras.gov.sg/taxes/stamp-duty/for-property",
+            Authority::CpfBoard => {
+                "https://www.cpf.gov.sg/member/growing-your-savings/earning-attractive-interest"
+            }
+            Authority::Cfpb => "https://www.consumerfinance.gov/owning-a-home/loan-estimate/",
+            Authority::Fhfa => "https://www.fhfa.gov/policy/conforming-loan-limit",
+            Authority::FederalReserveH15 => "https://www.federalreserve.gov/releases/h15/",
+        }
+    }
+}
+
+/// The authorities a report for `region` rests on, in the order a reader
+/// meets them: the loan first, then what it is assessed against, then the
+/// duties and benchmarks around it.
+pub fn references(region: Region) -> Vec<Authority> {
+    match region {
+        Region::SG => vec![
+            Authority::MasNotice632a,
+            Authority::MasNotice645,
+            Authority::MasNotice632,
+            Authority::Iras,
+            Authority::CpfBoard,
+            Authority::MasSora,
+        ],
+        Region::US => vec![
+            Authority::Cfpb,
+            Authority::Fhfa,
+            Authority::FederalReserveH15,
+        ],
+    }
+}
 
 /// A stretch of the loan over which the instalment does not change.
 ///
@@ -95,6 +175,9 @@ pub struct Report {
     pub bands: Vec<PaymentBand>,
     pub rate_rise: Vec<RateRiseRow>,
     pub yearly: Vec<AmortizationYear>,
+    /// Who set the rules the figures follow, so the document cites its
+    /// sources rather than asserting them.
+    pub references: Vec<Authority>,
 }
 
 /// Increases the illustration is run at, in percentage points.
@@ -105,8 +188,8 @@ pub struct Report {
 /// the +2% line is inside the assessment their own bank will run.
 const RATE_RISES: [Decimal; 3] = [dec!(0.005), dec!(0.01), dec!(0.02)];
 
-/// Builds the illustration for `loan`.
-pub fn report(loan: &Loan) -> MortgageResult<Report> {
+/// Builds the illustration for `loan` as it would be read in `region`.
+pub fn report(loan: &Loan, region: Region) -> MortgageResult<Report> {
     let summary = summarize(loan);
     // One schedule, read several ways. The document prints the yearly rows
     // and the totals beside them, and stresses the balance left at the
@@ -130,6 +213,7 @@ pub fn report(loan: &Loan) -> MortgageResult<Report> {
         bands: bands(loan, &summary),
         rate_rise: rate_rise(loan, &rows),
         yearly,
+        references: references(region),
     })
 }
 
@@ -260,7 +344,7 @@ mod tests {
 
     #[test]
     fn a_flat_loan_is_one_band_over_the_whole_term() {
-        let bands = report(&flat()).unwrap().bands;
+        let bands = report(&flat(), Region::US).unwrap().bands;
         assert_eq!(bands.len(), 1);
         assert_eq!(bands[0].from_year, dec!(1));
         assert_eq!(bands[0].to_year, dec!(30));
@@ -270,7 +354,7 @@ mod tests {
     fn a_package_is_split_at_the_lock_in_with_no_year_lost_between_them() {
         // The bands are read as "Years 1-2" and "Years 3-25". An off-by-one
         // here silently drops or double-counts a year of the loan.
-        let bands = report(&package()).unwrap().bands;
+        let bands = report(&package(), Region::SG).unwrap().bands;
         assert_eq!(bands.len(), 2);
         assert_eq!((bands[0].from_year, bands[0].to_year), (dec!(1), dec!(2)));
         assert_eq!((bands[1].from_year, bands[1].to_year), (dec!(3), dec!(25)));
@@ -283,7 +367,7 @@ mod tests {
         // A promotional spread is contractual for its lock-in: a rise in the
         // benchmark during those years does not move the instalment. Running
         // the illustration off the opening rate would understate every line.
-        let report = report(&package()).unwrap();
+        let report = report(&package(), Region::SG).unwrap();
         let first = report.rate_rise.first().unwrap();
 
         assert_eq!(first.annual_rate, report.final_annual_rate + dec!(0.005));
@@ -292,7 +376,7 @@ mod tests {
 
     #[test]
     fn each_rise_costs_more_than_the_one_below_it() {
-        let rows = report(&package()).unwrap().rate_rise;
+        let rows = report(&package(), Region::SG).unwrap().rate_rise;
         assert_eq!(rows.len(), 3);
         for pair in rows.windows(2) {
             assert!(
@@ -310,7 +394,7 @@ mod tests {
         // Two years of principal have been paid off by the time the rate
         // moves. Repricing the original amount over the original term would
         // overstate what a rise actually costs.
-        let report = report(&package()).unwrap();
+        let report = report(&package(), Region::SG).unwrap();
         let unchanged = report
             .rate_rise
             .iter()
@@ -326,14 +410,14 @@ mod tests {
         // MoneySense lists the rate-change illustration as a fact sheet
         // requirement without qualification, and a US ARM is quoted flat
         // here too. "Fixed today" is not "fixed forever".
-        let rows = report(&flat()).unwrap().rate_rise;
+        let rows = report(&flat(), Region::US).unwrap().rate_rise;
         assert_eq!(rows.len(), 3);
         assert!(rows[0].payment > crate::payment::payment_amount(&flat()));
     }
 
     #[test]
     fn the_yearly_schedule_covers_the_whole_term() {
-        let report = report(&package()).unwrap();
+        let report = report(&package(), Region::SG).unwrap();
         assert_eq!(report.yearly.len(), 25);
         assert_eq!(
             report.yearly.last().unwrap().remaining_balance,
@@ -345,9 +429,51 @@ mod tests {
     fn the_totals_match_the_schedule_they_are_shown_beside() {
         // The document prints both. Two routes to one figure is how a
         // summary ends up disagreeing with the rows under it.
-        let report = report(&package()).unwrap();
+        let report = report(&package(), Region::SG).unwrap();
         let from_rows: Decimal = report.yearly.iter().map(|y| y.interest).sum();
 
         assert_eq!(round_currency(from_rows), report.total_interest);
+    }
+
+    #[test]
+    fn a_report_cites_the_market_it_is_read_in() {
+        let sg = report(&package(), Region::SG).unwrap().references;
+        let us = report(&flat(), Region::US).unwrap().references;
+
+        assert!(sg.contains(&Authority::MasNotice645));
+        assert!(sg.contains(&Authority::Iras));
+        assert!(!sg.contains(&Authority::Fhfa));
+
+        assert!(us.contains(&Authority::Fhfa));
+        assert!(!us.contains(&Authority::MasNotice645));
+    }
+
+    #[test]
+    fn no_report_is_published_without_citing_anything() {
+        // A document that states a servicing ceiling and an LTV cap without
+        // naming who set them reads as the issuer's own word for it.
+        for region in [Region::SG, Region::US] {
+            assert!(!references(region).is_empty(), "{region:?}");
+        }
+    }
+
+    #[test]
+    fn every_authority_can_actually_be_looked_up() {
+        // A citation nobody can follow is decoration.
+        for region in [Region::SG, Region::US] {
+            for authority in references(region) {
+                let url = authority.url();
+                assert!(url.starts_with("https://"), "{authority:?}: {url}");
+            }
+        }
+    }
+
+    #[test]
+    fn both_markets_name_the_disclosure_this_document_is_not() {
+        // The shape is borrowed from a regulated disclosure a lender issues
+        // about an offer. Naming the real thing, with a link, is what keeps
+        // a borrower from mistaking this for it.
+        assert!(references(Region::SG).contains(&Authority::MasNotice632a));
+        assert!(references(Region::US).contains(&Authority::Cfpb));
     }
 }

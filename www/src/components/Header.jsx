@@ -7,6 +7,7 @@ const TABS = [
   { id: 'affordability', key: 'nav.affordability' },
   { id: 'refinance', key: 'nav.refinance' },
   { id: 'compare', key: 'nav.compare' },
+  { id: 'report', key: 'nav.report' },
 ];
 
 const REGIONS = [

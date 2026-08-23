@@ -905,3 +905,382 @@ body {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------------
+   The printable illustration.
+
+   Its own document, not the calculator panels with the chrome hidden. On
+   screen it is a preview; on paper it is the deliverable, so the print
+   rules below are the real design and the screen rules approximate them.
+   --------------------------------------------------------------------- */
+
+.report {
+  position: relative;
+  background: #ffffff;
+  color: #16202c;
+  padding: 32px 36px;
+  border-radius: 12px;
+  max-width: 860px;
+  margin: 0 auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.report-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  border-bottom: 2px solid #16202c;
+  padding-bottom: 14px;
+  margin-bottom: 22px;
+}
+
+.report-head h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.report-subtitle {
+  margin: 4px 0 0;
+  color: #5c6b7d;
+}
+
+.report-meta {
+  display: flex;
+  gap: 22px;
+  margin: 0;
+  text-align: right;
+}
+
+.report-meta dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #5c6b7d;
+}
+
+.report-meta dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.report-section {
+  margin-bottom: 24px;
+  /* A heading stranded at the foot of a page with its table overleaf is
+     the single most common way a printed report looks unfinished. */
+  break-inside: avoid;
+}
+
+.report-section h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #5c6b7d;
+  margin: 0 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #d5dde6;
+}
+
+.report-note {
+  margin: 0 0 10px;
+  color: #5c6b7d;
+  font-size: 0.82rem;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Figures in a column only read as a column when their digits line up. */
+  font-variant-numeric: tabular-nums;
+}
+
+.report-table th,
+.report-table td {
+  text-align: right;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e4eaf0;
+}
+
+.report-table thead th,
+.report-table tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+
+.report-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5c6b7d;
+  border-bottom: 1px solid #b9c5d2;
+}
+
+.report-table thead th:not(:first-child) {
+  text-align: right;
+}
+
+.report-terms td:last-child {
+  text-align: left;
+  color: #5c6b7d;
+}
+
+.report-totals {
+  display: flex;
+  gap: 28px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #d5dde6;
+}
+
+.report-totals dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5c6b7d;
+}
+
+.report-totals dd {
+  margin: 3px 0 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-foot {
+  border-top: 2px solid #16202c;
+  padding-top: 14px;
+  font-size: 0.76rem;
+  color: #46556a;
+}
+
+.report-foot h3 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #5c6b7d;
+  margin: 14px 0 6px;
+}
+
+.report-disclaimer {
+  margin: 0 0 8px;
+}
+
+.report-sources {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.report-sources li {
+  margin-bottom: 4px;
+}
+
+.report-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  word-break: break-all;
+}
+
+.report-origin {
+  margin: 12px 0 0;
+}
+
+/* The watermark. Behind the text, never over it: a document nobody can
+   read is not a safer document.
+
+   A real element rather than a background image, because browsers do not
+   print backgrounds unless the reader ticks "Background graphics" — a
+   watermark that depends on a print setting is a watermark that is missing
+   from most of the PDFs anyone actually makes.
+
+   Sticky on screen so it stays in view down a long document; fixed when
+   printing, which lands it on every sheet. */
+.report-watermark {
+  position: sticky;
+  top: 45vh;
+  height: 0;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.report-watermark span {
+  transform: rotate(-32deg);
+  font-size: clamp(2.5rem, 9vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(22, 32, 44, 0.09);
+  white-space: nowrap;
+}
+
+.report > *:not(.report-watermark) {
+  position: relative;
+  z-index: 1;
+}
+
+@media print {
+  /* Only the document goes to paper -- but only when there *is* one.
+     Scoped on `:has(.report)` so that Ctrl+P on any other tab still prints
+     that page normally instead of a blank sheet. */
+  body:has(.report) .app-header,
+  body:has(.report) .app-nav,
+  body:has(.report) .app-footer,
+  body:has(.report) .panel,
+  body:has(.report) .intro,
+  body:has(.report) .about {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm 12mm 16mm;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  .report {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    font-size: 9.5pt;
+  }
+
+  /* Repeated on every sheet rather than once at the top. A page that gets
+     separated from the rest still says what it is -- which is the whole
+     point of a watermark and the reason it is not just a footer line. */
+  .report-watermark {
+    position: fixed;
+    inset: 0;
+    top: 0;
+    height: 100%;
+  }
+
+  .report-watermark span {
+    font-size: 64pt;
+    color: rgba(22, 32, 44, 0.09);
+  }
+
+  .report-schedule {
+    break-before: page;
+    break-inside: auto;
+  }
+
+  .report-schedule thead {
+    display: table-header-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+
+  .report-foot {
+    break-before: page;
+  }
+
+  a[href]::after {
+    content: '';
+  }
+}
+
+.report-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+
+.report-actions-note {
+  margin: 0;
+  flex: 1 1 260px;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: #9fb0c3;
+}
+
+.primary-button {
+  background: #7ee787;
+  color: #0f1720;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: #9df0a4;
+}
+
+.report-recipients {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.report-actions-warning {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #ffb454;
+}
+
+.secondary-button {
+  background: transparent;
+  color: #e6edf3;
+  border: 1px solid #2a3546;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: #7ee787;
+}
+
+.secondary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.report-confirm {
+  flex-basis: 100%;
+  background: #0f1720;
+  border: 1px solid #2a3546;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.report-confirm h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.report-confirm p {
+  margin: 0 0 14px;
+  font-size: 0.83rem;
+  color: #9fb0c3;
+}
+
+.report-confirm-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+.report-confirm-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

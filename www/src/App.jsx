@@ -8,6 +8,7 @@ import AffordabilityCalculator from './components/AffordabilityCalculator';
 import SingaporeAffordability from './components/SingaporeAffordability';
 import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
+import ReportView from './components/ReportView';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
 import { DEFAULT_SCENARIO, seedRateForRegion } from './scenario';
 import { detectRegion, rememberRegion } from './region';
@@ -18,6 +19,7 @@ const PANELS = {
   affordability: AffordabilityCalculator,
   refinance: RefinanceCalculator,
   compare: ComparisonView,
+  report: ReportView,
 };
 
 /**
