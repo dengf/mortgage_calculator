@@ -1,11 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import NumberField from './NumberField';
 import CalcError from './CalcError';
+import RateFields from './RateFields';
 import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { describeDuration, formatDuration } from '../duration';
+import { DEFAULT_RATE, normalizeRate, rateValues, toRateTypeDto } from '../rate';
+import { seedRateForRegion } from '../scenario';
 
 export default function RefinanceCalculator({ wasmModule, region }) {
   const { t } = useI18n();
@@ -14,21 +17,48 @@ export default function RefinanceCalculator({ wasmModule, region }) {
   const [currentBalance, setCurrentBalance] = useState(300000);
   const [currentRate, setCurrentRate] = useState(7.5);
   const [remainingPeriods, setRemainingPeriods] = useState(300);
-  const [newRate, setNewRate] = useState(6.0);
+  // The loan being refinanced *into* is a quote like any other, and in
+  // Singapore refinancing means moving onto another package that steps up
+  // after its own lock-in. A single "New rate" box could only describe the
+  // promotional years of it -- which is exactly the number a switch gets
+  // sold on, and the first one to stop being true.
+  const [newRate, setNewRate] = useState({ ...DEFAULT_RATE, ratePercent: 6.0 });
   const [newTermYears, setNewTermYears] = useState(30);
   const [closingCosts, setClosingCosts] = useState(6000);
+  const seededFor = useRef(null);
+
+  useEffect(() => {
+    if (!wasmModule || seededFor.current === region) return;
+    seededFor.current = region;
+    const seeded = seedRateForRegion(wasmModule, region, {
+      rate: newRate,
+      termYears: newTermYears,
+    });
+    setNewRate(seeded.rate);
+    setNewTermYears(seeded.termYears);
+  }, [wasmModule, region]);
+
+  const newRateType = toRateTypeDto(newRate);
+  const newRateKey = JSON.stringify(newRateType);
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
     if (
-      !allFilled(currentBalance, currentRate, remainingPeriods, newRate, newTermYears, closingCosts)
+      !allFilled(
+        currentBalance,
+        currentRate,
+        remainingPeriods,
+        ...rateValues(newRate),
+        newTermYears,
+        closingCosts,
+      )
     )
       return null;
     return wasmModule.calculate_refinance({
       current_balance: currentBalance,
       current_annual_rate_percent: currentRate,
       remaining_periods: remainingPeriods,
-      new_annual_rate_percent: newRate,
+      new_rate: newRateType,
       new_term_years: newTermYears,
       closing_costs: closingCosts,
       frequency: 'monthly',
@@ -38,7 +68,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
     currentBalance,
     currentRate,
     remainingPeriods,
-    newRate,
+    newRateKey,
     newTermYears,
     closingCosts,
   ]);
@@ -88,13 +118,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
           min={1}
           step="1"
         />
-        <NumberField
-          label={t('refi.newRate')}
-          value={newRate}
-          onChange={setNewRate}
-          suffix="%"
-          min={0}
-        />
+        <RateFields rate={newRate} onChange={setNewRate} label="refi.newRate" />
         <NumberField
           label={t('refi.newTerm')}
           value={newTermYears}
@@ -128,10 +152,22 @@ export default function RefinanceCalculator({ wasmModule, region }) {
             <div className="stat">
               <span className="stat-label">{t('refi.newPayment')}</span>
               <span className="stat-value">{formatMoney(result.new_payment)}</span>
+              {result.new_payment_after_reversion != null && (
+                <span className="stat-note">
+                  {t('rate.thenPayment', {
+                    payment: formatMoney(result.new_payment_after_reversion),
+                  })}
+                </span>
+              )}
             </div>
             <div className="stat stat-primary">
               <span className="stat-label">{t('refi.monthlySavings')}</span>
               <span className="stat-value">{formatMoney(result.payment_savings)}</span>
+              {/* Named for what it is once the new loan can step up: the
+                  saving during the lock-in, not for the life of the loan. */}
+              {result.new_payment_after_reversion != null && (
+                <span className="stat-note">{t('refi.savingsDuringLockIn')}</span>
+              )}
             </div>
             <div className="stat">
               <span className="stat-label">{t('refi.breakEven')}</span>
@@ -167,7 +203,8 @@ export default function RefinanceCalculator({ wasmModule, region }) {
           setCurrentBalance(inputs.currentBalance);
           setCurrentRate(inputs.currentRate);
           setRemainingPeriods(inputs.remainingPeriods);
-          setNewRate(inputs.newRate);
+          // Records saved before a rate was a shape hold a bare number.
+          setNewRate(normalizeRate(inputs.newRate));
           setNewTermYears(inputs.newTermYears);
           setClosingCosts(inputs.closingCosts);
         }}

@@ -1,9 +1,14 @@
 import React from 'react';
+import { RateKindToggle } from './RateFields';
+import { RATE_FIELDS } from '../rate';
 import { useI18n } from '../i18n';
 
 export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
   const { t } = useI18n();
   const set = (patch) => onChange({ ...entry, ...patch });
+  // The same list the panel forms render, in the compact styling a row of
+  // scenarios needs. Which fields a shape has is decided in one place.
+  const fields = RATE_FIELDS[entry.kind] ?? RATE_FIELDS.fixed;
 
   return (
     <div className="comparison-entry">
@@ -16,116 +21,21 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
         placeholder={t('cmp.scenarioLabel')}
       />
 
-      <div className="comparison-entry-kind">
-        <button
-          className={entry.kind === 'fixed' ? 'kind-toggle active' : 'kind-toggle'}
-          onClick={() => set({ kind: 'fixed' })}
-        >
-          {t('cmp.fixed')}
-        </button>
-        <button
-          className={entry.kind === 'reverting' ? 'kind-toggle active' : 'kind-toggle'}
-          aria-pressed={entry.kind === 'reverting'}
-          onClick={() => set({ kind: 'reverting' })}
-        >
-          {t('cmp.reverting')}
-        </button>
-        <button
-          className={entry.kind === 'floating' ? 'kind-toggle active' : 'kind-toggle'}
-          onClick={() => set({ kind: 'floating' })}
-        >
-          {t('cmp.floating')}
-        </button>
-      </div>
+      <RateKindToggle kind={entry.kind} onChange={(kind) => set({ kind })} />
 
-      {entry.kind === 'fixed' && (
-        <label className="comparison-entry-field">
-          <span>{t('cmp.rate')}</span>
+      {fields.map((field) => (
+        <label className="comparison-entry-field" key={field.key}>
+          <span>{t(field.label)}</span>
           <input
             type="number"
             step="any"
-            value={entry.ratePercent}
-            onChange={(e) => set({ ratePercent: Number(e.target.value) })}
+            min={field.min}
+            value={entry[field.key]}
+            onChange={(e) => set({ [field.key]: Number(e.target.value) })}
           />
-          <span className="unit">%</span>
+          <span className="unit">{t(field.unit)}</span>
         </label>
-      )}
-
-      {/* Every field of a Singapore package is editable, because every one
-          of them is negotiated: the index, the promotional spread, how long
-          it lasts, and the spread it steps up to. The last is the one that
-          decides most of the interest and the one buyers are least often
-          shown. */}
-      {entry.kind === 'reverting' && (
-        <>
-          <label className="comparison-entry-field">
-            <span>{t('cmp.base')}</span>
-            <input
-              type="number"
-              step="any"
-              value={entry.baseRatePercent}
-              onChange={(e) => set({ baseRatePercent: Number(e.target.value) })}
-            />
-            <span className="unit">%</span>
-          </label>
-          <label className="comparison-entry-field">
-            <span>{t('cmp.initialSpread')}</span>
-            <input
-              type="number"
-              step="any"
-              value={entry.initialSpreadPercent}
-              onChange={(e) => set({ initialSpreadPercent: Number(e.target.value) })}
-            />
-            <span className="unit">%</span>
-          </label>
-          <label className="comparison-entry-field">
-            <span>{t('cmp.lockIn')}</span>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              value={entry.initialYears}
-              onChange={(e) => set({ initialYears: Number(e.target.value) })}
-            />
-            <span className="unit">{t('cmp.yrs')}</span>
-          </label>
-          <label className="comparison-entry-field">
-            <span>{t('cmp.thereafterSpread')}</span>
-            <input
-              type="number"
-              step="any"
-              value={entry.thereafterSpreadPercent}
-              onChange={(e) => set({ thereafterSpreadPercent: Number(e.target.value) })}
-            />
-            <span className="unit">%</span>
-          </label>
-        </>
-      )}
-
-      {entry.kind === 'floating' && (
-        <>
-          <label className="comparison-entry-field">
-            <span>{t('cmp.base')}</span>
-            <input
-              type="number"
-              step="any"
-              value={entry.baseRatePercent}
-              onChange={(e) => set({ baseRatePercent: Number(e.target.value) })}
-            />
-            <span className="unit">%</span>
-          </label>
-          <label className="comparison-entry-field">
-            <span>{t('cmp.spread')}</span>
-            <input
-              type="number"
-              step="any"
-              value={entry.spreadPercent}
-              onChange={(e) => set({ spreadPercent: Number(e.target.value) })}
-            />
-            <span className="unit">%</span>
-          </label>
-        </>
-      )}
+      ))}
 
       <label className="comparison-entry-field">
         <span>{t('cmp.term')}</span>
@@ -136,7 +46,7 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
           value={entry.termYears}
           onChange={(e) => set({ termYears: Number(e.target.value) })}
         />
-        <span className="unit">{t('cmp.yrs')}</span>
+        <span className="unit">{t('rate.yrs')}</span>
       </label>
 
       <button className="link-button danger" onClick={onRemove}>

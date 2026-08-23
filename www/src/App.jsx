@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Header from './components/Header';
 import Intro from './components/Intro';
 import About from './components/About';
@@ -9,7 +9,7 @@ import SingaporeAffordability from './components/SingaporeAffordability';
 import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
-import { DEFAULT_SCENARIO } from './scenario';
+import { DEFAULT_SCENARIO, seedRateForRegion } from './scenario';
 import { detectRegion, rememberRegion } from './region';
 
 const PANELS = {
@@ -38,8 +38,22 @@ export function AppShell({ wasmModule }) {
   const [region, setRegion] = useState(() => detectRegion(wasmModule));
   // One loan, described from several angles — see src/scenario.js.
   const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
+  // The market the current loan was seeded for, so a region switch reseeds.
+  const seededFor = useRef(null);
   const { t } = useI18n();
   const ActivePanel = panelFor(activeTab, region);
+
+  // The quote a buyer opens on has to be one their market actually offers.
+  // A Singapore buyer used to land on a flat 6.5% for thirty years: several
+  // times the market, on a product no bank there sells. Reseeding discards
+  // whatever was typed for the previous market, deliberately — the same
+  // rationale the Compare tab's rows already follow, since a US fixed quote
+  // relabelled S$ states a price nobody would honour.
+  useEffect(() => {
+    if (!wasmModule || seededFor.current === region) return;
+    seededFor.current = region;
+    setScenario((current) => seedRateForRegion(wasmModule, region, current));
+  }, [wasmModule, region]);
 
   return (
     <div className="app">

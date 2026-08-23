@@ -6,20 +6,20 @@ use mortgage_calc::Loan;
 
 use crate::message::Message;
 
-use crate::convert::{f64_to_decimal, parse_frequency, percent_to_rate};
+use crate::convert::{f64_to_decimal, parse_frequency, rate_type_from_dto};
 use crate::dto::LoanParams;
 
 pub fn build_loan(params: &LoanParams) -> Result<Loan, Message> {
-    let annual_rate = percent_to_rate(params.annual_rate_percent).ok_or_else(|| {
-        Message::bare(
-            "err.invalidRate",
-            "annual_rate_percent must be a finite number",
-        )
-    })?;
+    // `rate_type` rather than `annual_rate`: a reverting package sets its
+    // own step-up on the way in, so there is no path through this function
+    // that builds a Singapore loan as though its promotional rate ran for
+    // twenty-five years.
+    let rate_type =
+        rate_type_from_dto(&params.rate).map_err(|text| Message::bare("err.invalidRate", &text))?;
 
     Loan::builder()
         .principal(f64_to_decimal(params.principal))
-        .annual_rate(annual_rate)
+        .rate_type(rate_type)
         .term_years(f64_to_decimal(params.term_years))
         .frequency(parse_frequency(params.frequency.as_deref()))
         .build()
@@ -29,11 +29,12 @@ pub fn build_loan(params: &LoanParams) -> Result<Loan, Message> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dto::RateTypeDto;
 
     fn valid_params() -> LoanParams {
         LoanParams {
             principal: 400_000.0,
-            annual_rate_percent: 6.5,
+            rate: RateTypeDto::Fixed { rate_percent: 6.5 },
             term_years: 30.0,
             frequency: None,
         }
@@ -47,9 +48,32 @@ mod tests {
     #[test]
     fn rejects_a_nan_rate_instead_of_silently_building_a_zero_percent_loan() {
         let params = LoanParams {
-            annual_rate_percent: f64::NAN,
+            rate: RateTypeDto::Fixed {
+                rate_percent: f64::NAN,
+            },
             ..valid_params()
         };
         assert!(build_loan(&params).is_err());
+    }
+
+    #[test]
+    fn a_reverting_package_keeps_its_step_up() {
+        // The whole point of taking a shape rather than a figure: every
+        // caller of this helper -- payment, schedule, extra-payment impact
+        // -- inherits the reversion instead of having to remember it.
+        let loan = build_loan(&LoanParams {
+            rate: RateTypeDto::Reverting {
+                base_rate_percent: 1.12,
+                initial_spread_percent: 0.3,
+                initial_years: 2.0,
+                thereafter_spread_percent: 0.6,
+            },
+            term_years: 25.0,
+            ..valid_params()
+        })
+        .unwrap();
+
+        assert!(loan.reversion().is_some());
+        assert!(loan.final_annual_rate() > loan.annual_rate());
     }
 }

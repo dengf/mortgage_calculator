@@ -1,6 +1,7 @@
 import React from 'react';
 import NumberField from './NumberField';
 import DownPaymentField from './DownPaymentField';
+import RateFields from './RateFields';
 import { useScenarioSummary } from '../scenario';
 import { useI18n } from '../i18n';
 
@@ -48,15 +49,11 @@ export default function ScenarioFields({
         />
       )}
 
-      {has('rate') && (
-        <NumberField
-          label={t('field.interestRate')}
-          value={scenario.rate}
-          onChange={set('rate')}
-          suffix="%"
-          min={0}
-        />
-      )}
+      {/* A rate, not a rate figure: a Singapore package is quoted as an
+          index, a promotional spread, how long it lasts, and the spread it
+          steps up to. A single "Interest rate" box could only ever describe
+          the first few years of one. */}
+      {has('rate') && <RateFields rate={scenario.rate} onChange={set('rate')} />}
 
       {has('term') && (
         <NumberField

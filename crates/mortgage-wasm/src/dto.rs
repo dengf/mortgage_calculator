@@ -13,8 +13,11 @@ use crate::message::Message;
 #[derive(Debug, Clone, Deserialize)]
 pub struct LoanParams {
     pub principal: f64,
-    /// Annual interest rate as a percentage, e.g. `6.5` for 6.5%.
-    pub annual_rate_percent: f64,
+    /// The rate as a shape, not a figure. A flat quote is
+    /// `{ kind: "fixed", rate_percent: 6.5 }`; a Singapore package is
+    /// `reverting`, and carries its own step-up so no caller can quote the
+    /// promotional rate as if it lasted the whole term.
+    pub rate: RateTypeDto,
     pub term_years: f64,
     /// `"monthly" | "biweekly" | "weekly"`, defaults to monthly.
     pub frequency: Option<String>,
@@ -141,7 +144,9 @@ pub struct RefinanceParams {
     pub current_balance: f64,
     pub current_annual_rate_percent: f64,
     pub remaining_periods: u32,
-    pub new_annual_rate_percent: f64,
+    /// The rate being refinanced *into*, as a shape — in Singapore that is
+    /// a package that steps up, not a single figure.
+    pub new_rate: RateTypeDto,
     pub new_term_years: f64,
     pub closing_costs: f64,
     pub frequency: Option<String>,
@@ -151,6 +156,9 @@ pub struct RefinanceParams {
 pub struct RefinanceResultDto {
     pub current_payment: Option<f64>,
     pub new_payment: Option<f64>,
+    /// What the new instalment becomes after the lock-in. `null` when the
+    /// new rate holds for its whole term.
+    pub new_payment_after_reversion: Option<f64>,
     pub payment_savings: Option<f64>,
     pub break_even_periods: Option<u32>,
     pub remaining_interest_on_current_loan: Option<f64>,
@@ -317,8 +325,10 @@ pub struct UnitedStatesParams {
     pub principal: f64,
     pub home_price: f64,
     /// Used to derive the first period's interest for the deduction
-    /// estimate, so the formula stays on this side of the boundary.
-    pub annual_rate_percent: f64,
+    /// estimate, so the formula stays on this side of the boundary. Taken
+    /// as a shape rather than a figure so that resolving a floating quote
+    /// to the rate it actually charges stays here too.
+    pub rate: RateTypeDto,
     /// Five-digit ZIP; only the first three digits are used to resolve a
     /// state.
     pub zip: String,
@@ -362,11 +372,12 @@ pub struct SingaporeParams {
     pub monthly_payment: Option<f64>,
     /// The loan amount, used with `home_price` to derive the down payment.
     pub principal: f64,
-    /// The borrower's own rate, e.g. `4.5` for 4.5%. TDSR/MSR are assessed
-    /// at the higher of this and MAS's 4% floor, so the terms have to cross
-    /// the boundary — a pre-computed `monthly_payment` alone can't be
-    /// repriced.
-    pub annual_rate_percent: f64,
+    /// The borrower's own package. TDSR/MSR are assessed at the higher of
+    /// MAS's 4% floor and the rate the loan *ends* on, so the terms have to
+    /// cross the boundary — a pre-computed `monthly_payment` alone can't be
+    /// repriced, and a single rate would hide the step-up that Notice 645
+    /// para 6(b) is asking about.
+    pub rate: RateTypeDto,
     pub term_years: f64,
     pub home_price: f64,
     /// Fixed salary, counted in full.

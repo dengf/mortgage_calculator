@@ -72,6 +72,24 @@ before adding one:
 - `www/src/undefined-setters.test.js` guards a different recurring bug: a
   handler calling a setter that no longer exists. It shipped twice.
 
+### Send the shape, not the number
+
+A domain value that can take more than one form crosses the boundary as that
+form, never pre-resolved to a figure. `www/src/rate.js` is the model: a quote
+travels as `{ kind: "reverting", base_rate_percent, initial_spread_percent,
+initial_years, thereafter_spread_percent }`, and Rust decides what rate that
+charges, what the instalment is before and after the step-up, and what rate a
+bank assesses servicing at.
+
+Flattening it in JS looks harmless -- `base + spread` is one addition -- and
+it is the same mistake as any other duplicated rule, with one extra edge: a
+flattened quote is not merely rounded differently, it is a *different
+product*. Every tab except Compare took a single `annual_rate_percent`, so
+every one of them modelled a Singapore package as though its promotional rate
+ran for twenty-five years. The Payment tab then assessed TDSR on that rate and
+passed borrowers a bank would decline (MAS Notice 645 para 6(b) assesses on
+the *thereafter* rate). Nothing looked broken.
+
 ## Verification traps
 
 Each of these produces a wrong result that looks like a correct one.

@@ -7,6 +7,7 @@ import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
+import { DEFAULT_RATE, rateFromPreset, toRateTypeDto } from '../rate';
 
 let nextId = 0;
 const newId = () => `entry-${nextId++}`;
@@ -27,18 +28,11 @@ const EMPTY_ENTRY = {
   // it. Together they decide whether the name still follows the figures.
   labelIndex: null,
   labelEdited: false,
-  kind: 'fixed',
-  ratePercent: 6.5,
-  baseRatePercent: 4.3,
-  spreadPercent: 2,
-  initialSpreadPercent: 0.3,
-  initialYears: 2,
-  thereafterSpreadPercent: 0.6,
+  ...DEFAULT_RATE,
   termYears: 30,
 };
 
 function presetToEntry(preset, t) {
-  const rate = preset.rate_type;
   return {
     ...EMPTY_ENTRY,
     id: newId(),
@@ -47,19 +41,8 @@ function presetToEntry(preset, t) {
     // rather than re-translating under them on a language switch.
     label: presetName(preset, t),
     labelIndex: preset.index ?? null,
-    kind: rate.kind,
+    ...rateFromPreset(preset),
     termYears: preset.term_years,
-    ...(rate.kind === 'fixed' && { ratePercent: rate.rate_percent }),
-    ...(rate.kind === 'floating' && {
-      baseRatePercent: rate.base_rate_percent,
-      spreadPercent: rate.spread_percent,
-    }),
-    ...(rate.kind === 'reverting' && {
-      baseRatePercent: rate.base_rate_percent,
-      initialSpreadPercent: rate.initial_spread_percent,
-      initialYears: rate.initial_years,
-      thereafterSpreadPercent: rate.thereafter_spread_percent,
-    }),
   };
 }
 
@@ -69,22 +52,13 @@ function blankEntry(t) {
 }
 
 function toWasmEntry(entry) {
-  const rate_type = {
-    fixed: () => ({ kind: 'fixed', rate_percent: entry.ratePercent }),
-    floating: () => ({
-      kind: 'floating',
-      base_rate_percent: entry.baseRatePercent,
-      spread_percent: entry.spreadPercent,
-    }),
-    reverting: () => ({
-      kind: 'reverting',
-      base_rate_percent: entry.baseRatePercent,
-      initial_spread_percent: entry.initialSpreadPercent,
-      initial_years: entry.initialYears,
-      thereafter_spread_percent: entry.thereafterSpreadPercent,
-    }),
-  }[entry.kind]();
-  return { label: entry.label, rate_type, term_years: entry.termYears };
+  // An entry is a rate with a name and a term on it, so the rate travels the
+  // same way it does from every other tab.
+  return {
+    label: entry.label,
+    rate_type: toRateTypeDto(entry),
+    term_years: entry.termYears,
+  };
 }
 
 export default function ComparisonView({
@@ -258,7 +232,7 @@ export default function ComparisonView({
                     {row.effective_rate_percent.toFixed(3)}%
                     {row.thereafter_rate_percent != null && (
                       <span className="cmp-thereafter">
-                        {t('cmp.thenRate', {
+                        {t('rate.thenRate', {
                           rate: row.thereafter_rate_percent.toFixed(3),
                         })}
                       </span>
@@ -272,7 +246,7 @@ export default function ComparisonView({
                         only it is how a package gets compared on its teaser. */}
                     {row.payment_after_reversion != null && (
                       <span className="cmp-thereafter">
-                        {t('cmp.thenPayment', {
+                        {t('rate.thenPayment', {
                           payment: formatMoney(row.payment_after_reversion),
                         })}
                       </span>

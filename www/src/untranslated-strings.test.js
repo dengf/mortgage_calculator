@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import en from './i18n/en';
 
 // English that never reaches `t()` renders untranslated in the middle of an
 // otherwise fully translated page. Three shipped that way and were found by
@@ -37,6 +38,17 @@ function sources() {
 const CARRIES_A_WORD = /[A-Za-z]*[a-z][A-Za-z]/;
 
 /**
+ * A catalog key passed as a prop, e.g. `label="refi.newRate"`.
+ *
+ * A component that renders one shape of input in several places -- the rate
+ * fields, which appear on Payment, Amortization, Refinance and Compare --
+ * has to be told which heading to give it, and the honest way to pass that
+ * is the key, not the English. Checked against the catalog rather than by
+ * shape, so a key that does not exist is still a finding.
+ */
+const isCatalogKey = (text) => Object.hasOwn(en, text);
+
+/**
  * User-visible English that is not coming from a catalog.
  *
  * Only patterns that are unambiguous from a single line. A string literal
@@ -48,7 +60,7 @@ const CARRIES_A_WORD = /[A-Za-z]*[a-z][A-Za-z]/;
 function hardcodedEnglish(source) {
   const found = [];
   const add = (index, text) => {
-    if (CARRIES_A_WORD.test(text)) found.push({ line: index + 1, text });
+    if (CARRIES_A_WORD.test(text) && !isCatalogKey(text)) found.push({ line: index + 1, text });
   };
 
   source.split('\n').forEach((line, index) => {

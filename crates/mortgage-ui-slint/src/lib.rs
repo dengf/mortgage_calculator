@@ -740,8 +740,13 @@ fn recompute_refinance(ui: &AppWindow) {
                 .as_str()
                 .parse::<u32>()
                 .map_err(|_| "Enter a valid number of payments remaining.".to_string())?,
-            new_annual_rate: parse_field(ui.get_refi_new_rate_percent().as_str(), "new rate")?
-                / Decimal::from(100),
+            // The desktop app quotes one rate for the new loan. The web app
+            // takes a package shape here; until this UI grows the same
+            // fields, a flat quote is what it has to say.
+            new_rate: mortgage_calc::RateType::Fixed {
+                rate: parse_field(ui.get_refi_new_rate_percent().as_str(), "new rate")?
+                    / Decimal::from(100),
+            },
             new_term_years: parse_field(ui.get_refi_new_term_years().as_str(), "new term")?,
             closing_costs: parse_field(ui.get_refi_closing_costs().as_str(), "closing costs")?,
             frequency: PaymentFrequency::Monthly,

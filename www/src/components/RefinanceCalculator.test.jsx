@@ -88,3 +88,81 @@ describe('RefinanceCalculator', () => {
     expect(wasm.calculate_refinance).not.toHaveBeenCalled();
   });
 });
+
+describe('RefinanceCalculator, refinancing into a package', () => {
+  const SG_PRESET = {
+    label: '3M SORA + 0.30% for 2 yr, then + 0.60%',
+    label_message: { code: 'preset.reverting', params: {} },
+    index: '3M SORA',
+    rate_type: {
+      kind: 'reverting',
+      base_rate_percent: 1.12,
+      initial_spread_percent: 0.3,
+      initial_years: 2,
+      thereafter_spread_percent: 0.6,
+    },
+    term_years: 25,
+  };
+
+  function sgWasm(overrides = {}) {
+    return mockWasm({
+      get_common_rate_presets: vi.fn(() => [SG_PRESET]),
+      calculate_refinance: vi.fn(() => ({
+        current_payment: 2216.04,
+        new_payment: 1798.65,
+        new_payment_after_reversion: 1_950.12,
+        payment_savings: 417.39,
+        break_even_periods: 15,
+        remaining_interest_on_current_loan: 364812,
+        total_interest_on_new_loan: 347514,
+        lifetime_savings: 11298,
+        error: null,
+      })),
+      ...overrides,
+    });
+  }
+
+  const showSg = (wasmModule) =>
+    render(
+      <I18nProvider initialLocale="en">
+        <RefinanceCalculator wasmModule={wasmModule} region="SG" />
+      </I18nProvider>,
+    );
+
+  it('quotes the new loan as a package the market actually sells', async () => {
+    // Refinancing in Singapore means moving onto another package that steps
+    // up after its own lock-in. A single "New rate" box could only describe
+    // the promotional years of it.
+    const wasmModule = sgWasm();
+    showSg(wasmModule);
+
+    await screen.findByText('S$1,798.65');
+    expect(wasmModule.calculate_refinance).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        new_rate: expect.objectContaining({
+          kind: 'reverting',
+          thereafter_spread_percent: 0.6,
+        }),
+        new_term_years: 25,
+      }),
+    );
+  });
+
+  it('names the instalment the new loan steps up to', async () => {
+    showSg(sgWasm());
+    expect(await screen.findByText('then S$1,950.12')).toBeInTheDocument();
+  });
+
+  it('says the monthly saving is only for the lock-in', async () => {
+    // "$417.39 saved each month" is true for two years of a twenty-five
+    // year loan, and it is the number a switch gets sold on.
+    showSg(sgWasm());
+    expect(await screen.findByText('during the lock-in only')).toBeInTheDocument();
+  });
+
+  it('leaves a flat quote unqualified', async () => {
+    show(mockWasm());
+    await screen.findByText('$1,798.65');
+    expect(screen.queryByText('during the lock-in only')).toBeNull();
+  });
+});

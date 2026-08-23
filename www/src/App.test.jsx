@@ -91,3 +91,81 @@ describe('shared scenario', () => {
     );
   });
 });
+
+describe('the loan a market opens on', () => {
+  // Presets are the market's own, so what a "default rate" even is differs:
+  // a US buyer's is a 30-year fixed quote, a Singapore buyer's is a 25-year
+  // package that steps up after the lock-in.
+  const PRESETS = {
+    US: [
+      {
+        label: '30-Year Fixed',
+        label_message: { code: 'preset.fixed', params: { years: '30' } },
+        index: null,
+        rate_type: { kind: 'fixed', rate_percent: 6.5 },
+        term_years: 30,
+      },
+    ],
+    SG: [
+      {
+        label: '3M SORA + 0.30% for 2 yr, then + 0.60%',
+        label_message: { code: 'preset.reverting', params: {} },
+        index: '3M SORA',
+        rate_type: {
+          kind: 'reverting',
+          base_rate_percent: 1.12,
+          initial_spread_percent: 0.3,
+          initial_years: 2,
+          thereafter_spread_percent: 0.6,
+        },
+        term_years: 25,
+      },
+    ],
+  };
+
+  function regionalWasm() {
+    return {
+      ...mockWasm(),
+      get_common_rate_presets: vi.fn((region) => PRESETS[region] ?? []),
+      calculate_singapore: vi.fn(() => ({ warnings: [], warning_codes: [] })),
+    };
+  }
+
+  const renderWith = (wasmModule) =>
+    render(
+      <I18nProvider initialLocale="en">
+        <AppShell wasmModule={wasmModule} />
+      </I18nProvider>,
+    );
+
+  it('quotes a Singapore buyer a package, not a thirty-year fixed rate', async () => {
+    // Switching to SG used to leave the loan on a flat 6.5% for 30 years:
+    // several times the Singapore market, on a product no bank there sells,
+    // relabelled S$ and priced as though it were real.
+    const wasmModule = regionalWasm();
+    renderWith(wasmModule);
+    await waitFor(() => expect(wasmModule.calculate_payment).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByRole('button', { name: 'SG' }));
+
+    await waitFor(() =>
+      expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          rate: expect.objectContaining({ kind: 'reverting' }),
+          term_years: 25,
+        }),
+      ),
+    );
+  });
+
+  it('seeds from the region it detected, without waiting for a click', async () => {
+    const wasmModule = regionalWasm();
+    renderWith(wasmModule);
+
+    await waitFor(() =>
+      expect(wasmModule.calculate_payment).toHaveBeenLastCalledWith(
+        expect.objectContaining({ rate: { kind: 'fixed', rate_percent: 6.5 }, term_years: 30 }),
+      ),
+    );
+  });
+});

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { DEFAULT_RATE, rateFromPreset } from './rate';
 
 /**
  * The one loan the Payment, Amortization and Compare tabs are all describing.
@@ -19,10 +20,33 @@ export const DEFAULT_SCENARIO = {
   // and what they can put down.
   homePrice: 500000,
   downPayment: 100000,
-  rate: 6.5,
+  // A shape, not a figure -- see src/rate.js. Reseeded from the region's
+  // own first preset as soon as the module is up, so this is only ever the
+  // shape of a default, never a quote anyone is shown.
+  rate: DEFAULT_RATE,
   termYears: 30,
   frequency: 'monthly',
 };
+
+/**
+ * The loan a buyer in `region` is shown before they change anything.
+ *
+ * Read from the region's own presets rather than kept here, because what a
+ * default rate even *is* differs by market: a US buyer's is a 30-year fixed
+ * quote, a Singapore buyer's is a 25-year package that steps up after the
+ * lock-in. Carrying one market's default into the other was how a Singapore
+ * buyer got quoted a flat 6.5% for thirty years -- several times the market,
+ * on a product that does not exist there.
+ */
+export function seedRateForRegion(wasmModule, region, scenario) {
+  const presets = wasmModule?.get_common_rate_presets?.(region) ?? [];
+  if (presets.length === 0) return scenario;
+  return {
+    ...scenario,
+    rate: rateFromPreset(presets[0]),
+    termYears: presets[0].term_years,
+  };
+}
 
 // What an empty form summarizes to, and what is shown when there is no wasm
 // module to ask. Deriving these here instead would be a second answer to
