@@ -37,6 +37,7 @@ pub struct Loan {
     term_years: Decimal,
     frequency: PaymentFrequency,
     reversion: Option<Reversion>,
+    floating_base: Option<Decimal>,
 }
 
 impl Loan {
@@ -68,6 +69,19 @@ impl Loan {
     /// When and to what the rate changes, if it does.
     pub fn reversion(&self) -> Option<Reversion> {
         self.reversion
+    }
+
+    /// The moving benchmark the rate was quoted over, if it was quoted over
+    /// one. See [`RateType::floating_base`].
+    ///
+    /// Carried on the loan rather than left behind with the `RateType` for
+    /// the same reason [`Reversion`] is: a builder that flattens a quote to
+    /// a number lets every calculation downstream present an assumption as
+    /// a fact. The rate is the arithmetic; this is what the arithmetic
+    /// rests on, and a report that prints one without the other is telling
+    /// the reader less than it knows.
+    pub fn floating_base(&self) -> Option<Decimal> {
+        self.floating_base
     }
 
     /// The rate charged for the remainder of the term -- the one the loan
@@ -115,6 +129,7 @@ pub struct LoanBuilder {
     frequency: Option<PaymentFrequency>,
     reversion: Option<Reversion>,
     reversion_after_years: Option<(Decimal, Decimal)>,
+    floating_base: Option<Decimal>,
 }
 
 impl LoanBuilder {
@@ -133,12 +148,16 @@ impl LoanBuilder {
     /// A reverting package also sets the reversion, so a caller cannot take
     /// the rate and silently drop the step-up -- which would model the
     /// promotional rate as lasting the whole term.
+    /// A quote resting on a moving benchmark also records that it does, so
+    /// a caller cannot flatten it to a number and present the result as
+    /// contractual.
     pub fn rate_type(mut self, rate_type: RateType) -> Self {
         self.annual_rate = Some(rate_type.effective_rate());
         if let (Some(years), Some(rate)) = (rate_type.initial_years(), rate_type.thereafter_rate())
         {
             self.reversion_after_years = Some((years, rate));
         }
+        self.floating_base = rate_type.floating_base();
         self
     }
 
@@ -211,6 +230,7 @@ impl LoanBuilder {
             term_years,
             frequency,
             reversion,
+            floating_base: self.floating_base,
         })
     }
 }
@@ -218,6 +238,51 @@ impl LoanBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_loan_built_from_a_benchmark_quote_remembers_that_it_was() {
+        let sora = |base_floats| {
+            Loan::builder()
+                .principal(dec!(400000))
+                .rate_type(RateType::Reverting {
+                    base_rate: dec!(0.0112),
+                    base_floats,
+                    initial_spread: dec!(0.003),
+                    initial_years: dec!(2),
+                    thereafter_spread: dec!(0.006),
+                })
+                .term_years(dec!(25))
+                .frequency(PaymentFrequency::Monthly)
+                .build()
+                .unwrap()
+        };
+
+        assert_eq!(sora(true).floating_base(), Some(dec!(0.0112)));
+        assert_eq!(sora(false).floating_base(), None);
+        // The disclosure travels; the arithmetic is untouched.
+        assert_eq!(sora(true).annual_rate(), sora(false).annual_rate());
+        assert_eq!(
+            sora(true).final_annual_rate(),
+            sora(false).final_annual_rate()
+        );
+    }
+
+    #[test]
+    fn a_rate_given_as_a_bare_number_claims_no_benchmark() {
+        // `annual_rate()` is how the tabs that only ever had a flat rate
+        // build a loan. Inventing a benchmark under it would put a caveat on
+        // a figure the user typed as final.
+        let loan = Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.065))
+            .term_years(dec!(30))
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+
+        assert_eq!(loan.floating_base(), None);
+    }
+
     use mortgage_core::{MortgageError, PaymentFrequency};
     use rust_decimal_macros::dec;
 

@@ -362,6 +362,7 @@ describe('ComparisonView saved reverting rows', () => {
             rate_type: {
               kind: 'reverting',
               base_rate_percent: 1.12,
+              base_floats: true,
               initial_spread_percent: 0.35,
               initial_years: 3,
               thereafter_spread_percent: 0.75,
@@ -412,6 +413,7 @@ describe('ComparisonView row names follow their figures', () => {
     rate_type: {
       kind: 'reverting',
       base_rate_percent: 1.12,
+      base_floats: true,
       initial_spread_percent: 0.3,
       initial_years: 2,
       thereafter_spread_percent: 0.6,
@@ -484,5 +486,88 @@ describe('ComparisonView row names follow their figures', () => {
 
     // Their name, not ours.
     expect(screen.getByDisplayValue('DBS quote')).toBeInTheDocument();
+  });
+});
+
+describe('what the compared rows assumed', () => {
+  const sora = (initial) => ({
+    label: `SORA + ${initial}`,
+    index: '3M SORA',
+    rate_type: {
+      kind: 'reverting',
+      base_rate_percent: 1.12,
+      base_floats: true,
+      initial_spread_percent: initial,
+      initial_years: 2,
+      thereafter_spread_percent: 0.6,
+    },
+    term_years: 25,
+  });
+
+  const mount = (presets, rate_note) =>
+    renderControlled((props) => (
+      <I18nProvider initialLocale="en">
+        <ComparisonView
+          wasmModule={{
+            ...scenarioBindings(),
+            get_common_rate_presets: vi.fn(() => presets),
+            calculate_comparison: vi.fn(() => ({ rows: [], verdict: null, error: null })),
+            list_scenarios: vi.fn(async () => ({ scenarios: [], error: null })),
+            describe_rate: vi.fn(() => null),
+            rate_note,
+          }}
+          region="SG"
+          {...props}
+        />
+      </I18nProvider>
+    ));
+
+  const notes = () => [...document.querySelectorAll('.rate-note')];
+
+  it('states the assumption once for rows that share it', async () => {
+    // Two SORA packages compared side by side rest on the same held-still
+    // figure. Repeating the sentence under each row turns it into wallpaper.
+    const note = { code: 'note.floatingBase', params: { base: '1.12' }, text: 'held at 1.12%' };
+    mount(
+      [sora(0.3), sora(0.5)],
+      vi.fn(() => note),
+    );
+
+    await screen.findAllByDisplayValue(/SORA/);
+    expect(notes()).toHaveLength(1);
+    expect(notes()[0]).toHaveTextContent('1.12%');
+  });
+
+  it('states it twice when the rows were quoted over different figures', async () => {
+    // The held-still figure is the whole content of the sentence, so two
+    // different ones are two different disclosures.
+    const rate_note = vi.fn(({ base_rate_percent }) => ({
+      code: 'note.floatingBase',
+      params: { base: base_rate_percent.toFixed(2) },
+      text: `held at ${base_rate_percent.toFixed(2)}%`,
+    }));
+    const other = sora(0.5);
+    other.rate_type.base_rate_percent = 2.5;
+    mount([sora(0.3), other], rate_note);
+
+    await screen.findAllByDisplayValue(/SORA/);
+    expect(notes()).toHaveLength(2);
+  });
+
+  it('stays silent for rows on contractual rates', async () => {
+    mount(
+      [preset('30-Year Fixed', 6.5, 30)],
+      vi.fn(() => null),
+    );
+    await screen.findByDisplayValue(/30-Year Fixed/);
+    expect(notes()).toHaveLength(0);
+  });
+
+  it('survives a binding the module does not have', async () => {
+    // An older `pkg/` built before `rate_note` existed. The tab is still a
+    // working comparison without the caveat.
+    mount([sora(0.3)], undefined);
+    expect(await screen.findByDisplayValue(/SORA/)).toBeInTheDocument();
+    expect(notes()).toHaveLength(0);
   });
 });

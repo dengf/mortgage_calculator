@@ -305,6 +305,7 @@ mod tests {
         let r = singapore_from_params(SingaporeParams {
             rate: RateTypeDto::Reverting {
                 base_rate_percent: 1.12,
+                base_floats: true,
                 initial_spread_percent: 0.3,
                 initial_years: 2.0,
                 thereafter_spread_percent: 4.5,
@@ -320,6 +321,7 @@ mod tests {
         let r = singapore_from_params(SingaporeParams {
             rate: RateTypeDto::Reverting {
                 base_rate_percent: 1.12,
+                base_floats: true,
                 initial_spread_percent: 0.3,
                 initial_years: 2.0,
                 thereafter_spread_percent: 0.6,

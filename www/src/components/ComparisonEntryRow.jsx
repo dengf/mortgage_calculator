@@ -37,6 +37,20 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
         </label>
       ))}
 
+      {/* Same question the panel forms ask, in row styling: a package
+          quoted over SORA and one stepping between two agreed rates
+          compute identically and are read very differently. */}
+      {entry.kind === 'reverting' && (
+        <label className="comparison-entry-field comparison-entry-check">
+          <input
+            type="checkbox"
+            checked={entry.baseFloats !== false}
+            onChange={(e) => set({ baseFloats: e.target.checked })}
+          />
+          <span>{t('rate.baseFloats')}</span>
+        </label>
+      )}
+
       <label className="comparison-entry-field">
         <span>{t('cmp.term')}</span>
         <input

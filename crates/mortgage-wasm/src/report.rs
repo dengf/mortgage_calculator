@@ -9,6 +9,7 @@ use crate::convert::{decimal_to_f64, rate_to_percent, to_js};
 use crate::dto::{PaymentBandDto, RateRiseRowDto, ReferenceDto, ReportParams, ReportResult};
 use crate::loan::build_loan;
 use crate::message::Message;
+use crate::rate::floating_base_note;
 
 #[wasm_bindgen]
 pub fn build_report(params: JsValue) -> JsValue {
@@ -74,6 +75,8 @@ fn report_from_params(params: ReportParams) -> ReportResult {
                 payment: decimal_to_f64(band.payment),
             })
             .collect(),
+        floating_base_percent: report.floating_base.map(rate_to_percent),
+        rate_note: floating_base_note(report.floating_base),
         rate_rise: report
             .rate_rise
             .into_iter()
@@ -114,6 +117,7 @@ mod tests {
                 principal: 400_000.0,
                 rate: RateTypeDto::Reverting {
                     base_rate_percent: 1.12,
+                    base_floats: true,
                     initial_spread_percent: 0.3,
                     initial_years: 2.0,
                     thereafter_spread_percent: 0.6,

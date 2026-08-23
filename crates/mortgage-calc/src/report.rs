@@ -173,6 +173,18 @@ pub struct Report {
     /// paid -- a share of zero is undefined, not zero percent.
     pub interest_share: Option<Decimal>,
     pub bands: Vec<PaymentBand>,
+    /// The benchmark every figure above was computed at, when the quote
+    /// rests on one that moves. `None` when the loan's rates are
+    /// contractual for the term.
+    ///
+    /// The document is required to print this. Not as a hedge: the bands,
+    /// the totals and the schedule are all exact *given* this number, and a
+    /// reader who is not told it was held still has been shown a
+    /// projection dressed as a quotation. MAS makes a bank say the same
+    /// thing on a Notice 632A fact sheet, whose rate-change illustration is
+    /// published alongside the admission that the reference rate may move
+    /// further than the example shows.
+    pub floating_base: Option<Decimal>,
     pub rate_rise: Vec<RateRiseRow>,
     pub yearly: Vec<AmortizationYear>,
     /// Who set the rules the figures follow, so the document cites its
@@ -211,6 +223,7 @@ pub fn report(loan: &Loan, region: Region) -> MortgageResult<Report> {
         total_interest: summary.total_interest,
         interest_share: summary.interest_share(),
         bands: bands(loan, &summary),
+        floating_base: loan.floating_base(),
         rate_rise: rate_rise(loan, &rows),
         yearly,
         references: references(region),
@@ -326,12 +339,52 @@ mod tests {
             .unwrap()
     }
 
+    #[test]
+    fn a_package_report_states_the_benchmark_it_was_computed_at() {
+        let report = report(&package(), Region::SG).unwrap();
+        assert_eq!(report.floating_base, Some(dec!(0.0112)));
+    }
+
+    #[test]
+    fn a_report_on_contractual_rates_states_no_assumption() {
+        // Nothing was held still, so there is nothing to disclose, and a
+        // caveat printed anyway would teach the reader to skip the ones
+        // that mean something.
+        assert_eq!(report(&flat(), Region::US).unwrap().floating_base, None);
+    }
+
+    #[test]
+    fn disclosing_the_benchmark_changes_no_figure_on_the_page() {
+        let contractual = Loan::builder()
+            .principal(dec!(400000))
+            .rate_type(RateType::Reverting {
+                base_rate: dec!(0.0112),
+                base_floats: false,
+                initial_spread: dec!(0.003),
+                initial_years: dec!(2),
+                thereafter_spread: dec!(0.006),
+            })
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+
+        let quoted = report(&package(), Region::SG).unwrap();
+        let agreed = report(&contractual, Region::SG).unwrap();
+
+        assert_eq!(quoted.bands, agreed.bands);
+        assert_eq!(quoted.rate_rise, agreed.rate_rise);
+        assert_eq!(quoted.total_paid, agreed.total_paid);
+        assert_ne!(quoted.floating_base, agreed.floating_base);
+    }
+
     /// The shape every Singapore home loan takes.
     fn package() -> Loan {
         Loan::builder()
             .principal(dec!(400000))
             .rate_type(RateType::Reverting {
                 base_rate: dec!(0.0112),
+                base_floats: true,
                 initial_spread: dec!(0.003),
                 initial_years: dec!(2),
                 thereafter_spread: dec!(0.006),

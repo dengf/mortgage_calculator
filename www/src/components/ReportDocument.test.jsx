@@ -29,6 +29,14 @@ const REPORT = {
     { increase_percent: 2, annual_rate_percent: 3.72, payment: 2012.81, payment_increase: 375.69 },
   ],
   yearly: [{ year: 1, paid: 19017, principal: 13425, interest: 5592, remaining_balance: 386575 }],
+  // The package is quoted over 3M SORA, so every figure above is exact
+  // given a number nobody in this app controls.
+  floating_base_percent: 1.12,
+  rate_note: {
+    code: 'note.floatingBase',
+    params: { base: '1.12' },
+    text: 'These figures assume the base rate stays at 1.12%.',
+  },
   references: [
     { code: 'ref.MasNotice632a', url: 'https://www.mas.gov.sg/regulation/notices/notice-632a' },
     { code: 'ref.MasNotice645', url: 'https://www.mas.gov.sg/regulation/notices/notice-645' },
@@ -131,5 +139,55 @@ describe('what the document states about the loan', () => {
   it('renders nothing rather than a blank document when the loan is invalid', () => {
     const { container } = show({ report: { error: 'nope', bands: [] } });
     expect(container.querySelector('.report')).toBeNull();
+  });
+});
+
+describe('what the document says was assumed', () => {
+  // The tables read as a quotation: exact instalments, an exact total, a
+  // year-by-year schedule. They are exact *given* a benchmark that was held
+  // still, and a reader who is not told that has been shown a projection
+  // wearing a quotation's clothes. MAS makes a bank admit the same thing on
+  // a Notice 632A fact sheet.
+
+  it('names the figure that was held still, beside the terms it produced', () => {
+    show();
+    const note = document.querySelector('.report-assumption');
+    expect(note).toHaveTextContent('1.12%');
+    // In the terms section, not filed at the bottom with the citations.
+    expect(note.closest('.report-section')).toContainElement(
+      screen.getByRole('heading', { name: 'Loan terms' }),
+    );
+  });
+
+  it('answers the rate column with the benchmark as well as the schedule', () => {
+    show();
+    // "Steps up after 2 yr, to 1.720%" is true and incomplete: the 1.720%
+    // moves too.
+    expect(document.querySelector('.report-can-change')).toHaveTextContent(
+      'whenever the benchmark moves',
+    );
+  });
+
+  it('answers the payment column the same way', () => {
+    show();
+    // The instalment moves for the same reason the rate does. Saying it of
+    // the rate alone reads as though the payment settles at the thereafter
+    // figure and stays there for twenty-three years.
+    const rows = [...document.querySelectorAll('.report-terms tbody tr')];
+    const payment = rows.find((r) => /1,584/.test(r.textContent));
+    expect(payment.querySelector('.report-can-change')).toHaveTextContent(
+      'whenever the benchmark moves',
+    );
+  });
+
+  it('says nothing when the rates are contractual', () => {
+    show({ report: { ...REPORT, floating_base_percent: null, rate_note: null } });
+    expect(document.querySelector('.report-assumption')).toBeNull();
+    expect(document.querySelector('.report-can-change')).toBeNull();
+  });
+
+  it('states the assumption in the language the document is printed in', () => {
+    show({}, 'zh-Hans');
+    expect(document.querySelector('.report-assumption').textContent).toContain('基准利率');
   });
 });

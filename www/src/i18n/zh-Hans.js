@@ -155,6 +155,9 @@ export default {
   'rate.rate': '利率',
   'cmp.term': '年限',
   'rate.base': '基准',
+  'rate.baseFloats': '基准利率浮动',
+  'note.floatingBase':
+    '以下数字假设基准利率维持在 {base}%。该基准由外部公布并会浮动，本计算器不追踪其变动，所有金额都会随之改变。',
   'rate.spread': '加点',
   'cmp.tradeoff':
     '{cheaper} 每月比 {lighter} 多付 {paymentDelta}，但在整个贷款期内可少付 {interestDelta} 利息。',
@@ -202,6 +205,7 @@ export default {
   'report.canChange': '是否会变动？',
   'report.no': '否',
   'report.ratePlan': '会 —— {years} 年后升至 {rate}',
+  'report.andWithBenchmark': '并会随基准利率变动',
   'report.paymentPlan': '会 —— {years} 年后升至 {payment}',
   'report.overTime': '各阶段还款',
   'report.period': '期间',

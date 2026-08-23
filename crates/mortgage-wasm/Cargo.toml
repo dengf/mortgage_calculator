@@ -49,3 +49,7 @@ rust_decimal = { workspace = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
+rust_decimal_macros = { workspace = true }
+# Deserializing a DTO on the native host, to prove a record saved before a
+# field existed still loads. serde-wasm-bindgen needs a browser.
+serde_json = { workspace = true }

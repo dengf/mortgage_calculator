@@ -189,10 +189,26 @@ pub enum RateTypeDto {
     /// bank quotes a home loan.
     Reverting {
         base_rate_percent: f64,
+        /// Whether that base is a published benchmark that moves -- 3M SORA
+        /// for a SGD package -- rather than a figure agreed for the term.
+        ///
+        /// Defaults to `true` when absent, which covers a scenario saved
+        /// before the field existed. Those were all built from the SGD
+        /// presets, every one of which is quoted over SORA, so the default
+        /// restores the truth about them rather than guessing. It is also
+        /// the safe direction: over-disclosing an assumption costs the
+        /// reader a sentence, and under-disclosing one costs them the
+        /// difference between a projection and a quotation.
+        #[serde(default = "base_floats_by_default")]
+        base_floats: bool,
         initial_spread_percent: f64,
         initial_years: f64,
         thereafter_spread_percent: f64,
     },
+}
+
+fn base_floats_by_default() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -562,6 +578,12 @@ pub struct ReportResult {
     pub total_interest: Option<f64>,
     pub interest_share_percent: Option<f64>,
     pub bands: Vec<PaymentBandDto>,
+    /// The benchmark every figure here was computed at, when the quote
+    /// rests on one that moves. `null` when the rates are contractual.
+    pub floating_base_percent: Option<f64>,
+    /// The same fact as a sentence the document prints, in the reader's
+    /// language. `null` alongside a `null` base.
+    pub rate_note: Option<Message>,
     pub rate_rise: Vec<RateRiseRowDto>,
     pub yearly: Vec<AmortizationYearDto>,
     /// Who set the rules the figures follow. The document cites these

@@ -32,6 +32,20 @@ pub enum RateType {
     Reverting {
         /// The published index both spreads are quoted over.
         base_rate: Decimal,
+        /// Whether that index is one that moves.
+        ///
+        /// A Singapore package is quoted over 3M SORA, which MAS publishes
+        /// and no lender sets: the figure above is the day's print, not a
+        /// term of the contract. A package quoted over a bank's own board
+        /// rate, or one that simply steps from one fixed rate to another,
+        /// carries no such benchmark.
+        ///
+        /// This changes no arithmetic. Both cases are computed at the base
+        /// entered, because this calculator has no market feed and holding
+        /// today's print flat is the only assumption it can defend. What it
+        /// changes is whether the reader is told that is what happened --
+        /// see [`Self::floating_base`].
+        base_floats: bool,
         /// Spread during the lock-in.
         initial_spread: Decimal,
         /// Years the initial spread holds.
@@ -76,6 +90,34 @@ impl RateType {
         match self {
             RateType::Reverting { initial_years, .. } => Some(*initial_years),
             _ => None,
+        }
+    }
+
+    /// The moving benchmark this quote sits on, if it sits on one.
+    ///
+    /// `None` means every figure derived from this rate is contractual for
+    /// the term. `Some(base)` means the opposite, and names what was held
+    /// still to get there: `base` is a published index -- SORA, SOFR, Prime
+    /// -- that the lender does not set and this calculator does not read.
+    ///
+    /// A floating quote always has one; that is what makes it floating. A
+    /// package that steps up may or may not, which is why it is asked.
+    ///
+    /// Every caller that shows a figure to a reader should ask this and say
+    /// so. MAS requires the same admission of a bank: a Notice 632A fact
+    /// sheet's rate-change illustration is published alongside a statement
+    /// that the reference rate may move by more than the example shows and
+    /// that the rates given are estimates. A calculator with no market feed
+    /// is in a weaker position than the bank, not a stronger one.
+    pub fn floating_base(&self) -> Option<Decimal> {
+        match self {
+            RateType::Fixed { .. } => None,
+            RateType::Floating { base_rate, .. } => Some(*base_rate),
+            RateType::Reverting {
+                base_rate,
+                base_floats,
+                ..
+            } => base_floats.then_some(*base_rate),
         }
     }
 }
@@ -266,6 +308,7 @@ fn sg_presets() -> Vec<RatePreset> {
             },
             rate_type: RateType::Reverting {
                 base_rate: SORA,
+                base_floats: true,
                 initial_spread: dec!(0.003),
                 initial_years: dec!(2),
                 thereafter_spread: dec!(0.006),
@@ -281,6 +324,7 @@ fn sg_presets() -> Vec<RatePreset> {
             },
             rate_type: RateType::Reverting {
                 base_rate: SORA,
+                base_floats: true,
                 initial_spread: dec!(0.005),
                 initial_years: dec!(3),
                 thereafter_spread: dec!(0.008),
@@ -432,6 +476,7 @@ mod tests {
     fn a_reverting_rate_reports_the_rate_that_actually_lasts() {
         let rate = RateType::Reverting {
             base_rate: dec!(0.0112),
+            base_floats: true,
             initial_spread: dec!(0.003),
             initial_years: dec!(2),
             thereafter_spread: dec!(0.006),
@@ -440,6 +485,85 @@ mod tests {
         assert_eq!(rate.effective_rate(), dec!(0.0142));
         assert_eq!(rate.thereafter_rate(), Some(dec!(0.0172)));
         assert_eq!(rate.initial_years(), Some(dec!(2)));
+    }
+
+    #[test]
+    fn a_fixed_rate_rests_on_nothing_that_moves() {
+        assert_eq!(RateType::Fixed { rate: dec!(0.026) }.floating_base(), None);
+    }
+
+    #[test]
+    fn a_floating_rate_always_names_the_benchmark_it_rests_on() {
+        // Not a question the caller gets to answer: a quote of base + spread
+        // is floating by construction. Only a package that steps up is
+        // ambiguous, and only that one is asked.
+        assert_eq!(
+            RateType::Floating {
+                base_rate: dec!(0.0363),
+                spread: dec!(0.02),
+            }
+            .floating_base(),
+            Some(dec!(0.0363))
+        );
+    }
+
+    #[test]
+    fn a_step_up_reports_a_moving_base_only_when_it_has_one() {
+        let sora = RateType::Reverting {
+            base_rate: dec!(0.0112),
+            base_floats: true,
+            initial_spread: dec!(0.003),
+            initial_years: dec!(2),
+            thereafter_spread: dec!(0.006),
+        };
+        // The same package quoted off a board rate, or stepping from one
+        // agreed rate to another: the figures are contractual, so there is
+        // nothing to disclose.
+        let board = RateType::Reverting {
+            base_rate: dec!(0.0112),
+            base_floats: false,
+            initial_spread: dec!(0.003),
+            initial_years: dec!(2),
+            thereafter_spread: dec!(0.006),
+        };
+
+        assert_eq!(sora.floating_base(), Some(dec!(0.0112)));
+        assert_eq!(board.floating_base(), None);
+        // The disclosure is the whole difference. Neither the rate charged
+        // nor the rate it reverts to may move with it.
+        assert_eq!(sora.effective_rate(), board.effective_rate());
+        assert_eq!(sora.thereafter_rate(), board.thereafter_rate());
+    }
+
+    #[test]
+    fn every_singapore_bank_package_rests_on_a_benchmark_that_moves() {
+        // SORA is published by MAS and set by the overnight market. A SGD
+        // package quoted over it that claims its figures are contractual is
+        // making a promise no bank in the market makes.
+        for preset in common_presets(Region::SG) {
+            if let RateType::Reverting { .. } = preset.rate_type {
+                assert_eq!(
+                    preset.rate_type.floating_base(),
+                    Some(dec!(0.0112)),
+                    "{preset:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_hdb_concessionary_rate_carries_no_market_benchmark() {
+        // Modelled as fixed, and it is not quoted over an index: it is a
+        // policy rate pegged 0.1% above the CPF Ordinary Account rate, which
+        // has sat at its 2.5% statutory floor since 1999. That peg is
+        // revisable and this does not claim otherwise -- only that there is
+        // no market benchmark under it to disclose.
+        let hdb = common_presets(Region::SG)
+            .into_iter()
+            .find(|p| p.label == PresetLabel::HdbConcessionary)
+            .expect("SG presets include the HDB concessionary loan");
+
+        assert_eq!(hdb.rate_type.floating_base(), None);
     }
 
     #[test]
@@ -467,6 +591,7 @@ mod tests {
             .principal(dec!(400000))
             .rate_type(RateType::Reverting {
                 base_rate: dec!(0.0112),
+                base_floats: true,
                 initial_spread: dec!(0.003),
                 initial_years: dec!(2),
                 thereafter_spread: dec!(0.006),

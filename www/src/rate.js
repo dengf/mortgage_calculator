@@ -23,6 +23,13 @@ export const DEFAULT_RATE = {
   initialSpreadPercent: 0.3,
   initialYears: 2,
   thereafterSpreadPercent: 0.6,
+  // A step-up is assumed to be quoted over a benchmark until the user says
+  // otherwise, because in the market this shape comes from it always is —
+  // every SGD package is quoted over 3M SORA. The two states differ only in
+  // what the reader is told, and the cost of being wrong is asymmetric: an
+  // unnecessary caveat wastes a sentence, a missing one lets a projection
+  // read as a quotation.
+  baseFloats: true,
 };
 
 /**
@@ -67,6 +74,7 @@ export function toRateTypeDto(rate) {
       return {
         kind: 'reverting',
         base_rate_percent: Number(shape.baseRatePercent),
+        base_floats: Boolean(shape.baseFloats),
         initial_spread_percent: Number(shape.initialSpreadPercent),
         initial_years: Number(shape.initialYears),
         thereafter_spread_percent: Number(shape.thereafterSpreadPercent),
@@ -105,6 +113,7 @@ export function rateFromPreset(preset) {
     }),
     ...(rate.kind === 'reverting' && {
       baseRatePercent: rate.base_rate_percent,
+      baseFloats: rate.base_floats ?? true,
       initialSpreadPercent: rate.initial_spread_percent,
       initialYears: rate.initial_years,
       thereafterSpreadPercent: rate.thereafter_spread_percent,

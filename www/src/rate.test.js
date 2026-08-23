@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RATE, normalizeRate, rateFromPreset, rateValues, toRateTypeDto } from './rate';
+import {
+  DEFAULT_RATE,
+  RATE_FIELDS,
+  normalizeRate,
+  rateFromPreset,
+  rateValues,
+  toRateTypeDto,
+} from './rate';
 
 // This module is the boundary contract for a quoted rate: what the forms
 // edit on one side, what `RateTypeDto` deserializes on the other. Nothing
@@ -29,6 +36,7 @@ describe('the wire form of a rate', () => {
     ).toEqual({
       kind: 'reverting',
       base_rate_percent: 1.12,
+      base_floats: true,
       initial_spread_percent: 0.3,
       initial_years: 2,
       thereafter_spread_percent: 0.6,
@@ -71,6 +79,7 @@ describe('a preset read into a form', () => {
       rate_type: {
         kind: 'reverting',
         base_rate_percent: 1.12,
+        base_floats: true,
         initial_spread_percent: 0.3,
         initial_years: 2,
         thereafter_spread_percent: 0.6,
@@ -83,5 +92,51 @@ describe('a preset read into a form', () => {
 
   it('reports the values a flat quote needs, and no others', () => {
     expect(rateValues({ kind: 'fixed', ratePercent: 6.5 })).toEqual([6.5]);
+  });
+});
+
+describe('whether a step-up rests on something that moves', () => {
+  it('assumes it does until told otherwise', () => {
+    // Every package with this shape in the market it comes from is quoted
+    // over 3M SORA. Defaulting the other way would silently drop the
+    // caveat from every Singapore scenario saved before the field existed.
+    expect(toRateTypeDto({ ...DEFAULT_RATE, kind: 'reverting' }).base_floats).toBe(true);
+    expect(normalizeRate({ kind: 'reverting', baseRatePercent: 1.12 }).baseFloats).toBe(true);
+  });
+
+  it('carries the answer across when it is no', () => {
+    const dto = toRateTypeDto({ ...DEFAULT_RATE, kind: 'reverting', baseFloats: false });
+    expect(dto.base_floats).toBe(false);
+  });
+
+  it('is not asked of a shape that has no answer to give', () => {
+    // A floating quote rests on a benchmark by construction and a fixed one
+    // has no base at all. Sending the field would invite a caller to set it.
+    expect(toRateTypeDto({ ...DEFAULT_RATE, kind: 'fixed' })).not.toHaveProperty('base_floats');
+    expect(toRateTypeDto({ ...DEFAULT_RATE, kind: 'floating' })).not.toHaveProperty('base_floats');
+  });
+
+  it('reads a preset back with the basis it was quoted on', () => {
+    const preset = {
+      rate_type: {
+        kind: 'reverting',
+        base_rate_percent: 1.12,
+        base_floats: true,
+        initial_spread_percent: 0.3,
+        initial_years: 2,
+        thereafter_spread_percent: 0.6,
+      },
+    };
+    expect(rateFromPreset(preset).baseFloats).toBe(true);
+  });
+
+  it('does not turn the toggle into an input field', () => {
+    // RATE_FIELDS drives the number inputs on every form, and `rateValues`
+    // gates the boundary call on them being filled. A boolean in that list
+    // renders as a numeric box and blocks the tab when it is false.
+    expect(RATE_FIELDS.reverting.map((f) => f.key)).not.toContain('baseFloats');
+    expect(rateValues({ ...DEFAULT_RATE, kind: 'reverting', baseFloats: false })).not.toContain(
+      false,
+    );
   });
 });

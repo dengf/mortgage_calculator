@@ -201,6 +201,7 @@ describe('AmortizationSchedule, on a package that steps up', () => {
           rate: {
             kind: 'reverting',
             base_rate_percent: 1.12,
+            base_floats: true,
             initial_spread_percent: 0.3,
             initial_years: 2,
             thereafter_spread_percent: 0.6,

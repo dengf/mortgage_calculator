@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import NumberField from './NumberField';
+import RateNote from './RateNote';
 import { RATE_FIELDS, RATE_KINDS, normalizeRate } from '../rate';
 import { useI18n } from '../i18n';
 
@@ -33,7 +34,21 @@ export function RateKindToggle({ kind, onChange }) {
  * Which inputs those are comes from `RATE_FIELDS`, the same list the compact
  * Compare rows read, so the two can't drift apart.
  */
-export default function RateFields({ rate, onChange, label = 'field.interestRate' }) {
+export function BaseFloatsToggle({ checked, onChange }) {
+  const { t } = useI18n();
+  return (
+    <label className="field field-check">
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="field-label">{t('rate.baseFloats')}</span>
+    </label>
+  );
+}
+
+export default function RateFields({ rate, onChange, label = 'field.interestRate', wasmModule }) {
   const { t } = useI18n();
   const shape = normalizeRate(rate);
   const fields = RATE_FIELDS[shape.kind] ?? RATE_FIELDS.fixed;
@@ -60,6 +75,18 @@ export default function RateFields({ rate, onChange, label = 'field.interestRate
           min={field.min ?? 0}
         />
       ))}
+
+      {/* Asked only of a package that steps up. A floating quote is
+          benchmark-based by construction and a fixed one has no base at
+          all, so for those two the answer is not the user's to give. */}
+      {shape.kind === 'reverting' && (
+        <BaseFloatsToggle
+          checked={shape.baseFloats}
+          onChange={(baseFloats) => onChange({ ...shape, baseFloats })}
+        />
+      )}
+
+      <RateNote wasmModule={wasmModule} rate={shape} />
     </>
   );
 }
