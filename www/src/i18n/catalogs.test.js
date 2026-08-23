@@ -143,3 +143,45 @@ describe('catalog encoding', () => {
     expect(untranslated).toEqual([]);
   });
 });
+
+/**
+ * Wording that states a regulatory rule, pinned to the rule it states.
+ *
+ * MAS Notice 645 para 6(b) assesses servicing at the higher of 4% and the
+ * *thereafter* rate. The code was corrected to that in #55 and #57; this
+ * copy was not, and went on telling every reader -- in all three languages
+ * -- that banks test "the higher of 4% or your actual rate". On a package
+ * that opens on a promotional spread, "your rate" reads as the teaser,
+ * which is exactly the misreading the fix existed to prevent. The app
+ * computed it correctly and explained it wrongly.
+ *
+ * Matching on a phrase is blunt, and deliberately so: it is not checking
+ * style, it is checking that a specific claim about the law is still being
+ * made. Reword freely -- the concept has to survive the rewording.
+ */
+const NAMES_THE_REVERSION = {
+  en: /after the lock-in/i,
+  'zh-Hans': /锁定期/,
+  'zh-Hant': /鎖定期/,
+};
+
+describe('copy that states a rule', () => {
+  const catalogs = { en, ...TRANSLATIONS };
+
+  it.each(Object.keys(NAMES_THE_REVERSION))(
+    '%s explains servicing against the rate that lasts, not the one quoted',
+    (locale) => {
+      expect(catalogs[locale]['about.sg.tdsr.a']).toMatch(NAMES_THE_REVERSION[locale]);
+    },
+  );
+
+  it.each(Object.keys(NAMES_THE_REVERSION))(
+    '%s does not describe the superseded rule',
+    (locale) => {
+      // The exact phrasings that shipped, in each language.
+      expect(catalogs[locale]['about.sg.tdsr.a']).not.toMatch(
+        /your actual rate|您实际利率|您實際利率|您的利率/,
+      );
+    },
+  );
+});

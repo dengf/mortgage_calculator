@@ -40,7 +40,7 @@ export default {
     'The headline figure is principal and interest only. The Singapore panel below splits it between CPF Ordinary Account and cash, and prices the stamp duty and deposit you need at completion.',
   'about.sg.tdsr.q': 'What are TDSR and MSR?',
   'about.sg.tdsr.a':
-    'Singapore caps how much of your income can service debt. TDSR limits all debt repayments to 55% of gross monthly income; MSR limits the housing loan alone to 30%, and applies only to HDB flats and Executive Condominiums. Banks assess both at the higher of 4% or your actual rate, so the ratios here use that assessed figure rather than your quoted payment.',
+    'Singapore caps how much of your income can service debt. TDSR limits all debt repayments to 55% of gross monthly income; MSR limits the housing loan alone to 30%, and applies only to HDB flats and Executive Condominiums. Banks assess both at the higher of 4% or the rate your loan runs at after the lock-in — not the promotional rate you are quoted — so the ratios here use that assessed figure rather than your quoted payment.',
   'about.sg.afford.q': 'Why is my affordability lower than I expected?',
   'about.sg.afford.a':
     'Three rules usually bite before income does: the LTV ceiling caps a first housing loan at 75% of price, the minimum cash portion of the deposit cannot come from CPF, and both stamp duties fall due in cash within 14 days. Commission and bonus also count at only 70%.',
@@ -239,8 +239,6 @@ export default {
   'sg.downPayment': 'Down payment',
   'sg.cashAtCompletion': 'Cash needed at completion',
   'sg.assessedAt': 'Assessed at {rate}% ({instalment}/mo)',
-  'sg.assessedNote':
-    'MAS requires banks to test TDSR and MSR at the higher of 4% or your rate, so these ratios use {instalment}/mo, not your actual payment.',
   'sgaff.funds': 'Cash + CPF available',
   'sgaff.initialRate': 'Rate for the lock-in',
   'sgaff.thereafterRate': 'Rate thereafter',
