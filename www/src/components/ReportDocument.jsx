@@ -67,69 +67,71 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
           ask. */}
       <section className="report-section">
         <h2>{t('report.terms')}</h2>
-        <table className="report-table report-terms">
-          <thead>
-            <tr>
-              <th>{t('report.item')}</th>
-              <th>{t('report.value')}</th>
-              <th>{t('report.canChange')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">{t('field.homePrice')}</th>
-              <td>{money(scenario.homePrice)}</td>
-              <td>{t('report.no')}</td>
-            </tr>
-            <tr>
-              <th scope="row">{t('field.loanAmount')}</th>
-              <td>{money(report.principal)}</td>
-              <td>{t('report.no')}</td>
-            </tr>
-            <tr>
-              <th scope="row">{t('field.loanTerm')}</th>
-              <td>{t('duration.years', { years: report.term_years })}</td>
-              <td>{t('report.no')}</td>
-            </tr>
-            <tr>
-              <th scope="row">{t('field.interestRate')}</th>
-              <td>{pct(report.initial_rate_percent)}</td>
-              <td>
-                {steps
-                  ? t('report.ratePlan', {
-                      years: report.lock_in_years,
-                      rate: pct(report.final_rate_percent),
-                    })
-                  : t('report.no')}
-                {/* A rate that steps up on a schedule and a rate that moves
+        <div className="report-table-wrap">
+          <table className="report-table report-terms">
+            <thead>
+              <tr>
+                <th>{t('report.item')}</th>
+                <th>{t('report.value')}</th>
+                <th>{t('report.canChange')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">{t('field.homePrice')}</th>
+                <td>{money(scenario.homePrice)}</td>
+                <td>{t('report.no')}</td>
+              </tr>
+              <tr>
+                <th scope="row">{t('field.loanAmount')}</th>
+                <td>{money(report.principal)}</td>
+                <td>{t('report.no')}</td>
+              </tr>
+              <tr>
+                <th scope="row">{t('field.loanTerm')}</th>
+                <td>{t('duration.years', { years: report.term_years })}</td>
+                <td>{t('report.no')}</td>
+              </tr>
+              <tr>
+                <th scope="row">{t('field.interestRate')}</th>
+                <td>{pct(report.initial_rate_percent)}</td>
+                <td>
+                  {steps
+                    ? t('report.ratePlan', {
+                        years: report.lock_in_years,
+                        rate: pct(report.final_rate_percent),
+                      })
+                    : t('report.no')}
+                  {/* A rate that steps up on a schedule and a rate that moves
                     with a benchmark are two different answers to this
                     column, and a package can give both. Printing only the
                     schedule would let "then 1.720%" read as the last word. */}
-                {floats && (
-                  <span className="report-can-change">{t('report.andWithBenchmark')}</span>
-                )}
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">{t('payment.payment')}</th>
-              <td>{money(report.initial_payment)}</td>
-              <td>
-                {steps
-                  ? t('report.paymentPlan', {
-                      years: report.lock_in_years,
-                      payment: money(report.payment_after_reversion),
-                    })
-                  : t('report.no')}
-                {/* The instalment moves for the same reason the rate does.
+                  {floats && (
+                    <span className="report-can-change">{t('report.andWithBenchmark')}</span>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">{t('payment.payment')}</th>
+                <td>{money(report.initial_payment)}</td>
+                <td>
+                  {steps
+                    ? t('report.paymentPlan', {
+                        years: report.lock_in_years,
+                        payment: money(report.payment_after_reversion),
+                      })
+                    : t('report.no')}
+                  {/* The instalment moves for the same reason the rate does.
                     Saying it of the rate alone reads as though the payment
                     settles at the thereafter figure and stays there. */}
-                {floats && (
-                  <span className="report-can-change">{t('report.andWithBenchmark')}</span>
-                )}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                  {floats && (
+                    <span className="report-can-change">{t('report.andWithBenchmark')}</span>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         {report.rate_note && (
           <p className="report-note report-assumption">
@@ -142,26 +144,28 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
           over time or not at all. */}
       <section className="report-section">
         <h2>{t('report.overTime')}</h2>
-        <table className="report-table">
-          <thead>
-            <tr>
-              <th>{t('report.period')}</th>
-              <th>{t('rate.rate')}</th>
-              <th>{t('report.instalment')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.bands.map((band) => (
-              <tr key={band.from_year}>
-                <th scope="row">
-                  {t('report.yearRange', { from: band.from_year, to: band.to_year })}
-                </th>
-                <td>{pct(band.annual_rate_percent)}</td>
-                <td>{money(band.payment)}</td>
+        <div className="report-table-wrap">
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>{t('report.period')}</th>
+                <th>{t('rate.rate')}</th>
+                <th>{t('report.instalment')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {report.bands.map((band) => (
+                <tr key={band.from_year}>
+                  <th scope="row">
+                    {t('report.yearRange', { from: band.from_year, to: band.to_year })}
+                  </th>
+                  <td>{pct(band.annual_rate_percent)}</td>
+                  <td>{money(band.payment)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <dl className="report-totals">
           <div>
@@ -184,54 +188,58 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
       <section className="report-section">
         <h2>{t('report.ifRatesRise')}</h2>
         <p className="report-note">{t('report.ifRatesRiseNote')}</p>
-        <table className="report-table">
-          <thead>
-            <tr>
-              <th>{t('report.increase')}</th>
-              <th>{t('rate.rate')}</th>
-              <th>{t('report.instalment')}</th>
-              <th>{t('report.monthlyIncrease')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.rate_rise.map((row) => (
-              <tr key={row.increase_percent}>
-                <th scope="row">
-                  {t('report.plusPoints', { points: row.increase_percent.toFixed(2) })}
-                </th>
-                <td>{pct(row.annual_rate_percent)}</td>
-                <td>{money(row.payment)}</td>
-                <td>{money(row.payment_increase)}</td>
+        <div className="report-table-wrap">
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>{t('report.increase')}</th>
+                <th>{t('rate.rate')}</th>
+                <th>{t('report.instalment')}</th>
+                <th>{t('report.monthlyIncrease')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {report.rate_rise.map((row) => (
+                <tr key={row.increase_percent}>
+                  <th scope="row">
+                    {t('report.plusPoints', { points: row.increase_percent.toFixed(2) })}
+                  </th>
+                  <td>{pct(row.annual_rate_percent)}</td>
+                  <td>{money(row.payment)}</td>
+                  <td>{money(row.payment_increase)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="report-section report-schedule">
         <h2>{t('report.schedule')}</h2>
-        <table className="report-table">
-          <thead>
-            <tr>
-              <th>{t('amort.year')}</th>
-              <th>{t('amort.paid')}</th>
-              <th>{t('amort.principal')}</th>
-              <th>{t('amort.interest')}</th>
-              <th>{t('amort.balance')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.yearly.map((year) => (
-              <tr key={year.year}>
-                <th scope="row">{year.year}</th>
-                <td>{money(year.paid)}</td>
-                <td>{money(year.principal)}</td>
-                <td>{money(year.interest)}</td>
-                <td>{money(year.remaining_balance)}</td>
+        <div className="report-table-wrap">
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>{t('amort.year')}</th>
+                <th>{t('amort.paid')}</th>
+                <th>{t('amort.principal')}</th>
+                <th>{t('amort.interest')}</th>
+                <th>{t('amort.balance')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {report.yearly.map((year) => (
+                <tr key={year.year}>
+                  <th scope="row">{year.year}</th>
+                  <td>{money(year.paid)}</td>
+                  <td>{money(year.principal)}</td>
+                  <td>{money(year.interest)}</td>
+                  <td>{money(year.remaining_balance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <footer className="report-foot">
