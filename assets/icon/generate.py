@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Generate every platform's app icon from one piece of vector-ish artwork.
+"""Generate the app's icons from one piece of vector-ish artwork.
 
 Run from the repository root:
 
     python3 assets/icon/generate.py
 
-Requires only Pillow (plus macOS `iconutil` for the .icns, which is skipped
-with a warning elsewhere). Everything it writes is committed, so this only
-needs re-running when the artwork itself changes.
+Requires only Pillow. Everything it writes is committed, so this only needs
+re-running when the artwork itself changes.
+
+It used to emit an iOS asset catalogue, an Android launcher PNG, a Windows
+.ico and a macOS .icns as well. Those went with the native apps; what is
+left is the set a web app actually serves -- favicons, the PWA manifest
+icons, and the header mark.
 
 The mark is a house silhouette with a mortgage's real remaining-balance curve
 carved through it. The curve is not decorative: it's B(t) for a level-payment
@@ -15,21 +19,18 @@ loan, which is why it stays high through the first half of the term and only
 breaks late. See `amortization_curve`.
 """
 
-import json
 import os
-import shutil
-import subprocess
 import sys
 
 from PIL import Image, ImageChops, ImageDraw
 
 SS = 4  # supersample factor; artwork is drawn at SS x and LANCZOS-downsampled
 
-# Brand palette, taken from the existing Slint and React UIs so the icon
-# matches what the user sees the moment the app opens.
-NAVY_DEEP = (11, 17, 25)     # #0b1119  slint window background
-NAVY_PANEL = (22, 30, 43)    # #161e2b  web panel background
-BLUE = (79, 140, 255)        # #4f8cff  slint accent
+# Brand palette, taken from the app's own stylesheet so the icon matches
+# what the user sees the moment the page opens.
+NAVY_DEEP = (11, 17, 25)     # #0b1119  darkest ground
+NAVY_PANEL = (22, 30, 43)    # #161e2b  panel background
+BLUE = (79, 140, 255)        # #4f8cff  accent
 GREEN = (126, 231, 135)      # #7ee787  shared "positive" green
 
 # House silhouette in a normalized 0..1 square, y pointing down.
@@ -197,35 +198,6 @@ def write(img, *parts):
 
 
 # --- iOS -------------------------------------------------------------------
-# Xcode 14+ accepts a single 1024x1024 "universal" entry and derives the rest.
-# The App Store rejects icons with an alpha channel, hence opaque=True.
-
-APPICON_CONTENTS = {
-    "images": [{
-        "filename": "AppIcon-1024.png",
-        "idiom": "universal",
-        "platform": "ios",
-        "scale": "1x",
-        "size": "1024x1024",
-    }],
-    "info": {"author": "xcode", "version": 1},
-}
-
-XCASSETS_CONTENTS = {"info": {"author": "xcode", "version": 1}}
-
-
-def build_ios(root):
-    print("iOS")
-    cat = os.path.join(root, "crates/mortgage-ui-slint/ios/Assets.xcassets")
-    appicon = os.path.join(cat, "AppIcon.appiconset")
-    os.makedirs(appicon, exist_ok=True)
-    write(render(1024, opaque=True), appicon, "AppIcon-1024.png")
-    for path, data in ((os.path.join(cat, "Contents.json"), XCASSETS_CONTENTS),
-                       (os.path.join(appicon, "Contents.json"), APPICON_CONTENTS)):
-        with open(path, "w") as fh:
-            json.dump(data, fh, indent=2)
-            fh.write("\n")
-        print(f"  {path}")
 
 
 # --- Android ---------------------------------------------------------------
@@ -234,57 +206,14 @@ def build_ios(root):
 # own mask to the square. The inset keeps the house corners inside the
 # inscribed circle -- without it a round mask clips the eaves.
 
-def build_android(root):
-    print("Android")
-    write(render(512, inset=0.10),
-          root, "crates/mortgage-ui-slint/assets/android-icon.png")
-
 
 # --- Desktop ---------------------------------------------------------------
 
-ICNS_VARIANTS = [
-    ("icon_16x16.png", 16), ("icon_16x16@2x.png", 32),
-    ("icon_32x32.png", 32), ("icon_32x32@2x.png", 64),
-    ("icon_128x128.png", 128), ("icon_128x128@2x.png", 256),
-    ("icon_256x256.png", 256), ("icon_256x256@2x.png", 512),
-    ("icon_512x512.png", 512), ("icon_512x512@2x.png", 1024),
-]
-
-
-def build_desktop(root, here):
-    print("Desktop")
-    # Slint's Window.icon, used for the title bar and taskbar entry.
-    write(render(256, radius=0.22),
-          root, "crates/mortgage-ui-slint/ui/app-icon.png")
-
-    # Windows .ico, multi-resolution in one file.
-    ico = os.path.join(here, "icon-windows.ico")
-    render(256, radius=0.22).save(
-        ico, sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    print(f"  {ico}")
-
-    # macOS .icns. Apple's own icons sit inset inside the canvas with a
-    # squircle, unlike iOS where the system masks a full-bleed square.
-    if not shutil.which("iconutil"):
-        print("  (skipping .icns -- iconutil not found, macOS only)")
-        return
-    iconset = os.path.join(here, "icon.iconset")
-    shutil.rmtree(iconset, ignore_errors=True)
-    os.makedirs(iconset)
-    for name, size in ICNS_VARIANTS:
-        pad = int(size * 0.06)
-        canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        canvas.alpha_composite(render(size - 2 * pad, radius=0.22), (pad, pad))
-        canvas.save(os.path.join(iconset, name))
-    icns = os.path.join(here, "icon-macos.icns")
-    subprocess.run(["iconutil", "-c", "icns", iconset, "-o", icns], check=True)
-    shutil.rmtree(iconset)
-    print(f"  {icns}")
-
 
 # --- Web -------------------------------------------------------------------
-# Two separate web front ends ship from this repo: the React app in www/ and
-# the Slint wasm canvas in crates/mortgage-ui-slint/.
+# One front end ships from this repo: the React app in www/. The favicons,
+# the PWA manifest icons and the header mark all come from the same master
+# artwork below, so the mark cannot drift between the tab and the page.
 
 def build_web(root):
     print("Web")
@@ -306,12 +235,6 @@ def build_web(root):
     # "maskable" promises the platform it may crop to any shape it likes.
     write(render(512, inset=0.10), static, "icon-maskable-512.png")
 
-    slint_web = os.path.join(root, "crates/mortgage-ui-slint")
-    render(64, radius=0.22).save(
-        os.path.join(slint_web, "favicon.ico"),
-        sizes=[(16, 16), (32, 32), (48, 48)])
-    print(f"  {os.path.join(slint_web, 'favicon.ico')}")
-
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
@@ -321,9 +244,6 @@ def main():
 
     print("Master")
     write(render(1024, opaque=True), here, "icon-master.png")
-    build_ios(root)
-    build_android(root)
-    build_desktop(root, here)
     build_web(root)
     print("\ndone")
 

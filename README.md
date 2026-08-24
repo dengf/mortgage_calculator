@@ -1,85 +1,128 @@
 # Mortgage Calculator
 
-A mortgage payment, amortization, affordability, and refinance calculator,
-with a pure Rust calculation core shared by two separate UIs: a React web
-app that loads the core compiled to WebAssembly, and a [Slint](https://slint.dev)
-app that runs the same Rust code natively on desktop, iOS, and Android (and
-also compiles to a wasm canvas for the browser).
+A mortgage payment, amortization, affordability, and refinance calculator for
+the **US and Singapore markets**, built as a web app with a pure Rust
+calculation core compiled to WebAssembly.
+
+**<https://dengf.github.io/mortgage_calculator/>** — nothing to install, and
+nothing you type is sent anywhere.
+
+## What it is, and what it deliberately is not
+
+This is a web app and only a web app. There used to be a [Slint](https://slint.dev)
+crate here that built the same Rust core into a desktop, iOS and Android app;
+it was removed on purpose. A calculator someone consults a handful of times
+while deciding on a house is not something they want to install, keep updated,
+or wait behind a store review for. One URL, one build, one place a fix has to
+land.
+
+Three consequences, all intentional:
+
+- **No installation.** It is a page. It works on a phone, and the browser's
+  own "Add to Home Screen" is there for anyone who wants a launcher — that is
+  the user's choice, not a prerequisite.
+- **No accounts, no server, no data collection.** There is no backend to send
+  anything to: the site is static files on GitHub Pages. The app makes no
+  analytics, telemetry or tracking calls of any kind. Open the network tab and
+  watch it stay empty.
+- **Saved scenarios stay on the device.** They are written to IndexedDB in
+  your own browser (see below). Nothing is uploaded, and clearing site data
+  removes them for good.
 
 ## Features
 
-- **Payment**: standard amortizing payment amount, total cost, total interest
-- **Amortization**: full payment-by-payment schedule with optional extra
-  principal payments, and the resulting time/interest saved
-- **Affordability**: maximum home price from income, debts, down payment,
-  and a target debt-to-income ratio (property tax, insurance, and HOA aware)
-- **Refinance**: break-even point and lifetime savings from refinancing into
-  a new rate/term, net of closing costs
-- **Compare**: side-by-side scenario comparison across rate types (fixed, or
-  floating expressed as base index + spread, e.g. "SOFR + 2.5%") and loan
-  terms, with a handful of common presets plus fully custom entries
-- **Saved scenarios**: every calculator (including Compare) can save its
-  current inputs under a name and reload them later — persisted locally in
-  the browser via a real embedded database (see below), not just this
-  session's memory
+- **Payment**: the amortizing instalment, total cost, and total interest
+- **Amortization**: the full payment-by-payment schedule with optional extra
+  principal, and the time and interest that saves
+- **Affordability**: maximum home price from income, debts, and deposit — for
+  the US against a target debt-to-income ratio, for Singapore against MAS's
+  TDSR and MSR limits, LTV ceilings, CPF usage and IRAS stamp duty
+- **Refinance**: break-even point and lifetime savings net of closing costs
+- **Compare**: scenarios side by side across rate shapes and terms
+- **Report**: a printable, client-facing illustration — payment bands, a
+  rate-rise stress table, the schedule at either granularity, a watermark and
+  a cited source list. Print to PDF or open a pre-filled mail draft
+- **Saved scenarios**: name the current inputs and reload them later
+- **Three languages**: English, 简体中文, 繁體中文
 
-All calculations run **entirely client-side** — the WASM module runs in the
-browser, no server round-trip, and saved data never leaves the device.
+### Rate shapes
+
+A rate is entered as a *shape*, not a number, on every tab:
+
+- **Fixed** — one rate for the term
+- **Floating** — a published benchmark plus a spread, e.g. `SOFR + 2.5%`
+- **Steps up** — a promotional spread for a lock-in period and a higher one
+  thereafter. This is how every Singapore bank quotes a home loan, and reading
+  only the promotional rate is the mistake the structure invites. MAS Notice
+  645 assesses servicing on the *thereafter* rate, and so does this.
+
+Where a rate rests on a published benchmark the app cannot read, it says so on
+screen and on the printed document rather than presenting a projection as a
+quotation.
 
 ## Architecture
 
 ```
 crates/
   mortgage-core     - shared vocabulary: PaymentFrequency, rounding, errors
-  mortgage-calc     - pure calculation logic (Loan + payment/amortization/
-                      affordability/refinance/comparison modules, RateType);
-                      no I/O, no JS
+  mortgage-calc     - all calculation and all domain rules (Loan, RateType,
+                      payment/amortization/affordability/refinance/comparison,
+                      the US and Singapore rule sets, and what a report says).
+                      No I/O, no JS.
   mortgage-ports    - the Scenario type + ScenarioStore trait; no backend
-  mortgage-ext-redb - ScenarioStore implemented on redb: a plain file on
-                      native targets, an in-memory buffer asynchronously
-                      flushed to IndexedDB in the browser
-  mortgage-wasm     - wasm-bindgen bindings: parses JsValue, calls
-                      mortgage-calc / mortgage-ext-redb, serializes the
-                      result back. No business logic lives here.
-  mortgage-ui-slint - Slint UI: one Rust codebase targeting desktop, iOS,
-                      Android, and a wasm canvas for the browser
+  mortgage-ext-redb - ScenarioStore on redb, backed by IndexedDB in the browser
+  mortgage-wasm     - wasm-bindgen bindings: parse JsValue, call mortgage-calc,
+                      serialize the result back. No business logic lives here.
 www/                - webpack + React app that loads the compiled wasm module
 ```
 
-The calculation crates are 100% pure Rust and unit-tested on their own, with
-no knowledge of `wasm-bindgen`, Slint, or any other UI layer. That keeps the
-math reusable across both UIs (and any future one) without dragging their
-dependencies along, and keeps each UI crate itself trivial to review since
-it's pure plumbing over `mortgage-calc`.
+The direction is one-way: **Rust → wasm → React**. `mortgage-calc` knows
+nothing about `wasm-bindgen` and is unit-tested on its own; `mortgage-wasm` is
+pure plumbing and is trivial to review because of it.
 
-Money is `rust_decimal::Decimal` throughout the Rust layers (never `f64`)
-to avoid floating-point drift in currency arithmetic; the wasm boundary
-converts to/from `f64` since that's what JS numbers are.
+### Core logic lives in Rust
+
+This is the rule the whole layout exists to serve, and it is not stylistic. The
+front end formats and lays out; it does not decide anything. No money
+arithmetic, no thresholds, no domain derivations in `.jsx` — a rule
+implemented twice is a rule that will be wrong in one of the two places, and
+the copy that drifts is the one nobody is testing.
+
+Two consequences worth knowing before adding a feature:
+
+- **Send the shape, not the number.** A domain value with more than one form
+  crosses the boundary as that form. `www/src/rate.js` is the model: a quote
+  travels as its variant and its fields, and Rust decides what rate that
+  charges, what the instalment is before and after a step-up, and what rate a
+  bank assesses servicing at. Flattening `base + spread` in JS looks harmless
+  and produces a different product.
+- **Carry what a figure assumed, next to the figure.** An amount and the
+  assumption under it travel together, both decided in Rust. See `CLAUDE.md`.
+
+Money is `rust_decimal::Decimal` throughout the Rust layers, never `f64`, so
+currency arithmetic cannot drift. The wasm boundary converts to and from `f64`
+because that is what a JS number is.
 
 ### Local persistence: redb, not SQLite
 
-Saved scenarios are stored with [`redb`](https://docs.rs/redb), a pure-Rust
-embedded database, rather than SQLite. `mortgage-ext-redb::native` opens a
-plain redb file on disk, used by the Slint app's desktop, iOS, and Android
-builds.
+Saved scenarios use [`redb`](https://docs.rs/redb), a pure-Rust embedded
+database. `mortgage-ext-redb::wasm` implements redb's pluggable
+`StorageBackend` over an in-memory buffer, with each write asynchronously
+flushed to IndexedDB (via `rexie`) and the whole thing preloaded once at
+startup. Real redb — actual transactions, actual schema — runs in-process on
+every read and write; only the durability step is async.
 
-The browser path (`mortgage-ext-redb::wasm`) is the interesting one: redb's
-pluggable `StorageBackend` trait is implemented over an in-memory buffer,
-with each write asynchronously flushed to IndexedDB in the background
-(via the `rexie` crate). Real redb — actual ACID transactions, actual
-schema — runs in-process on every read/write; only the durability step is
-async and best-effort. This deliberately avoids the Origin Private File
-System's synchronous-access-handle API, which is the "proper" way to get
-a real file-backed database in a browser but only works inside a
-dedicated Worker — using it would have meant restructuring the whole app
-around a Worker/postMessage boundary just for storage. The tradeoff: a
-write is durable within roughly one JS microtask rather than
+This deliberately avoids the Origin Private File System's synchronous access
+handles, which are the "proper" route to a file-backed database in a browser
+but only exist inside a dedicated Worker. Using them would have meant
+restructuring the app around a Worker/postMessage boundary for storage alone.
+The tradeoff: a write is durable within about one JS microtask rather than
 fsync-before-return, which is a normal local-first compromise.
 
 ## Quick start
 
 ```bash
-# Run the Rust test suite
+# The Rust test suite
 cargo test --workspace
 
 # Build the wasm bindings, then run the dev server
@@ -88,91 +131,58 @@ npm install
 npm run build:wasm
 npm start          # http://localhost:3001
 
+# The front-end test suite
+npm test
+
 # Production build (runs build:wasm first)
 npm run deploy
 ```
 
-`npm start` also works without `build:wasm` having been run yet — `src/index.js`
-falls back to a mock JS implementation of the same functions so the UI is
-usable before you've built the wasm module.
+`npm start` works before `build:wasm` has ever been run — `src/index.js` falls
+back to a mock JS implementation so the UI comes up, though the figures are
+not the real ones until the wasm module exists.
 
-### Slint app (desktop / web / iOS / Android)
+Two traps that produce a wrong result looking like a correct one:
 
-```bash
-# Desktop (native window)
-cargo run -p mortgage-ui-slint
-
-# macOS: package it as a .app so it gets the real Dock/Finder icon.
-# macOS reads the icon from the bundle, ignoring Slint's `Window.icon`, so
-# a bare `cargo run` always shows a generic executable icon. The bundle is
-# unsigned -- right-click -> Open to bypass Gatekeeper locally.
-./scripts/bundle-macos.sh            # add --debug to skip the release build
-open "target/macos/Mortgage Calculator.app"
-
-# Web (compiles to a wasm canvas, separate from the React app above)
-cd crates/mortgage-ui-slint
-wasm-pack build --target web --out-dir pkg
-python3 -m http.server 4173   # then open index.html
-
-# iOS (generates an Xcode project that cargo-builds the Rust binary
-# as a postCompileScript; open in Xcode or `xcodebuild` from there)
-cd crates/mortgage-ui-slint/ios
-xcodegen generate
-
-# Android (via `xbuild` — https://github.com/rust-mobile/xbuild — which
-# cross-compiles and packages the slint/backend-android-activity binary
-# into an APK; package identity comes from crates/mortgage-ui-slint/manifest.yaml).
-# Needs the Android SDK + NDK and `cargo install --git https://github.com/rust-mobile/xbuild.git xbuild`.
-export ANDROID_HOME=/path/to/android-sdk       # must contain ndk/<version>/
-export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/<version>"
-# The system clang (Xcode's, on macOS) resolves `-fuse-ld=lld` by searching
-# PATH, not by asking the NDK — without this, linking fails with
-# "invalid linker name in argument '-fuse-ld=lld'" even though the NDK
-# ships its own copy.
-export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin:$PATH"
-x build --manifest-path crates/mortgage-ui-slint/Cargo.toml --platform android --arch arm64 --format apk
-# `x run` instead of `build` installs + launches on a connected device/emulator.
-```
+- **`npm run build` does not rebuild the wasm.** It is webpack-only. Run
+  `npm run build:wasm` first, or you are testing the previous `pkg/`.
+- **`cargo check --workspace` misses wasm32-only breakage.** Run
+  `cargo build -p mortgage-wasm --target wasm32-unknown-unknown`.
 
 ## App icon
 
-Every platform's icon is generated from one script, so the artwork has a
-single source of truth:
+Every icon comes from one script, so the artwork has a single source of truth:
 
 ```bash
-python3 assets/icon/generate.py    # needs Pillow; .icns step needs macOS
+python3 assets/icon/generate.py    # needs Pillow
 ```
 
-It writes the iOS asset catalog, the Android launcher PNG, the Slint window
-icon, `.icns`/`.ico` for desktop packaging, and the web favicons plus PWA
-manifest icons. All of its output is committed — rerun it only when the
-artwork itself changes.
+It writes the favicons, the PWA manifest icons and the header mark. All of its
+output is committed — rerun it only when the artwork itself changes.
 
 The mark is a house with a mortgage's remaining-balance curve carved through
 it. The curve is the real B(t) for a level-payment loan rather than a
 decorative swoosh, which is why it stays high through the first half of the
 term and only breaks late.
 
-Two platform quirks the script handles, both easy to get wrong by hand:
-
-- **iOS** rejects App Store icons that carry an alpha channel, so the 1024px
-  entry is written as opaque RGB.
-- **Android** icons here go through `xbuild`, which scales a single PNG into
-  the legacy mipmap densities and does *not* emit an adaptive icon with
-  separate foreground/background layers. Launchers therefore apply their own
-  mask to the square, so that variant is rendered with a safe-zone inset —
-  without it a circular mask clips the eaves of the house.
-- **macOS** takes the icon from the `.app` bundle and ignores the window
-  icon entirely, so the generated `.icns` only shows up once the binary is
-  bundled — see `scripts/bundle-macos.sh` above.
-
 ## A note on the `--target web` + webpack combination
 
-`mortgage-wasm` is built with `wasm-pack build --target web`, whose
-generated glue does its own `fetch` + `WebAssembly.instantiate` of the
-`.wasm` binary. Webpack's native `experiments.asyncWebAssembly` /
-`syncWebAssembly` **must stay disabled** for that combination — turning
-them on lets webpack intercept the glue's internal wasm import and hand
-back a differently-linked module, which silently corrupted values crossing
-the JS/wasm boundary for some (not all) exported functions during
-development of this project. See the comment in `www/webpack.config.js`.
+`mortgage-wasm` is built with `wasm-pack build --target web`, whose generated
+glue does its own `fetch` + `WebAssembly.instantiate` of the `.wasm` binary.
+Webpack's native `experiments.asyncWebAssembly` / `syncWebAssembly` **must stay
+disabled** for that combination — turning them on lets webpack intercept the
+glue's internal wasm import and hand back a differently-linked module, which
+silently corrupted values crossing the JS/wasm boundary for some (not all)
+exported functions during development of this project. See the comment in
+`www/webpack.config.js`.
+
+## Not financial advice
+
+This is a calculator and a planning illustration. It is not a Loan Estimate,
+not a MAS Residential Property Loan Fact Sheet, and not an offer — those are
+regulated disclosures a *lender* issues about a real offer it is making. Every
+figure here is an estimate; check it against your bank's own paperwork.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
