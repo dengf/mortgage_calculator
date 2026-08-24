@@ -5,14 +5,17 @@ name: CI
 # binary and a .icns. What is left is platform-independent Rust, a wasm32
 # build and npm, all of which run anywhere.
 #
-# Moving them to ubuntu-latest was tried and reverted: on 2026-08-24 the
-# switch left all five jobs sitting queued with no runner picking them up,
-# while the identical workflow on macos-latest had passed minutes earlier
-# on the previous commit. GitHub reported Actions operational and the repo
-# is public with no self-hosted runners and no action restrictions, so the
-# cause was never established. Worth retrying -- GitHub bills a macOS
-# minute at ten times a Linux one -- but on its own, not stapled to a
-# change someone is waiting to merge.
+# Moving them to ubuntu-latest was tried on 2026-08-24 and reverted, but
+# NOT because Linux failed. The switch coincided with every job sitting
+# queued with no runner assigned; reverting to macos-latest reproduced the
+# same queue exactly, which rules the runner label out. Whatever stalled
+# scheduling that afternoon was account- or platform-level, and unrelated.
+#
+# So the move is still the right one whenever runners are flowing again --
+# GitHub bills a macOS minute at ten times a Linux one, and nothing here
+# needs macOS. Left on macos-latest only because it is the configuration
+# with a green run on this repo, and the queue made verifying anything
+# impossible.
 
 on:
   push:
