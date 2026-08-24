@@ -237,6 +237,10 @@ export default {
   'report.paymentIncrease': 'More per payment',
   'report.plusPoints': '+{points}%',
   'report.schedule': 'Payment schedule',
+  'report.scheduleYearly': 'Yearly schedule',
+  'report.scheduleView': 'Schedule detail',
+  'report.byPayment': 'Every payment',
+  'report.byYear': 'By year',
   'report.referenceOnly':
     'For reference only. This is an illustration produced by a calculator, not a loan offer, a quotation, or a regulated disclosure from any lender. No bank has seen these figures or agreed to them.',
   'report.sources': 'Where the rules come from',

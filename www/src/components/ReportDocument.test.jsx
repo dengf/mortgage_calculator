@@ -32,19 +32,22 @@ const REPORT = {
   schedule: [
     {
       period: 1,
+      year: 1,
       paid: 1584.75,
       principal: 1111.42,
       interest: 473.33,
       remaining_balance: 398888.58,
     },
     {
-      period: 2,
+      period: 13,
+      year: 2,
       paid: 1584.75,
       principal: 1112.73,
       interest: 472.02,
       remaining_balance: 397775.85,
     },
   ],
+  yearly: [{ year: 1, paid: 19017, principal: 13425, interest: 5592, remaining_balance: 386575 }],
   // The package is quoted over 3M SORA, so every figure above is exact
   // given a number nobody in this app controls.
   floating_base_percent: 1.12,
@@ -214,7 +217,46 @@ describe('the schedule and the cadence it is paid on', () => {
     const rows = [...document.querySelectorAll('.report-schedule tbody tr')];
     expect(rows).toHaveLength(2);
     expect(rows[0].querySelector('th')).toHaveTextContent('1');
-    expect(rows[1].querySelector('th')).toHaveTextContent('2');
+    expect(rows[1].querySelector('th')).toHaveTextContent('13');
+  });
+
+  it('tells each payment which year it falls in', () => {
+    // Payment 13 of a monthly loan is year 2, and nobody divides while
+    // reading -- on a bi-weekly loan the divisor is 26 and nobody guesses.
+    show();
+    const rows = [...document.querySelectorAll('.report-schedule tbody tr')];
+    expect(rows[0].cells[1]).toHaveTextContent('1');
+    expect(rows[1].cells[1]).toHaveTextContent('2');
+  });
+
+  it('reads the year from the report rather than dividing', () => {
+    // The cadence decides it, and the cadence lives in Rust. A component
+    // doing `period / 12` would be right for one of the three frequencies.
+    show({
+      report: {
+        ...REPORT,
+        frequency: 'biweekly',
+        schedule: [
+          { period: 27, year: 2, paid: 731, principal: 512, interest: 219, remaining_balance: 1 },
+        ],
+      },
+    });
+    expect(document.querySelector('.report-schedule tbody tr').cells[1]).toHaveTextContent('2');
+  });
+
+  it('prints the yearly roll-up instead when that is what was asked for', () => {
+    show({ granularity: 'year' });
+    const rows = [...document.querySelectorAll('.report-schedule tbody tr')];
+    expect(rows).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Yearly schedule' })).toBeInTheDocument();
+    // No payment-number column to leave a stray header behind.
+    expect(document.querySelectorAll('.report-schedule thead th')).toHaveLength(5);
+  });
+
+  it('heads the payment view with six columns, the yearly with five', () => {
+    show();
+    expect(document.querySelectorAll('.report-schedule thead th')).toHaveLength(6);
+    expect(screen.getByRole('heading', { name: 'Payment schedule' })).toBeInTheDocument();
   });
 
   it('names the instalment column after the cadence, not "monthly"', () => {

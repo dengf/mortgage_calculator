@@ -95,11 +95,17 @@ fn report_from_params(params: ReportParams) -> ReportResult {
             .into_iter()
             .map(|row| ReportScheduleRowDto {
                 period: row.period,
-                paid: decimal_to_f64(row.payment),
-                principal: decimal_to_f64(row.principal_portion),
-                interest: decimal_to_f64(row.interest_portion),
+                year: row.year,
+                paid: decimal_to_f64(row.paid),
+                principal: decimal_to_f64(row.principal),
+                interest: decimal_to_f64(row.interest),
                 remaining_balance: decimal_to_f64(row.remaining_balance),
             })
+            .collect(),
+        yearly: report
+            .yearly
+            .into_iter()
+            .map(crate::amortization::to_year_dto)
             .collect(),
         references: report
             .references

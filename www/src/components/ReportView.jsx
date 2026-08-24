@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import ScenarioFields from './ScenarioFields';
 import CalcError from './CalcError';
 import ReportDocument from './ReportDocument';
@@ -31,6 +31,12 @@ export default function ReportView({
   // addressed to, because a mistyped or half-edited recipient list is only
   // obvious once it is spelled back.
   const [confirming, setConfirming] = useState(false);
+  // How much of the schedule goes on the document. A view choice, not a
+  // loan input: both cuts arrive from one `build_report` call, so flipping
+  // this re-renders and never recalculates.
+  const [granularity, setGranularity] = useState('payment');
+  // A group of buttons, not a labelled control -- see RateFields.
+  const scheduleViewId = useId();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
   const { rate, termYears, frequency } = scenario;
@@ -106,6 +112,25 @@ export default function ReportView({
 
         {report && !report.error && (
           <div className="report-actions">
+            <div className="field" role="group" aria-labelledby={scheduleViewId}>
+              <span className="field-label" id={scheduleViewId}>
+                {t('report.scheduleView')}
+              </span>
+              <div className="rate-kind">
+                {['payment', 'year'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={granularity === option ? 'kind-toggle active' : 'kind-toggle'}
+                    aria-pressed={granularity === option}
+                    onClick={() => setGranularity(option)}
+                  >
+                    {t(option === 'payment' ? 'report.byPayment' : 'report.byYear')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button className="primary-button" onClick={() => window.print()}>
               {t('report.print')}
             </button>
@@ -163,7 +188,13 @@ export default function ReportView({
       </section>
 
       {report && !report.error && (
-        <ReportDocument report={report} region={region} scenario={scenario} sourceUrl={sourceUrl} />
+        <ReportDocument
+          report={report}
+          region={region}
+          scenario={scenario}
+          sourceUrl={sourceUrl}
+          granularity={granularity}
+        />
       )}
     </>
   );

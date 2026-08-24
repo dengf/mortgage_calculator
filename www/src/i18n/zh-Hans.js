@@ -221,6 +221,10 @@ export default {
   'report.paymentIncrease': '每期增加',
   'report.plusPoints': '+{points}%',
   'report.schedule': '逐期还款表',
+  'report.scheduleYearly': '逐年还款表',
+  'report.scheduleView': '还款表明细',
+  'report.byPayment': '每期',
+  'report.byYear': '按年',
   'report.referenceOnly':
     '仅供参考。本文件为计算器生成的测算结果，并非贷款要约、报价，也不是任何银行出具的法定披露文件。没有任何银行审阅或认可过以上数字。',
   'report.sources': '规则依据',
