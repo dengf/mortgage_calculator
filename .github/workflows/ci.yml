@@ -1,10 +1,18 @@
 name: CI
 
-# Everything here runs on Linux. It used to run on macOS, because the Slint
-# crate built a macOS app, an iOS binary and a .icns, and none of that
-# cross-compiles. With the native targets gone the whole workspace is
-# platform-independent Rust plus a wasm32 build, and GitHub bills a macOS
-# minute at ten times a Linux one.
+# These run on macOS, which is now a historical accident rather than a
+# requirement: it was needed when the Slint crate built a macOS app, an iOS
+# binary and a .icns. What is left is platform-independent Rust, a wasm32
+# build and npm, all of which run anywhere.
+#
+# Moving them to ubuntu-latest was tried and reverted: on 2026-08-24 the
+# switch left all five jobs sitting queued with no runner picking them up,
+# while the identical workflow on macos-latest had passed minutes earlier
+# on the previous commit. GitHub reported Actions operational and the repo
+# is public with no self-hosted runners and no action restrictions, so the
+# cause was never established. Worth retrying -- GitHub bills a macOS
+# minute at ten times a Linux one -- but on its own, not stapled to a
+# change someone is waiting to merge.
 
 on:
   push:
@@ -19,7 +27,7 @@ permissions:
 jobs:
   lint:
     name: cargo fmt + clippy
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -39,7 +47,7 @@ jobs:
 
   test:
     name: cargo test --workspace
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -57,7 +65,7 @@ jobs:
 
   coverage:
     name: cargo llvm-cov (coverage gate)
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -93,7 +101,7 @@ jobs:
 
   www-test:
     name: www/ (React) unit tests
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -111,7 +119,7 @@ jobs:
 
   www-build:
     name: www/ (React + wasm) production build
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
