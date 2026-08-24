@@ -28,7 +28,23 @@ const REPORT = {
     { increase_percent: 1, annual_rate_percent: 2.72, payment: 1819.26, payment_increase: 182.14 },
     { increase_percent: 2, annual_rate_percent: 3.72, payment: 2012.81, payment_increase: 375.69 },
   ],
-  yearly: [{ year: 1, paid: 19017, principal: 13425, interest: 5592, remaining_balance: 386575 }],
+  frequency: 'monthly',
+  schedule: [
+    {
+      period: 1,
+      paid: 1584.75,
+      principal: 1111.42,
+      interest: 473.33,
+      remaining_balance: 398888.58,
+    },
+    {
+      period: 2,
+      paid: 1584.75,
+      principal: 1112.73,
+      interest: 472.02,
+      remaining_balance: 397775.85,
+    },
+  ],
   // The package is quoted over 3M SORA, so every figure above is exact
   // given a number nobody in this app controls.
   floating_base_percent: 1.12,
@@ -189,5 +205,40 @@ describe('what the document says was assumed', () => {
   it('states the assumption in the language the document is printed in', () => {
     show({}, 'zh-Hans');
     expect(document.querySelector('.report-assumption').textContent).toContain('基准利率');
+  });
+});
+
+describe('the schedule and the cadence it is paid on', () => {
+  it('prints a row per payment, numbered by payment', () => {
+    show();
+    const rows = [...document.querySelectorAll('.report-schedule tbody tr')];
+    expect(rows).toHaveLength(2);
+    expect(rows[0].querySelector('th')).toHaveTextContent('1');
+    expect(rows[1].querySelector('th')).toHaveTextContent('2');
+  });
+
+  it('names the instalment column after the cadence, not "monthly"', () => {
+    // The figure is a fortnightly payment. Calling it a monthly one is not
+    // a wording slip -- it is a wrong number on a document a banker hands a
+    // client.
+    show({ report: { ...REPORT, frequency: 'biweekly' } });
+    expect(screen.getAllByText('Bi-weekly instalment').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Monthly instalment')).toBeNull();
+  });
+
+  it('says monthly when it is monthly', () => {
+    show();
+    expect(screen.getAllByText('Monthly instalment').length).toBeGreaterThan(0);
+  });
+
+  it('falls back to monthly rather than printing a blank column head', () => {
+    // An older `pkg/` built before the cadence crossed the boundary.
+    show({ report: { ...REPORT, frequency: undefined } });
+    expect(screen.getAllByText('Monthly instalment').length).toBeGreaterThan(0);
+  });
+
+  it('states the rise per payment without claiming a period', () => {
+    show({ report: { ...REPORT, frequency: 'weekly' } });
+    expect(screen.getByText('More per payment')).toBeInTheDocument();
   });
 });

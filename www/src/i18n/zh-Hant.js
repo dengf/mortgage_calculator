@@ -213,7 +213,8 @@ export default {
   'report.paymentPlan': '會 —— {years} 年後升至 {payment}',
   'report.overTime': '各階段還款',
   'report.period': '期間',
-  'report.instalment': '每月供款',
+  'report.instalment': '{cadence}供款',
+  'report.paymentNo': '期數',
   'report.yearRange': '第 {from}–{to} 年',
   'report.totalPaid': '全期還款總額',
   'report.interestShare': '利息佔還款總額比例',
@@ -221,9 +222,9 @@ export default {
   'report.ifRatesRiseNote':
     '以鎖定期結束後本貸款適用的利率為基準計算，因為利率上升影響的正是該利率。每一行按屆時尚欠本金與剩餘年期重新計算供款。',
   'report.increase': '升幅',
-  'report.monthlyIncrease': '每月增加',
+  'report.paymentIncrease': '每期增加',
   'report.plusPoints': '+{points}%',
-  'report.schedule': '逐年還款表',
+  'report.schedule': '逐期還款表',
   'report.referenceOnly':
     '僅供參考。本文件為計算器產生的測算結果，並非貸款要約、報價，也不是任何銀行出具的法定披露文件。沒有任何銀行審閱或認可過以上數字。',
   'report.sources': '規則依據',

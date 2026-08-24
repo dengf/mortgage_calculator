@@ -5,8 +5,10 @@
 
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{decimal_to_f64, rate_to_percent, to_js};
-use crate::dto::{PaymentBandDto, RateRiseRowDto, ReferenceDto, ReportParams, ReportResult};
+use crate::convert::{decimal_to_f64, frequency_name, rate_to_percent, to_js};
+use crate::dto::{
+    PaymentBandDto, RateRiseRowDto, ReferenceDto, ReportParams, ReportResult, ReportScheduleRowDto,
+};
 use crate::loan::build_loan;
 use crate::message::Message;
 use crate::rate::floating_base_note;
@@ -65,6 +67,7 @@ fn report_from_params(params: ReportParams) -> ReportResult {
         total_paid: Some(decimal_to_f64(report.total_paid)),
         total_interest: Some(decimal_to_f64(report.total_interest)),
         interest_share_percent: report.interest_share.map(decimal_to_f64),
+        frequency: Some(frequency_name(report.frequency).to_string()),
         bands: report
             .bands
             .into_iter()
@@ -87,10 +90,16 @@ fn report_from_params(params: ReportParams) -> ReportResult {
                 payment_increase: decimal_to_f64(row.payment_increase),
             })
             .collect(),
-        yearly: report
-            .yearly
+        schedule: report
+            .schedule
             .into_iter()
-            .map(crate::amortization::to_year_dto)
+            .map(|row| ReportScheduleRowDto {
+                period: row.period,
+                paid: decimal_to_f64(row.payment),
+                principal: decimal_to_f64(row.principal_portion),
+                interest: decimal_to_f64(row.interest_portion),
+                remaining_balance: decimal_to_f64(row.remaining_balance),
+            })
             .collect(),
         references: report
             .references

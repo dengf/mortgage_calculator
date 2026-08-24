@@ -21,7 +21,8 @@ const REPORT = {
   rate_rise: [
     { increase_percent: 1, annual_rate_percent: 2.72, payment: 1819.26, payment_increase: 182.14 },
   ],
-  yearly: [],
+  schedule: [],
+  frequency: 'monthly',
   references: [
     { code: 'ref.MasNotice645', url: 'https://www.mas.gov.sg/regulation/notices/notice-645' },
   ],

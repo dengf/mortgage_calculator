@@ -56,6 +56,19 @@ pub fn decimal_to_f64(value: Decimal) -> f64 {
     value.to_f64().unwrap_or(0.0)
 }
 
+/// The name [`parse_frequency`] reads back.
+///
+/// Kept beside its inverse so the two spellings cannot drift: a result
+/// naming a cadence the parser does not recognise would quietly become
+/// monthly on the next round trip.
+pub fn frequency_name(frequency: PaymentFrequency) -> &'static str {
+    match frequency {
+        PaymentFrequency::Monthly => "monthly",
+        PaymentFrequency::BiWeekly => "biweekly",
+        PaymentFrequency::Weekly => "weekly",
+    }
+}
+
 /// Parses the frontend's `"monthly" | "biweekly" | "weekly"` strings,
 /// defaulting to monthly for anything unrecognized (including `None`).
 pub fn parse_frequency(frequency: Option<&str>) -> PaymentFrequency {
@@ -151,6 +164,17 @@ pub fn calculator_kind_to_str(kind: CalculatorKind) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_cadence_survives_a_round_trip() {
+        for frequency in [
+            PaymentFrequency::Monthly,
+            PaymentFrequency::BiWeekly,
+            PaymentFrequency::Weekly,
+        ] {
+            assert_eq!(parse_frequency(Some(frequency_name(frequency))), frequency);
+        }
+    }
 
     #[test]
     fn percent_to_rate_converts_a_normal_value() {

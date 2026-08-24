@@ -209,7 +209,8 @@ export default {
   'report.paymentPlan': '会 —— {years} 年后升至 {payment}',
   'report.overTime': '各阶段还款',
   'report.period': '期间',
-  'report.instalment': '每月供款',
+  'report.instalment': '{cadence}供款',
+  'report.paymentNo': '期数',
   'report.yearRange': '第 {from}–{to} 年',
   'report.totalPaid': '全期还款总额',
   'report.interestShare': '利息占还款总额比例',
@@ -217,9 +218,9 @@ export default {
   'report.ifRatesRiseNote':
     '以锁定期结束后本贷款适用的利率为基准计算，因为利率上升影响的正是该利率。每一行按届时尚欠本金与剩余年期重新计算供款。',
   'report.increase': '升幅',
-  'report.monthlyIncrease': '每月增加',
+  'report.paymentIncrease': '每期增加',
   'report.plusPoints': '+{points}%',
-  'report.schedule': '逐年还款表',
+  'report.schedule': '逐期还款表',
   'report.referenceOnly':
     '仅供参考。本文件为计算器生成的测算结果，并非贷款要约、报价，也不是任何银行出具的法定披露文件。没有任何银行审阅或认可过以上数字。',
   'report.sources': '规则依据',

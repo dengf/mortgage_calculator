@@ -35,6 +35,10 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
   // Rust decided whether anything was held still to produce these figures,
   // and wrote the sentence saying so. See `mortgage_calc::report::Report`.
   const floats = report.floating_base_percent != null;
+  // The cadence the instalments are on. Every column that used to say
+  // "Monthly" said it over whatever the borrower actually pays -- the
+  // frequency never crossed the boundary, so the document could not know.
+  const cadence = t(`freq.${report.frequency ?? 'monthly'}`);
 
   return (
     <article className="report" lang={locale}>
@@ -150,7 +154,7 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
               <tr>
                 <th>{t('report.period')}</th>
                 <th>{t('rate.rate')}</th>
-                <th>{t('report.instalment')}</th>
+                <th>{t('report.instalment', { cadence })}</th>
               </tr>
             </thead>
             <tbody>
@@ -194,8 +198,8 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
               <tr>
                 <th>{t('report.increase')}</th>
                 <th>{t('rate.rate')}</th>
-                <th>{t('report.instalment')}</th>
-                <th>{t('report.monthlyIncrease')}</th>
+                <th>{t('report.instalment', { cadence })}</th>
+                <th>{t('report.paymentIncrease')}</th>
               </tr>
             </thead>
             <tbody>
@@ -220,7 +224,7 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
           <table className="report-table">
             <thead>
               <tr>
-                <th>{t('amort.year')}</th>
+                <th>{t('report.paymentNo')}</th>
                 <th>{t('amort.paid')}</th>
                 <th>{t('amort.principal')}</th>
                 <th>{t('amort.interest')}</th>
@@ -228,13 +232,13 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
               </tr>
             </thead>
             <tbody>
-              {report.yearly.map((year) => (
-                <tr key={year.year}>
-                  <th scope="row">{year.year}</th>
-                  <td>{money(year.paid)}</td>
-                  <td>{money(year.principal)}</td>
-                  <td>{money(year.interest)}</td>
-                  <td>{money(year.remaining_balance)}</td>
+              {report.schedule.map((row) => (
+                <tr key={row.period}>
+                  <th scope="row">{row.period}</th>
+                  <td>{money(row.paid)}</td>
+                  <td>{money(row.principal)}</td>
+                  <td>{money(row.interest)}</td>
+                  <td>{money(row.remaining_balance)}</td>
                 </tr>
               ))}
             </tbody>

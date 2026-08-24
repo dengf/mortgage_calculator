@@ -225,7 +225,8 @@ export default {
   'report.paymentPlan': 'Yes — rises after {years} yr, to {payment}',
   'report.overTime': 'What you pay, over time',
   'report.period': 'Period',
-  'report.instalment': 'Monthly instalment',
+  'report.instalment': '{cadence} instalment',
+  'report.paymentNo': 'Payment',
   'report.yearRange': 'Years {from}–{to}',
   'report.totalPaid': 'Total paid over the term',
   'report.interestShare': 'Interest as a share of everything paid',
@@ -233,9 +234,9 @@ export default {
   'report.ifRatesRiseNote':
     'Measured against the rate this loan runs at once any lock-in has ended, since that is the rate a rise would move. Each line reprices the balance still owed at that point over the term remaining.',
   'report.increase': 'Rise',
-  'report.monthlyIncrease': 'More per month',
+  'report.paymentIncrease': 'More per payment',
   'report.plusPoints': '+{points}%',
-  'report.schedule': 'Yearly schedule',
+  'report.schedule': 'Payment schedule',
   'report.referenceOnly':
     'For reference only. This is an illustration produced by a calculator, not a loan offer, a quotation, or a regulated disclosure from any lender. No bank has seen these figures or agreed to them.',
   'report.sources': 'Where the rules come from',

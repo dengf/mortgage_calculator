@@ -562,6 +562,20 @@ pub struct ReportParams {
     pub region: Option<String>,
 }
 
+/// One scheduled payment, as the document prints it.
+///
+/// Leaner than `AmortizationRowDto`: a report is built with no extra
+/// payment, so that type's `extra_payment` would be a column of zeros on
+/// every row of a 300-row table.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReportScheduleRowDto {
+    pub period: u32,
+    pub paid: f64,
+    pub principal: f64,
+    pub interest: f64,
+    pub remaining_balance: f64,
+}
+
 /// The figures a client-facing loan illustration states.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ReportResult {
@@ -577,6 +591,11 @@ pub struct ReportResult {
     pub total_paid: Option<f64>,
     pub total_interest: Option<f64>,
     pub interest_share_percent: Option<f64>,
+    /// `"monthly" | "biweekly" | "weekly"`. The document has to say which
+    /// cadence its instalments are on -- it used to print "Monthly
+    /// instalment" over a fortnightly figure, because the cadence never
+    /// crossed the boundary at all.
+    pub frequency: Option<String>,
     pub bands: Vec<PaymentBandDto>,
     /// The benchmark every figure here was computed at, when the quote
     /// rests on one that moves. `null` when the rates are contractual.
@@ -585,7 +604,9 @@ pub struct ReportResult {
     /// language. `null` alongside a `null` base.
     pub rate_note: Option<Message>,
     pub rate_rise: Vec<RateRiseRowDto>,
-    pub yearly: Vec<AmortizationYearDto>,
+    /// One row per scheduled payment. See `mortgage_calc::report::Report`
+    /// for why this is not a yearly roll-up.
+    pub schedule: Vec<ReportScheduleRowDto>,
     /// Who set the rules the figures follow. The document cites these
     /// rather than asserting the numbers on its own authority.
     pub references: Vec<ReferenceDto>,
