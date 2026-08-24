@@ -112,7 +112,13 @@ export default function ReportView({
 
         {report && !report.error && (
           <div className="report-actions">
-            <div className="field" role="group" aria-labelledby={scheduleViewId}>
+            {/* What the document contains, before what to do with it. The
+                two used to sit on one wrapping row, so a setting and a
+                call to action read as one control group -- and each note
+                was squeezed into whatever width was left beside its
+                button. Three stacked rows, each with its explanation
+                underneath it at full width. */}
+            <div className="report-option" role="group" aria-labelledby={scheduleViewId}>
               <span className="field-label" id={scheduleViewId}>
                 {t('report.scheduleView')}
               </span>
@@ -131,35 +137,43 @@ export default function ReportView({
               </div>
             </div>
 
-            <button className="primary-button" onClick={() => window.print()}>
-              {t('report.print')}
-            </button>
-            <p className="report-actions-note">{t('report.printNote')}</p>
-
-            <label className="field report-recipients">
-              <span className="field-label">{t('report.recipients')}</span>
-              <div className="field-input">
-                <input
-                  type="text"
-                  value={recipients}
-                  onChange={(e) => setRecipients(e.target.value)}
-                  placeholder={t('report.recipientsPlaceholder')}
-                />
+            <div className="report-action">
+              <div className="report-action-row">
+                <button className="primary-button" onClick={() => window.print()}>
+                  {t('report.print')}
+                </button>
               </div>
-            </label>
-            <button
-              className="secondary-button"
-              onClick={() => setConfirming(true)}
-              disabled={addresses.length === 0 || rejected.length > 0}
-            >
-              {t('report.email', { count: addresses.length })}
-            </button>
-            {rejected.length > 0 && (
-              <p className="report-actions-warning">
-                {t('report.recipientsBad', { addresses: rejected.join(', ') })}
-              </p>
-            )}
-            <p className="report-actions-note">{t('report.emailNote')}</p>
+              <p className="report-actions-note">{t('report.printNote')}</p>
+            </div>
+
+            <div className="report-action">
+              <div className="report-action-row">
+                <label className="field report-recipients">
+                  <span className="field-label">{t('report.recipients')}</span>
+                  <div className="field-input">
+                    <input
+                      type="text"
+                      value={recipients}
+                      onChange={(e) => setRecipients(e.target.value)}
+                      placeholder={t('report.recipientsPlaceholder')}
+                    />
+                  </div>
+                </label>
+                <button
+                  className="secondary-button"
+                  onClick={() => setConfirming(true)}
+                  disabled={addresses.length === 0 || rejected.length > 0}
+                >
+                  {t('report.email', { count: addresses.length })}
+                </button>
+              </div>
+              {rejected.length > 0 && (
+                <p className="report-actions-warning">
+                  {t('report.recipientsBad', { addresses: rejected.join(', ') })}
+                </p>
+              )}
+              <p className="report-actions-note">{t('report.emailNote')}</p>
+            </div>
 
             {confirming && (
               <div className="report-confirm" role="dialog" aria-label={t('report.confirmTitle')}>
