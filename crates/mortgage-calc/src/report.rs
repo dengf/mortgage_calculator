@@ -41,7 +41,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
-use crate::amortization::AmortizationYear;
+use crate::amortization::AmortizationRow;
 use crate::payment::{payment_factor, summarize};
 use crate::Loan;
 
@@ -186,7 +186,19 @@ pub struct Report {
     /// further than the example shows.
     pub floating_base: Option<Decimal>,
     pub rate_rise: Vec<RateRiseRow>,
-    pub yearly: Vec<AmortizationYear>,
+    /// Every scheduled payment, one row each.
+    ///
+    /// Not a yearly summary. The document is read by someone deciding
+    /// whether to sign, and the question they ask of a schedule -- what do
+    /// I owe after the lock-in, what does the first payment after the
+    /// step-up look like -- is a question about a payment, not about a
+    /// calendar year. A yearly roll-up also hides the step-up entirely: on
+    /// a package reverting at 24 months, the year-2 row averages the two
+    /// instalments and shows a figure the borrower never pays.
+    ///
+    /// Length follows the cadence: 300 rows for a 25-year monthly loan,
+    /// 1,300 for a weekly one.
+    pub schedule: Vec<AmortizationRow>,
     /// Who set the rules the figures follow, so the document cites its
     /// sources rather than asserting them.
     pub references: Vec<Authority>,
@@ -203,12 +215,11 @@ const RATE_RISES: [Decimal; 3] = [dec!(0.005), dec!(0.01), dec!(0.02)];
 /// Builds the illustration for `loan` as it would be read in `region`.
 pub fn report(loan: &Loan, region: Region) -> MortgageResult<Report> {
     let summary = summarize(loan);
-    // One schedule, read several ways. The document prints the yearly rows
-    // and the totals beside them, and stresses the balance left at the
-    // step-up -- all three have to come from the same calculation or the
-    // page can contradict itself.
+    // One schedule, read several ways. The document prints every row and
+    // the totals beside them, and stresses the balance left at the step-up
+    // -- all of it has to come from the same calculation or the page can
+    // contradict itself.
     let rows = crate::amortization::schedule(loan, Decimal::ZERO)?;
-    let yearly = crate::amortization::summarize_by_year(&rows, loan.frequency().periods_per_year());
 
     Ok(Report {
         principal: loan.principal(),
@@ -225,7 +236,7 @@ pub fn report(loan: &Loan, region: Region) -> MortgageResult<Report> {
         bands: bands(loan, &summary),
         floating_base: loan.floating_base(),
         rate_rise: rate_rise(loan, &rows),
-        yearly,
+        schedule: rows,
         references: references(region),
     })
 }
@@ -469,13 +480,45 @@ mod tests {
     }
 
     #[test]
-    fn the_yearly_schedule_covers_the_whole_term() {
+    fn the_schedule_has_a_row_for_every_payment() {
         let report = report(&package(), Region::SG).unwrap();
-        assert_eq!(report.yearly.len(), 25);
+        assert_eq!(report.schedule.len(), 300);
+        assert_eq!(report.schedule.first().unwrap().period, 1);
+        assert_eq!(report.schedule.last().unwrap().period, 300);
         assert_eq!(
-            report.yearly.last().unwrap().remaining_balance,
+            report.schedule.last().unwrap().remaining_balance,
             Decimal::ZERO
         );
+    }
+
+    #[test]
+    fn the_schedule_follows_the_cadence_the_loan_is_paid_on() {
+        // The row count is the number of payments, not the number of years.
+        // A weekly loan is not a monthly loan with smaller numbers.
+        let weekly = Loan::builder()
+            .principal(dec!(400000))
+            .annual_rate(dec!(0.02))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Weekly)
+            .build()
+            .unwrap();
+
+        assert_eq!(report(&weekly, Region::SG).unwrap().schedule.len(), 1300);
+    }
+
+    #[test]
+    fn the_schedule_shows_the_step_up_on_the_payment_it_happens() {
+        // The reason this is not a yearly roll-up. A package reverting at
+        // 24 months steps between payment 24 and payment 25; a year-2 row
+        // would average the two and print an instalment the borrower never
+        // pays on a day they never pay it.
+        let report = report(&package(), Region::SG).unwrap();
+        let before = report.schedule[23].payment;
+        let after = report.schedule[24].payment;
+
+        assert_eq!(before, report.initial_payment);
+        assert_eq!(after, report.payment_after_reversion.unwrap());
+        assert_ne!(before, after);
     }
 
     #[test]
@@ -483,7 +526,7 @@ mod tests {
         // The document prints both. Two routes to one figure is how a
         // summary ends up disagreeing with the rows under it.
         let report = report(&package(), Region::SG).unwrap();
-        let from_rows: Decimal = report.yearly.iter().map(|y| y.interest).sum();
+        let from_rows: Decimal = report.schedule.iter().map(|r| r.interest_portion).sum();
 
         assert_eq!(round_currency(from_rows), report.total_interest);
     }
