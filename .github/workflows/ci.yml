@@ -1,5 +1,11 @@
 name: CI
 
+# Everything here runs on Linux. It used to run on macOS, because the Slint
+# crate built a macOS app, an iOS binary and a .icns, and none of that
+# cross-compiles. With the native targets gone the whole workspace is
+# platform-independent Rust plus a wasm32 build, and GitHub bills a macOS
+# minute at ten times a Linux one.
+
 on:
   push:
     branches: [main]
@@ -13,7 +19,7 @@ permissions:
 jobs:
   lint:
     name: cargo fmt + clippy
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -33,7 +39,7 @@ jobs:
 
   test:
     name: cargo test --workspace
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -51,7 +57,7 @@ jobs:
 
   coverage:
     name: cargo llvm-cov (coverage gate)
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -70,18 +76,24 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
-      # Baseline at the time this gate was added was ~58.7% lines /
-      # 55.3% regions (see the commit that introduced this job for the
-      # full per-file breakdown). Set a few points below that so normal
-      # week-to-week fluctuation doesn't trip it — this is a regression
-      # gate against the coverage this repo already has, not a coverage
-      # target to chase. Raise it as coverage genuinely improves.
+      # Measured 92.56% lines / 92.68% regions on the workspace as it
+      # stands. The gate sat at 55 for a long time because the baseline
+      # was ~58.7%, and that baseline was dragged down by the Slint UI
+      # crate — thousands of lines of untested view glue averaged in with
+      # the calculation code. With the native front ends gone, every line
+      # measured here is core or bridge, and both are tested.
+      #
+      # Left a few points of headroom so ordinary fluctuation doesn't trip
+      # it. This is a regression gate against the coverage the repo
+      # already has, not a target to chase — but at 55 it had stopped
+      # being even that: coverage could have fallen by thirty-seven points
+      # without failing.
       - name: cargo llvm-cov --fail-under-lines
-        run: cargo llvm-cov --workspace --fail-under-lines 55
+        run: cargo llvm-cov --workspace --fail-under-lines 88
 
   www-test:
     name: www/ (React) unit tests
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -99,7 +111,7 @@ jobs:
 
   www-build:
     name: www/ (React + wasm) production build
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
