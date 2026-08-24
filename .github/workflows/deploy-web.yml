@@ -1,9 +1,11 @@
 name: Deploy web app
 
 # Publishes the React + wasm app to GitHub Pages. Only fires for pushes to
-# main that actually touch the web app or the Rust it compiles from, so
-# unrelated commits (docs, the Slint app, iOS/Android packaging) don't
-# redeploy an identical site.
+# main that actually touch the web app or the Rust it compiles from, so a
+# docs-only or CI-only commit doesn't redeploy an identical site.
+#
+# Every crate in the workspace is now on the path to this deploy -- there is
+# no longer any Rust here that the browser does not run.
 on:
   push:
     branches: [main]
@@ -36,7 +38,7 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

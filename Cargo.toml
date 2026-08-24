@@ -3,6 +3,11 @@
 # Layered architecture: a dependency-free domain-types crate at the bottom,
 # pure calculation logic in the middle, and a thin wasm-bindgen crate on top
 # that only translates JS <-> Rust and never contains business logic itself.
+#
+# One target: the browser. There was a Slint crate here that built the same
+# core as a desktop, iOS and Android app; it was removed deliberately, not
+# abandoned. This is a web app -- nothing to install, nothing to update, and
+# no store review between a fix and the person who needs it.
 
 [workspace]
 members = [
@@ -11,7 +16,6 @@ members = [
     "crates/mortgage-ports",
     "crates/mortgage-ext-redb",
     "crates/mortgage-wasm",
-    "crates/mortgage-ui-slint",
 ]
 resolver = "2"
 
@@ -46,19 +50,3 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
-
-# One-line upstream fix: i-slint-backend-winit 1.17.1's
-# try_create_window_with_fallback_renderer() builds an array of renderer
-# constructor fn items and calls `.into_iter().find_map(|renderer_factory| ...)`
-# on it; with the single #[cfg]-active array element this app's feature
-# selection produces (only renderer-femtovg is ever enabled), rustc
-# can't infer `renderer_factory`'s type (E0282: type annotations needed).
-# Reproduces with a plain `cargo check --target aarch64-apple-ios-sim`
-# (confirmed not an Xcode artifact) but not on desktop/wasm/Android
-# despite those going through the same unconditional function body —
-# root cause of the platform difference not fully tracked down, but the
-# fix itself is unambiguous: it's the exact explicit-type annotation
-# rustc's own error message suggests, nothing else changed. Vendored
-# copy in local-patches/; see local-patches/README.md.
-[patch.crates-io]
-i-slint-backend-winit = { path = "local-patches/i-slint-backend-winit-1.17.1" }

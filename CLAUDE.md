@@ -5,11 +5,24 @@
 Every calculation, rule, threshold and regulatory constant belongs in the Rust
 crates. The front ends render results and collect input. They do not compute.
 
-This is not a style preference. There are four front ends over one core — web
-(wasm), desktop, iOS, Android — and a rule implemented twice is a rule that
-will eventually disagree with itself. When it does, the app does not crash: it
-shows a confident, wrong number. A mortgage calculator that is quietly wrong is
-worse than one that is visibly broken.
+This is not a style preference, and it did not stop being true when the native
+front ends were removed. It used to be argued from breadth — four UIs over one
+core, and a rule implemented twice will eventually disagree with itself. With
+one UI the argument is sharper, not weaker:
+
+- **The tests are in the core.** `mortgage-calc` carries the entire regulatory
+  suite. A threshold that migrates into a `.jsx` file is covered by none of it,
+  and nothing fails when it drifts.
+- **The rules travel with their citations.** MAS Notice 645's stress floor, the
+  IRAS duty bands, the CPF peg and the FHFA limit are written next to the
+  authority they come from. Scattered through a render tree they become
+  unsourced magic numbers.
+- **The boundary is what makes the core reviewable.** `mortgage-wasm` is
+  plumbing precisely because no decision hides in it.
+
+When a duplicated rule does drift, the app does not crash: it shows a
+confident, wrong number. A mortgage calculator that is quietly wrong is worse
+than one that is visibly broken.
 
 ### Where a thing goes
 
@@ -18,7 +31,7 @@ worse than one that is visibly broken.
 | `mortgage-core` | Shared vocabulary: `Region`, `PaymentFrequency`, rounding, errors |
 | `mortgage-calc` | Every calculation and every regulatory rule (MAS, IRAS, CPF, FHFA) |
 | `mortgage-wasm` | Bridge only. Parse `JsValue`, call `mortgage-calc`, serialize back |
-| `www/`, `mortgage-ui-slint` | Layout, input, formatting for display, i18n |
+| `www/` | Layout, input, formatting for display, i18n |
 
 ### Business logic (Rust) vs. host layer (front end)
 
