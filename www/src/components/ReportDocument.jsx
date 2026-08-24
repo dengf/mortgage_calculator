@@ -19,7 +19,13 @@ import { useI18n } from '../i18n';
  * and the closer it gets to those, the more it has to say what it is not.
  * `ReportDocument.test.jsx` holds it to that.
  */
-export default function ReportDocument({ report, region, scenario, sourceUrl }) {
+export default function ReportDocument({
+  report,
+  region,
+  scenario,
+  sourceUrl,
+  granularity = 'payment',
+}) {
   const { t, locale } = useI18n();
   const money = makeFormatMoney(region);
   const pct = (n) => (n == null ? '—' : `${n.toFixed(3)}%`);
@@ -39,6 +45,7 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
   // "Monthly" said it over whatever the borrower actually pays -- the
   // frequency never crossed the boundary, so the document could not know.
   const cadence = t(`freq.${report.frequency ?? 'monthly'}`);
+  const byPayment = granularity !== 'year';
 
   return (
     <article className="report" lang={locale}>
@@ -218,13 +225,18 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
         </div>
       </section>
 
+      {/* Both cuts come from one calculation in `mortgage-calc`; which one
+          prints is the reader's choice, made on the panel. A thirty-page
+          payment-by-payment schedule and a twenty-five line summary answer
+          different questions, and neither is wrong. */}
       <section className="report-section report-schedule">
-        <h2>{t('report.schedule')}</h2>
+        <h2>{t(byPayment ? 'report.schedule' : 'report.scheduleYearly')}</h2>
         <div className="report-table-wrap">
           <table className="report-table">
             <thead>
               <tr>
-                <th>{t('report.paymentNo')}</th>
+                <th>{byPayment ? t('report.paymentNo') : t('amort.year')}</th>
+                {byPayment && <th>{t('amort.year')}</th>}
                 <th>{t('amort.paid')}</th>
                 <th>{t('amort.principal')}</th>
                 <th>{t('amort.interest')}</th>
@@ -232,15 +244,29 @@ export default function ReportDocument({ report, region, scenario, sourceUrl }) 
               </tr>
             </thead>
             <tbody>
-              {report.schedule.map((row) => (
-                <tr key={row.period}>
-                  <th scope="row">{row.period}</th>
-                  <td>{money(row.paid)}</td>
-                  <td>{money(row.principal)}</td>
-                  <td>{money(row.interest)}</td>
-                  <td>{money(row.remaining_balance)}</td>
-                </tr>
-              ))}
+              {byPayment
+                ? report.schedule.map((row) => (
+                    <tr key={row.period}>
+                      {/* The payment number is what identifies the row --
+                          the year repeats twelve times over and would name
+                          twelve rows the same thing. */}
+                      <th scope="row">{row.period}</th>
+                      <td>{row.year}</td>
+                      <td>{money(row.paid)}</td>
+                      <td>{money(row.principal)}</td>
+                      <td>{money(row.interest)}</td>
+                      <td>{money(row.remaining_balance)}</td>
+                    </tr>
+                  ))
+                : report.yearly.map((year) => (
+                    <tr key={year.year}>
+                      <th scope="row">{year.year}</th>
+                      <td>{money(year.paid)}</td>
+                      <td>{money(year.principal)}</td>
+                      <td>{money(year.interest)}</td>
+                      <td>{money(year.remaining_balance)}</td>
+                    </tr>
+                  ))}
             </tbody>
           </table>
         </div>

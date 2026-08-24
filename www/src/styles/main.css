@@ -1359,18 +1359,47 @@ body {
   }
 }
 
+/* A stack of rows, not one wrapping row of everything.
+   Flat, it put the schedule-detail setting shoulder to shoulder with the
+   print button -- a choice about the document reading as a third call to
+   action -- and left each explanation to fill whatever width remained
+   beside its own button, so the email note came out five ragged lines
+   deep in a column of its own. */
 .report-actions {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
   margin: 18px 0;
+}
+
+/* What goes in the document, ruled off from what to do with it. */
+.report-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #2a3546;
+}
+
+.report-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-action-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .report-actions-note {
   margin: 0;
-  flex: 1 1 260px;
   min-width: 0;
+  max-width: 62ch;
   font-size: 0.8rem;
   color: #9fb0c3;
 }
@@ -1390,13 +1419,16 @@ body {
   background: #9df0a4;
 }
 
+/* Sized to the content, not to the row: growing to fill pushed the send
+   button to the far edge, so the field and the thing that acts on it read
+   as two unrelated controls. Shrinks on a narrow screen, does not stretch
+   on a wide one. */
 .report-recipients {
-  flex: 1 1 320px;
+  flex: 0 1 360px;
   min-width: 0;
 }
 
 .report-actions-warning {
-  flex-basis: 100%;
   margin: 0;
   font-size: 0.8rem;
   color: #ffb454;

@@ -570,6 +570,9 @@ pub struct ReportParams {
 #[derive(Debug, Clone, Serialize)]
 pub struct ReportScheduleRowDto {
     pub period: u32,
+    /// Which year of the loan the payment falls in. Derived in
+    /// `mortgage_calc::report` from the cadence, not by dividing here.
+    pub year: u32,
     pub paid: f64,
     pub principal: f64,
     pub interest: f64,
@@ -604,9 +607,12 @@ pub struct ReportResult {
     /// language. `null` alongside a `null` base.
     pub rate_note: Option<Message>,
     pub rate_rise: Vec<RateRiseRowDto>,
-    /// One row per scheduled payment. See `mortgage_calc::report::Report`
-    /// for why this is not a yearly roll-up.
+    /// One row per scheduled payment.
     pub schedule: Vec<ReportScheduleRowDto>,
+    /// The same payments rolled up by year. Both are sent; which one the
+    /// document prints is the reader's choice, and a toggle that had to
+    /// cross the boundary to answer would stall on every flip.
+    pub yearly: Vec<AmortizationYearDto>,
     /// Who set the rules the figures follow. The document cites these
     /// rather than asserting the numbers on its own authority.
     pub references: Vec<ReferenceDto>,

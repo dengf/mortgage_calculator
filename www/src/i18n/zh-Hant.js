@@ -225,6 +225,10 @@ export default {
   'report.paymentIncrease': '每期增加',
   'report.plusPoints': '+{points}%',
   'report.schedule': '逐期還款表',
+  'report.scheduleYearly': '逐年還款表',
+  'report.scheduleView': '還款表明細',
+  'report.byPayment': '每期',
+  'report.byYear': '按年',
   'report.referenceOnly':
     '僅供參考。本文件為計算器產生的測算結果，並非貸款要約、報價，也不是任何銀行出具的法定披露文件。沒有任何銀行審閱或認可過以上數字。',
   'report.sources': '規則依據',
