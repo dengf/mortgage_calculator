@@ -10,8 +10,9 @@
 export default {
   // App shell
   'app.title': 'Mortgage Calculator',
-  'meta.title': 'Mortgage Calculator — Payments, Amortization, Affordability & Refinance',
-  'meta.ogTitle': 'Mortgage Calculator — nothing leaves your device',
+  'app.byline': '— a {logo} app',
+  'meta.title': 'Mortgage Calculator — Payments, Amortization, Affordability & Refinance | meifio',
+  'meta.ogTitle': 'Mortgage Calculator — a meifio app',
   'meta.description':
     'Free mortgage calculator for payments, amortization, affordability and refinancing, with Singapore TDSR, CPF and stamp duty built in. Runs entirely in your browser — your numbers never leave your device.',
   'intro.lead':

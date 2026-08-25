@@ -1,5 +1,5 @@
 {
-  "name": "Mortgage Calculator",
+  "name": "Mortgage Calculator — a meifio app",
   "short_name": "Mortgage",
   "description": "Mortgage payment, amortization, affordability and refinance calculators. Runs entirely in your browser.",
   "start_url": ".",

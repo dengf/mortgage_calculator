@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Generate the app's icons from one piece of vector-ish artwork.
+"""Generate the app's icons from the meifio brand mark.
 
 Run from the repository root:
 
@@ -10,15 +9,20 @@ re-running when the artwork itself changes.
 
 It used to emit an iOS asset catalogue, an Android launcher PNG, a Windows
 .ico and a macOS .icns as well. Those went with the native apps; what is
-left is the set a web app actually serves -- favicons, the PWA manifest
-icons, and the header mark.
+left is the set a web app actually serves -- favicons and the PWA
+manifest icons. The header carries the meifio logotype as inline SVG
+(www/src/components/MeifioMark.jsx), not a raster from here.
 
-The mark is a house silhouette with a mortgage's real remaining-balance curve
-carved through it. The curve is not decorative: it's B(t) for a level-payment
-loan, which is why it stays high through the first half of the term and only
-breaks late. See `amortization_curve`.
+The mark is meifio's plum blossom, so every tool in the family shares one
+icon. Its outline is sampled from the same path the brand SVG uses
+(meifio-brand/build.py, PETAL) rather than redrawn here, so the icon in the
+tab cannot drift from the logo on the page.
+
+The ground stays the app's own navy: the mark carries the brand, the tile
+carries the app, and a light tile would flash white before a dark app.
 """
 
+import math
 import os
 import sys
 
@@ -26,142 +30,76 @@ from PIL import Image, ImageChops, ImageDraw
 
 SS = 4  # supersample factor; artwork is drawn at SS x and LANCZOS-downsampled
 
-# Brand palette, taken from the app's own stylesheet so the icon matches
-# what the user sees the moment the page opens.
+# Brand palette. The blossom is meifio's plum; the ground is this app's, taken
+# from its own stylesheet so the icon matches what opens.
 NAVY_DEEP = (11, 17, 25)     # #0b1119  darkest ground
 NAVY_PANEL = (22, 30, 43)    # #161e2b  panel background
-BLUE = (79, 140, 255)        # #4f8cff  accent
-GREEN = (126, 231, 135)      # #7ee787  shared "positive" green
-
-# House silhouette in a normalized 0..1 square, y pointing down.
-HOUSE = [
-    (0.500, 0.115),
-    (0.905, 0.442),
-    (0.905, 0.885),
-    (0.095, 0.885),
-    (0.095, 0.442),
-]
+PLUM = (176, 18, 67)         # #B01243  meifio
 
 
-def amortization_curve(samples=200, annual_rate=0.06, years=30):
-    """Remaining balance B(t)/P for a level-payment loan, sampled over the term.
+# --- the mark ---------------------------------------------------------------
+# One petal, in the brand's 0..100 coordinate space, y pointing down:
+#
+#   M50 50  C41 46 34 38 34 27  A16 16 0 1 1 66 27  C66 38 59 46 50 50  Z
+#
+# Sampled to a polygon rather than approximated with ellipses, so the petal's
+# tapered flanks survive -- five plain circles read as a generic flower and
+# lose what makes this a plum blossom.
 
-    Convex and decreasing: at the halfway point roughly 71% of the principal
-    is still outstanding, which gives the curve its characteristic late break.
-    """
-    r = annual_rate / 12.0
-    n = years * 12
-    denom = (1.0 + r) ** n - 1.0
-    return [
-        (i / samples, 1.0 - (((1.0 + r) ** (n * i / samples)) - 1.0) / denom)
-        for i in range(samples + 1)
-    ]
-
-
-def lerp(a, b, t):
-    return a + (b - a) * t
+def _cubic(p0, c0, c1, p1, steps=24):
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        yield (u*u*u*p0[0] + 3*u*u*t*c0[0] + 3*u*t*t*c1[0] + t*t*t*p1[0],
+               u*u*u*p0[1] + 3*u*u*t*c0[1] + 3*u*t*t*c1[1] + t*t*t*p1[1])
 
 
-def mix(c1, c2, t):
-    return tuple(int(round(lerp(c1[i], c2[i], t))) for i in range(3))
+def _arc(cx, cy, r, a0, a1, steps=36):
+    """Angles in degrees, y pointing down."""
+    for i in range(steps + 1):
+        a = math.radians(a0 + (a1 - a0) * i / steps)
+        yield (cx + r * math.cos(a), cy + r * math.sin(a))
 
 
-def to_px(pt, size, inset):
-    """Normalized point -> pixel, honoring a safe-zone inset."""
-    span = size * (1.0 - 2 * inset)
-    off = size * inset
-    return (off + pt[0] * span, off + pt[1] * span)
+def _petal():
+    pts = list(_cubic((50, 50), (41, 46), (34, 38), (34, 27)))
+    pts += list(_arc(50, 27, 16, 180, 360))     # over the top, left to right
+    pts += list(_cubic((66, 27), (66, 38), (59, 46), (50, 50)))
+    return pts
 
 
-def stroke(draw, pts, size, inset, width, color):
-    """Polyline with round caps and joints.
-
-    Deliberately not `draw.line(..., joint="curve")`: on a densely sampled
-    path like this one, Pillow's joint rendering leaves a comb of jagged
-    spurs along the outer edge. Stamping a disc at every vertex instead
-    gives a clean round-joined stroke, and the samples are close enough
-    together that the discs overlap heavily.
-    """
-    px = [to_px(p, size, inset) for p in pts]
-    w = max(1, int(width * size))
-    r = w / 2.0
-    draw.line(px, fill=color, width=w)
-    for p in px:
-        draw.ellipse([p[0] - r, p[1] - r, p[0] + r, p[1] + r], fill=color)
+def _rotate(pts, deg, ox=50, oy=50):
+    a = math.radians(deg)
+    ca, sa = math.cos(a), math.sin(a)
+    return [((x - ox) * ca - (y - oy) * sa + ox,
+             (x - ox) * sa + (y - oy) * ca + oy) for x, y in pts]
 
 
-def vertical_gradient(size, top, bottom):
-    """Background wash, just enough to keep the ground from reading flat."""
-    img = Image.new("RGB", (1, size), top)
-    d = ImageDraw.Draw(img)
-    for y in range(size):
-        d.point((0, y), fill=mix(top, bottom, y / max(1, size - 1)))
-    return img.resize((size, size), Image.BILINEAR)
-
-
-def curve_points():
-    """The carved curve, placed within the mark's box."""
-    return [(lerp(0.045, 0.955, p[0]), lerp(0.930, 0.400, p[1]))
-            for p in amortization_curve()]
-
-
-def draw_mark(img, size, inset, punch_through=False):
-    """The house-with-carved-curve mark, composited onto `img`.
-
-    `punch_through` cuts the curve out as actual transparency rather than
-    painting it the ground colour. That matters wherever the mark sits on a
-    surface that isn't the icon's own dark ground -- painting NAVY_DEEP
-    there would draw a near-black band across whatever is behind it.
-    """
-    house_px = [to_px(p, size, inset) for p in HOUSE]
-
-    body = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ImageDraw.Draw(body).polygon(house_px, fill=BLUE)
-
-    shaped = curve_points()
-
+def draw_mark(img, s, inset=0.0, punch_through=False):
+    """Draw the blossom onto a transparent RGBA image of side s."""
+    span = s * (1 - 2 * inset)
+    off = s * inset
+    scale = span / 100.0
+    colour = (255, 255, 255, 255) if punch_through else PLUM + (255,)
+    layer = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    for k in range(5):
+        poly = [(off + x * scale, off + y * scale) for x, y in _rotate(_petal(), 72 * k)]
+        d.polygon(poly, fill=colour)
     if punch_through:
-        # Erase along the wide stroke, then lay the green one back on top.
-        erase = Image.new("L", (size, size), 0)
-        stroke(ImageDraw.Draw(erase), shaped, size, inset, 0.155, 255)
-        kept = ImageChops.subtract(body.getchannel("A"), erase)
-        body.putalpha(kept)
-
-        green = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        stroke(ImageDraw.Draw(green), [(p[0], p[1] + 0.004) for p in shaped],
-               size, inset, 0.072, GREEN)
-        body.alpha_composite(green)
-        img.alpha_composite(body)
-        return
-
-    # The curve is carved out of the body rather than drawn on top: a wide
-    # ground-coloured stroke first, then the green one inside it. Clipped to
-    # the silhouette so nothing spills past the roofline.
-    cut = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(cut)
-    stroke(cd, shaped, size, inset, 0.155, NAVY_DEEP)
-    stroke(cd, [(p[0], p[1] + 0.004) for p in shaped], size, inset, 0.072, GREEN)
-
-    clip = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(clip).polygon(house_px, fill=255)
-    cut.putalpha(Image.composite(cut.getchannel("A"),
-                                 Image.new("L", (size, size), 0), clip))
-    body.alpha_composite(cut)
-    img.alpha_composite(body)
+        # recolour the union in one pass; overlapping petals must not compound
+        solid = Image.new("RGBA", (s, s), PLUM + (255,))
+        solid.putalpha(layer.split()[3])
+        layer = solid
+    img.alpha_composite(layer)
 
 
-def render_logo(size):
-    """The mark alone, on transparency, for use as a logo in a UI.
-
-    The app icon carries its own dark ground because a home screen needs a
-    tile. Reused as a header logo that ground is almost exactly the page
-    background (#0b1119 vs #0f1720), so the tile disappears and the mark
-    reads as missing. This variant has no ground at all.
-    """
-    s = size * SS
-    art = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    draw_mark(art, s, 0.0, punch_through=True)
-    return art.resize((size, size), Image.LANCZOS)
+def vertical_gradient(s, top, bottom):
+    base = Image.new("RGB", (1, s))
+    for y in range(s):
+        t = y / max(1, s - 1)
+        base.putpixel((0, y), tuple(round(top[i] + (bottom[i] - top[i]) * t) for i in range(3)))
+    return base.resize((s, s), Image.NEAREST)
 
 
 def render(size, inset=0.0, radius=None, opaque=False):
@@ -211,9 +149,9 @@ def write(img, *parts):
 
 
 # --- Web -------------------------------------------------------------------
-# One front end ships from this repo: the React app in www/. The favicons,
-# the PWA manifest icons and the header mark all come from the same master
-# artwork below, so the mark cannot drift between the tab and the page.
+# One front end ships from this repo: the React app in www/. The favicons and
+# the PWA manifest icons come from the same artwork, so the tab and the home
+# screen cannot drift apart.
 
 def build_web(root):
     print("Web")
@@ -230,8 +168,6 @@ def build_web(root):
     write(render(180, opaque=True), static, "apple-touch-icon.png")
     write(render(192, radius=0.22), static, "icon-192.png")
     write(render(512, radius=0.22), static, "icon-512.png")
-    # Header logo: the mark with no tile behind it (see render_logo).
-    write(render_logo(192), static, "logo-mark.png")
     # "maskable" promises the platform it may crop to any shape it likes.
     write(render(512, inset=0.10), static, "icon-maskable-512.png")
 

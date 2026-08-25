@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mortgage-calculator-web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "http-server",
+        "www/dist",
+        "-p",
+        "8099",
+        "-c-1",
+        "--silent"
+      ],
+      "port": 8099
+    }
+  ]
+}
