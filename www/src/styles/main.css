@@ -35,12 +35,42 @@ body {
   gap: 8px;
 }
 
-/* No border-radius: this is the bare mark on transparency, not a tile, so
-   rounding the box would clip the roofline rather than round a corner. */
-.app-title-mark {
-  width: 32px;
-  height: 32px;
-  flex: none;
+.app-brand {
+  /* The header is a space-between row. Without this wrapper the byline became
+     a third item and drifted into the middle of the bar, away from the name
+     it belongs to. Baseline alignment, not centre: the byline is smaller, and
+     centring floated it off the title's baseline. */
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.app-byline {
+  /* Reads as one line with the product name: "Mortgage Calculator - a meifio
+     app". Links to the family's home. */
+  display: flex;
+  text-decoration: none;
+  align-items: center;
+  gap: 0.32em;
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #9aa7b4;
+  letter-spacing: 0.01em;
+}
+
+.app-byline:hover,
+.app-byline:focus-visible {
+  color: #e6edf3;
+}
+
+.meifio-mark {
+  /* Height is set inline, in em, so the mark tracks the byline's type size.
+     width:auto keeps the aspect ratio the viewBox defines. */
+  width: auto;
+  display: block;
+  color: #e6edf3;
+  vertical-align: middle;
 }
 
 .app-tabs {

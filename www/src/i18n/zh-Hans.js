@@ -8,8 +8,9 @@
 
 export default {
   'app.title': '房贷计算器',
-  'meta.title': '房贷计算器 — 月供、还款明细、购房力与再融资',
-  'meta.ogTitle': '房贷计算器 — 数据不离开您的设备',
+  'app.byline': '— {logo} 出品',
+  'meta.title': '房贷计算器 — 月供、还款明细、购房力与再融资 | meifio',
+  'meta.ogTitle': '房贷计算器 — meifio 出品',
   'meta.description':
     '免费房贷计算器，涵盖月供、还款明细、购房力与再融资，并内置新加坡 TDSR、公积金与印花税规则。全部在浏览器内计算——您的数据不会离开设备。',
   'intro.lead': '算清一套房的真实成本——月供、还款明细、您能负担多少，以及再融资是否划算。',

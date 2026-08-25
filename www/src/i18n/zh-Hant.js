@@ -12,8 +12,9 @@
 
 export default {
   'app.title': '房貸試算器',
-  'meta.title': '房貸試算器 — 月供、還款明細、購房力與再融資',
-  'meta.ogTitle': '房貸試算器 — 資料不離開您的裝置',
+  'app.byline': '— {logo} 出品',
+  'meta.title': '房貸試算器 — 月供、還款明細、購房力與再融資 | meifio',
+  'meta.ogTitle': '房貸試算器 — meifio 出品',
   'meta.description':
     '免費房貸試算器，涵蓋月供、還款明細、購房力與再融資，並內建新加坡 TDSR、公積金與印花稅規則。全部在瀏覽器內計算——您的資料不會離開裝置。',
   'intro.lead': '算清一套房的真實成本——月供、還款明細、您能負擔多少，以及再融資是否划算。',

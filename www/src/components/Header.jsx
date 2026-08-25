@@ -1,5 +1,10 @@
 import React from 'react';
 import { LOCALES, useI18n } from '../i18n';
+import MeifioMark from './MeifioMark';
+
+/* The family's home. Moves to https://meifio.app once the domain is live;
+   it is a constant so that is a one-line change. */
+const MEIFIO_HOME = 'https://dengf.github.io/meifio-blog/';
 
 const TABS = [
   { id: 'payment', key: 'nav.payment' },
@@ -20,20 +25,24 @@ export default function Header({ activeTab, onTabChange, region, onRegionChange 
 
   return (
     <header className="app-header">
-      {/* The page had no h1 at all. This is the one, and it names the
-          product rather than repeating a tab label. */}
-      <h1 className="app-title">
-        {/* The logo mark, not the app icon. The icon carries its own dark
-            tile for a home screen, and that tile is near-identical to this
-            page's background (#0b1119 vs #0f1720) — reused here it vanished
-            and the logo read as missing. This variant has no ground.
+      <div className="app-brand">
+        {/* The page had no h1 at all. This is the one, and it names the
+            product rather than repeating a tab label. */}
+        <h1 className="app-title">{t('app.title')}</h1>
 
-            Relative, not root-absolute, so it still resolves when the app is
-            served from a subpath (e.g. a GitHub Pages project site).
-            Decorative: the adjacent text already names the app. */}
-        <img className="app-title-mark" src="logo-mark.png" alt="" width="32" height="32" />
-        {t('app.title')}
-      </h1>
+        {/* The house mark it used to carry is gone: the family mark now lives in
+            the byline's logotype, and showing both read as two logos arguing.
+
+            The byline is split rather than interpolated because the brand is an
+            element, not a string -- and the word order around it differs by
+            locale ("a meifio app" vs "meifio 出品"), so the mark cannot simply be
+            pinned to one end. */}
+        <a className="app-byline" href={MEIFIO_HOME}>
+        {t('app.byline').split('{logo}').flatMap((part, i) =>
+          i === 0 ? [part] : [<MeifioMark key="mark" />, part],
+        )}
+      </a>
+      </div>
 
       <div className="app-switches">
         {/* Language and region are separate axes on purpose: someone reading

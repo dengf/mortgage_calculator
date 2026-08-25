@@ -49,6 +49,17 @@ const CARRIES_A_WORD = /[A-Za-z]*[a-z][A-Za-z]/;
 const isCatalogKey = (text) => Object.hasOwn(en, text);
 
 /**
+ * The brand name, which is a proper noun and identical in every locale.
+ *
+ * Same category as `US`, `SG` and `S$` above: the byline around it does
+ * change -- "a meifio app" against "meifio 出品" -- and that sentence *is* in
+ * the catalogs, as `app.byline`. Only the name itself is fixed. Matched
+ * exactly, so "meifio app" would still be a finding.
+ */
+const BRAND = new Set(['meifio']);
+const isBrand = (text) => BRAND.has(text);
+
+/**
  * User-visible English that is not coming from a catalog.
  *
  * Only patterns that are unambiguous from a single line. A string literal
@@ -60,7 +71,9 @@ const isCatalogKey = (text) => Object.hasOwn(en, text);
 function hardcodedEnglish(source) {
   const found = [];
   const add = (index, text) => {
-    if (CARRIES_A_WORD.test(text) && !isCatalogKey(text)) found.push({ line: index + 1, text });
+    if (CARRIES_A_WORD.test(text) && !isCatalogKey(text) && !isBrand(text)) {
+      found.push({ line: index + 1, text });
+    }
   };
 
   source.split('\n').forEach((line, index) => {
