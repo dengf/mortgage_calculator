@@ -1,5 +1,5 @@
 //! `init_storage`, `save_scenario`, `list_scenarios`, `load_scenario`,
-//! `delete_scenario`.
+//! `delete_scenario`, `clear_all_scenarios`.
 //!
 //! The open [`RedbScenarioStore`] lives in a thread-local `Rc` (wasm32 is
 //! single-threaded, so this is just "one instance per page load," not
@@ -106,7 +106,9 @@ async fn save_scenario_impl(params: JsValue) -> SaveScenarioResult {
         id: id.clone(),
         calculator,
         name: params.name,
-        created_at: js_sys::Date::now() as i64,
+        created_at: params
+            .created_at
+            .unwrap_or_else(|| js_sys::Date::now() as i64),
         inputs_json: params.inputs_json,
     };
 
@@ -210,6 +212,35 @@ async fn delete_scenario_impl(id: String) -> DeleteScenarioResult {
     };
 
     match store.delete(&id).await {
+        Ok(()) => DeleteScenarioResult {
+            success: true,
+            error: None,
+        },
+        Err(e) => DeleteScenarioResult {
+            success: false,
+            error: Some(e.to_string()),
+        },
+    }
+}
+
+#[wasm_bindgen]
+pub async fn clear_all_scenarios() -> JsValue {
+    let result = clear_all_scenarios_impl().await;
+    to_js(&result)
+}
+
+async fn clear_all_scenarios_impl() -> DeleteScenarioResult {
+    let store = match get_store() {
+        Ok(s) => s,
+        Err(e) => {
+            return DeleteScenarioResult {
+                error: Some(e),
+                success: false,
+            }
+        }
+    };
+
+    match store.clear().await {
         Ok(()) => DeleteScenarioResult {
             success: true,
             error: None,

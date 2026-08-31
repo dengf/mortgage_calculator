@@ -10,7 +10,7 @@ import { describeDuration, formatDuration } from '../duration';
 import { DEFAULT_RATE, normalizeRate, rateValues, toRateTypeDto } from '../rate';
 import { seedRateForRegion } from '../scenario';
 
-export default function RefinanceCalculator({ wasmModule, region }) {
+export default function RefinanceCalculator({ wasmModule, region, dataVersion }) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   const money = currencySymbol(region);
@@ -195,6 +195,7 @@ export default function RefinanceCalculator({ wasmModule, region }) {
 
       <SavedScenarios
         wasmModule={wasmModule}
+        dataVersion={dataVersion}
         calculatorKind="refinance"
         getCurrentInputs={() => ({
           currentBalance,

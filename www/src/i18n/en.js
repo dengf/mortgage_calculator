@@ -15,15 +15,6 @@ export default {
   'meta.ogTitle': 'Mortgage Calculator — a meifio app',
   'meta.description':
     'Free mortgage calculator for payments, amortization, affordability and refinancing, with Singapore TDSR, CPF and stamp duty built in. Runs entirely in your browser — your numbers never leave your device.',
-  'intro.lead':
-    'Work out what a home really costs — payments, amortization, what you can afford, and whether refinancing pays off.',
-  'intro.privacy':
-    'Everything is calculated in your browser. Nothing you type is sent anywhere, stored, or logged.',
-  'intro.verify':
-    "Don't take our word for it — open your browser's network tab and watch it stay empty.",
-  'intro.depth.US':
-    'Property tax estimated from your ZIP code, PMI, and 2026 conforming loan limits.',
-  'intro.depth.SG': 'MAS TDSR and MSR limits, CPF, LTV ceilings, and IRAS stamp duty.',
   'about.title': 'How these numbers are worked out',
 
   'about.us.payment.q': 'What does the monthly payment include?',
@@ -268,6 +259,19 @@ export default {
   'saved.cancel': 'Cancel',
   'saved.load': 'Load',
   'saved.delete': 'Delete',
+
+  // Your data
+  'data.title': 'Your data',
+  'data.exportHint': 'Download every saved scenario as a single JSON file, or restore one from a file you exported before.',
+  'data.export': 'Export all data',
+  'data.import': 'Import data',
+  'data.clearAll': 'Clear all data',
+  'data.importConfirm': 'Replace every saved scenario with the {count} in that file? What is here now will be gone.',
+  'data.clearConfirm': 'Delete every saved scenario, across every calculator? This cannot be undone.',
+  'data.close': 'Close',
+  'confirm.cancel': 'Cancel',
+  'confirm.replace': 'Replace',
+  'err.badImportFile': "That file isn't a Mortgage Calculator export — nothing was changed.",
 
   // Charts
   'chart.moneyGoes': 'Where your money goes',

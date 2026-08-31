@@ -291,6 +291,10 @@ pub struct SaveScenarioParams {
     pub inputs_json: String,
     /// Omit to create a new scenario; pass an existing id to overwrite it.
     pub id: Option<String>,
+    /// Omit to stamp the current time; pass a value to preserve one read
+    /// back from an import, so a restored scenario doesn't claim to have
+    /// been saved at the moment it was merely re-uploaded.
+    pub created_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -33,6 +33,7 @@ export default function PaymentCalculator({
   region = 'US',
   scenario = DEFAULT_SCENARIO,
   onScenarioChange,
+  dataVersion,
 }) {
   const [sgInputs, setSgInputs] = useState(SG_DEFAULTS);
   const [usInputs, setUsInputs] = useState(US_DEFAULTS);
@@ -194,6 +195,7 @@ export default function PaymentCalculator({
 
       <SavedScenarios
         wasmModule={wasmModule}
+        dataVersion={dataVersion}
         calculatorKind="payment"
         getCurrentInputs={() => ({ ...scenario })}
         onLoad={(inputs) => {

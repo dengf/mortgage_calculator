@@ -92,6 +92,7 @@ export default function ComparisonView({
   region,
   scenario = DEFAULT_SCENARIO,
   onScenarioChange,
+  dataVersion,
 }) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
@@ -306,6 +307,7 @@ export default function ComparisonView({
 
       <SavedScenarios
         wasmModule={wasmModule}
+        dataVersion={dataVersion}
         calculatorKind="comparison"
         getCurrentInputs={() => ({
           homePrice: scenario.homePrice,

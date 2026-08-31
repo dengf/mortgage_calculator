@@ -1,8 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import About from './About';
-import Intro from './Intro';
 import { I18nProvider } from '../i18n';
 
 const show = (Component, region, locale = 'en') =>
@@ -50,19 +49,5 @@ describe('region-scoped explanatory content', () => {
     const { container } = show(About, 'SG', 'zh-Hans');
     expect(container.textContent).toMatch(/公积金/);
     expect(container.textContent).not.toMatch(/Ordinary Account/);
-  });
-});
-
-describe('Intro', () => {
-  it('scopes the capability line to the region', () => {
-    expect(show(Intro, 'US').container.textContent).toMatch(/ZIP code/);
-    expect(show(Intro, 'SG').container.textContent).toMatch(/TDSR/);
-  });
-
-  it('links the privacy notice from the claim it belongs to', () => {
-    show(Intro, 'US');
-    const link = screen.getByRole('link', { name: /privacy/i });
-    // Relative, so it survives the GitHub Pages project subpath.
-    expect(link).toHaveAttribute('href', 'privacy.html');
   });
 });

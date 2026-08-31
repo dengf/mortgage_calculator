@@ -78,6 +78,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn clear_removes_everything() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store.save(scenario("a", "30yr fixed")).await.unwrap();
+        store.save(scenario("b", "15yr fixed")).await.unwrap();
+
+        store.clear().await.unwrap();
+
+        assert_eq!(store.list(None).await.unwrap().len(), 0);
+        assert!(store.load("a").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn clear_then_save_still_works() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store.save(scenario("a", "30yr fixed")).await.unwrap();
+        store.clear().await.unwrap();
+        store.save(scenario("b", "15yr fixed")).await.unwrap();
+
+        let all = store.list(None).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].id, "b");
+    }
+
+    #[tokio::test]
+    async fn clear_on_an_empty_store_does_not_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store.clear().await.unwrap();
+        assert_eq!(store.list(None).await.unwrap().len(), 0);
+    }
+
+    #[tokio::test]
     async fn reopening_the_same_file_persists_data() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("scenarios.redb");

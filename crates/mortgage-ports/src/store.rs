@@ -19,4 +19,7 @@ pub trait ScenarioStore {
     async fn load(&self, id: &str) -> Result<Scenario, StoreError>;
 
     async fn delete(&self, id: &str) -> Result<(), StoreError>;
+
+    /// Removes every scenario, across every calculator.
+    async fn clear(&self) -> Result<(), StoreError>;
 }
