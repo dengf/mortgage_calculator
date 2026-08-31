@@ -149,4 +149,44 @@ describe('YourDataMenu', () => {
     await waitFor(() => expect(onDataChanged).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
+
+  it('shows the store error instead of silently succeeding when clear fails, and leaves the dialog open', async () => {
+    const wasmModule = mockWasmModule({
+      clear_all_scenarios: vi.fn(async () => ({ success: false, error: 'storage quota exceeded' })),
+    });
+    const onDataChanged = vi.fn();
+    render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Clear all data' }));
+
+    expect(await screen.findByText('storage quota exceeded')).toBeInTheDocument();
+    expect(onDataChanged).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('shows the store error instead of silently succeeding when an import fails partway through', async () => {
+    const wasmModule = mockWasmModule({
+      save_scenario: vi.fn(async () => ({ error: 'storage quota exceeded' })),
+    });
+    const onDataChanged = vi.fn();
+    const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+
+    const file = makeFile({
+      format: EXPORT_FORMAT,
+      scenarios: [{ id: 'imp-1', calculator: 'refinance', name: 'Imported', created_at: 1, inputs_json: '{}' }],
+    });
+    const input = container.querySelector('input[type="file"]');
+    await userEvent.upload(input, file);
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Replace' }));
+
+    expect(await screen.findByText('storage quota exceeded')).toBeInTheDocument();
+    expect(onDataChanged).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
 });
