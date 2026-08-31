@@ -44,16 +44,17 @@ impl RedbScenarioStore {
     pub async fn open_wasm() -> Result<Self, StoreError> {
         let bytes = load_blob().await.map_err(StoreError::Backend)?;
 
+        let writer = Rc::new(PersistState::default());
         let backend = IndexedDbBackend {
             buffer: RefCell::new(InMemoryBuffer::new(bytes)),
-            writer: Rc::new(PersistState::default()),
+            writer: writer.clone(),
         };
         let db = Builder::new()
             .set_cache_size(CACHE_SIZE_BYTES)
             .create_with_backend(backend)
             .map_err(|e| StoreError::Backend(e.to_string()))?;
 
-        Ok(Self::from_database(db))
+        Ok(Self::from_database_with_persist(db, writer))
     }
 }
 
@@ -72,9 +73,29 @@ struct IndexedDbBackend {
 /// `pending` is drained in a loop after each flush so the *latest* snapshot
 /// always eventually wins.
 #[derive(Debug, Default)]
-struct PersistState {
+pub(crate) struct PersistState {
     flushing: RefCell<bool>,
     pending: RefCell<Option<Vec<u8>>>,
+    // Resolved (and drained) once `flushing` next goes back to `false` --
+    // lets a caller that just wrote actually wait for that write to reach
+    // IndexedDB, instead of reporting success while the browser still only
+    // holds it in memory. See `wait_idle`.
+    waiters: RefCell<Vec<futures_channel::oneshot::Sender<()>>>,
+}
+
+/// Waits until nothing is queued to persist. A caller that just committed a
+/// write and awaits this before reporting success is protected from the
+/// race a fire-and-forget flush otherwise allows: without it, a page
+/// reload that lands in the gap between "redb committed in memory" and
+/// "the blob actually reached IndexedDB" reloads the *previous* blob,
+/// silently reverting the write with no error anywhere.
+pub(crate) async fn wait_idle(writer: &Rc<PersistState>) {
+    if !*writer.flushing.borrow() {
+        return;
+    }
+    let (tx, rx) = futures_channel::oneshot::channel();
+    writer.waiters.borrow_mut().push(tx);
+    let _ = rx.await;
 }
 
 // Safety: wasm32-unknown-unknown is single-threaded (no shared-memory
@@ -135,6 +156,9 @@ fn spawn_flush_loop(writer: Rc<PersistState>, mut snapshot: Vec<u8>) {
             }
         }
         *writer.flushing.borrow_mut() = false;
+        for tx in writer.waiters.borrow_mut().drain(..) {
+            let _ = tx.send(());
+        }
     });
 }
 
