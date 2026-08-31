@@ -259,6 +259,7 @@ export default {
   'confirm.cancel': '取消',
   'confirm.replace': '替换',
   'err.badImportFile': '该文件不是抵押贷款计算器导出的备份——未做任何更改。',
+  'err.storageUnavailable': '无法访问已保存的数据（{detail}）。未做任何更改——请重试。',
 
   'chart.moneyGoes': '您的钱花在哪里',
   'chart.balanceVsInterest': '剩余本金与已付利息',

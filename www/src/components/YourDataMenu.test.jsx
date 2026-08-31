@@ -167,6 +167,25 @@ describe('YourDataMenu', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('shows a message instead of failing silently when clear_all_scenarios throws rather than returning an error', async () => {
+    const wasmModule = mockWasmModule({
+      clear_all_scenarios: vi.fn(async () => {
+        throw new Error('IndexedDB is unavailable in Private Browsing');
+      }),
+    });
+    const onDataChanged = vi.fn();
+    render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Clear all data' }));
+
+    expect(await screen.findByText(/IndexedDB is unavailable in Private Browsing/)).toBeInTheDocument();
+    expect(onDataChanged).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('shows the store error instead of silently succeeding when an import fails partway through', async () => {
     const wasmModule = mockWasmModule({
       save_scenario: vi.fn(async () => ({ error: 'storage quota exceeded' })),
