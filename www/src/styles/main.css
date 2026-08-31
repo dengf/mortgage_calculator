@@ -24,7 +24,6 @@ body {
   flex-wrap: wrap;
   gap: 16px;
   padding: 24px 0 16px;
-  border-bottom: 1px solid #223;
 }
 
 .app-title {
@@ -79,6 +78,10 @@ body {
   background: #161e2b;
   padding: 4px;
   border-radius: 10px;
+  /* Now a sibling of .app-header rather than nested in it (see Header.jsx),
+     so this margin -- not the header's own flex gap -- is what keeps it
+     visually grouped with the brand/switches row above. */
+  margin: 16px 0 0;
 }
 
 .app-tab {
@@ -129,6 +132,12 @@ body {
 
 .app-main {
   flex: 1;
+  /* The divider that used to be .app-header's own border-bottom, back when
+     the tab nav was its last child. It now sits here instead, since the nav
+     moved out to be sticky-able (see Header.jsx) and content is the next
+     thing after it either way. */
+  margin-top: 16px;
+  border-top: 1px solid #223;
   padding: 24px 0 48px;
 }
 
@@ -664,9 +673,21 @@ body {
   }
 
   /* Wrap onto as many rows as it takes: every tab stays visible and
-     tappable, which a horizontally scrolling strip would not guarantee. */
+     tappable, which a horizontally scrolling strip would not guarantee.
+
+     Sticky rather than fixed: it stays at the top of the viewport once
+     scrolled to, the same visual effect as fixed, without needing extra
+     top-padding elsewhere to keep the first scroll from covering content.
+     On a phone the schedule and report views run long, and switching
+     tabs used to mean scrolling all the way back up first. */
   .app-tabs {
     flex-wrap: wrap;
+    margin-top: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #161e2b;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   }
 
   .app-tab {
@@ -1241,7 +1262,7 @@ body {
      Scoped on `:has(.report)` so that Ctrl+P on any other tab still prints
      that page normally instead of a blank sheet. */
   body:has(.report) .app-header,
-  body:has(.report) .app-nav,
+  body:has(.report) .app-tabs,
   body:has(.report) .app-footer,
   body:has(.report) .panel,
   body:has(.report) .intro,

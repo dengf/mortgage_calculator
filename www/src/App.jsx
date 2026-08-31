@@ -72,7 +72,6 @@ export function AppShell({ wasmModule }) {
         }}
       />
       <main className="app-main">
-        <Intro region={region} />
         <ActivePanel
           wasmModule={wasmModule}
           region={region}
@@ -80,6 +79,7 @@ export function AppShell({ wasmModule }) {
           onScenarioChange={setScenario}
         />
         <About region={region} />
+        <Intro region={region} />
       </main>
       <footer className="app-footer">
         {t('app.footer')} {/* Relative so it resolves under a GitHub Pages project subpath. */}

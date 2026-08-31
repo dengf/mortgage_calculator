@@ -2,7 +2,9 @@ import React from 'react';
 import { useI18n } from '../i18n';
 
 /**
- * What this is, and the one thing that makes it different, above the fold.
+ * What this is, and the one thing that makes it different. Below the
+ * calculator now, not above it -- the tool itself is the first thing on
+ * screen, this is the pitch for people who scroll past it.
  *
  * The privacy claim used to live in the footer, in the smallest and lowest
  * contrast type on the page — the strongest argument the product has, placed
