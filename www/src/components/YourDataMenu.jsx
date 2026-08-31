@@ -65,15 +65,27 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
       );
       if (!proceed) return;
 
-      await wasmModule.clear_all_scenarios();
+      const clearResult = await wasmModule.clear_all_scenarios();
+      if (clearResult.error) {
+        setImportResult({ error: clearResult.error });
+        return;
+      }
       for (const scenario of backup.scenarios) {
-        await wasmModule.save_scenario({
+        const saveResult = await wasmModule.save_scenario({
           calculator: scenario.calculator,
           name: scenario.name,
           inputs_json: scenario.inputs_json,
           id: scenario.id,
           created_at: scenario.created_at,
         });
+        // Stop rather than pressing on into the rest of the file -- the
+        // store is already cleared at this point, so what's imported so
+        // far is genuinely what's there, not a false "done" over a partial
+        // restore.
+        if (saveResult.error) {
+          setImportResult({ error: saveResult.error });
+          return;
+        }
       }
       onDataChanged?.();
       setOpen(false);
@@ -84,7 +96,11 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
   const onClearAll = async () => {
     const proceed = await confirm(t('data.clearConfirm'), t('data.clearAll'));
     if (!proceed) return;
-    await wasmModule.clear_all_scenarios();
+    const result = await wasmModule.clear_all_scenarios();
+    if (result.error) {
+      setImportResult({ error: result.error });
+      return;
+    }
     onDataChanged?.();
     setOpen(false);
   };
