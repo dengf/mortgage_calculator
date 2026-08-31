@@ -34,11 +34,25 @@ const SCENARIOS: TableDefinition<&str, &[u8]> = TableDefinition::new("scenarios"
 /// [`redb::Database`], regardless of what [`redb::StorageBackend`] backs it.
 pub struct RedbScenarioStore {
     db: Database,
+    // Only wasm32 has anything to wait for -- redb's native file backend
+    // fsyncs synchronously inside `commit()`, so a write is already durable
+    // by the time it returns.
+    #[cfg(target_arch = "wasm32")]
+    persist: Option<std::rc::Rc<wasm::PersistState>>,
 }
 
 impl RedbScenarioStore {
+    #[cfg(not(target_arch = "wasm32"))]
     fn from_database(db: Database) -> Self {
         Self { db }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn from_database_with_persist(db: Database, persist: std::rc::Rc<wasm::PersistState>) -> Self {
+        Self {
+            db,
+            persist: Some(persist),
+        }
     }
 
     fn backend_err(e: impl std::fmt::Display) -> StoreError {
@@ -47,6 +61,21 @@ impl RedbScenarioStore {
 
     fn serialization_err(e: impl std::fmt::Display) -> StoreError {
         StoreError::Serialization(e.to_string())
+    }
+
+    /// Waits for a just-committed write to actually reach durable storage.
+    /// A no-op on native (see the `persist` field's doc comment); on
+    /// wasm32, waits for the in-flight IndexedDB flush this write kicked
+    /// off to finish, so a caller only reports success once a page reload
+    /// would actually see the change.
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn wait_for_durability(&self) {}
+
+    #[cfg(target_arch = "wasm32")]
+    async fn wait_for_durability(&self) {
+        if let Some(persist) = &self.persist {
+            wasm::wait_idle(persist).await;
+        }
     }
 }
 
@@ -63,6 +92,7 @@ impl ScenarioStore for RedbScenarioStore {
                 .map_err(Self::backend_err)?;
         }
         write_txn.commit().map_err(Self::backend_err)?;
+        self.wait_for_durability().await;
 
         Ok(())
     }
@@ -114,6 +144,7 @@ impl ScenarioStore for RedbScenarioStore {
             table.remove(id).map_err(Self::backend_err)?;
         }
         write_txn.commit().map_err(Self::backend_err)?;
+        self.wait_for_durability().await;
 
         Ok(())
     }
@@ -128,6 +159,7 @@ impl ScenarioStore for RedbScenarioStore {
             .delete_table(SCENARIOS)
             .map_err(Self::backend_err)?;
         write_txn.commit().map_err(Self::backend_err)?;
+        self.wait_for_durability().await;
 
         Ok(())
     }
