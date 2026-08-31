@@ -16,6 +16,7 @@ export default function AmortizationSchedule({
   region,
   scenario = DEFAULT_SCENARIO,
   onScenarioChange,
+  dataVersion,
 }) {
   const { t, locale } = useI18n();
   const formatMoney = makeFormatMoney(region);
@@ -152,6 +153,7 @@ export default function AmortizationSchedule({
 
       <SavedScenarios
         wasmModule={wasmModule}
+        dataVersion={dataVersion}
         calculatorKind="amortization"
         getCurrentInputs={() => ({
           homePrice: scenario.homePrice,

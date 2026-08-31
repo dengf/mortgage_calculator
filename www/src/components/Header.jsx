@@ -1,6 +1,7 @@
 import React from 'react';
 import { LOCALES, useI18n } from '../i18n';
 import MeifioMark from './MeifioMark';
+import YourDataMenu from './YourDataMenu';
 
 /* The family's home. Moves to https://meifio.app once the domain is live;
    it is a constant so that is a one-line change. */
@@ -20,7 +21,14 @@ const REGIONS = [
   { id: 'SG', label: 'SG' },
 ];
 
-export default function Header({ activeTab, onTabChange, region, onRegionChange }) {
+export default function Header({
+  activeTab,
+  onTabChange,
+  region,
+  onRegionChange,
+  wasmModule,
+  onDataChanged,
+}) {
   const { t, locale, setLocale } = useI18n();
 
   return (
@@ -98,6 +106,7 @@ export default function Header({ activeTab, onTabChange, region, onRegionChange 
             {t(tab.key)}
           </button>
         ))}
+        <YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />
       </nav>
     </>
   );

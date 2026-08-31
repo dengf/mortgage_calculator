@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Header from './components/Header';
-import Intro from './components/Intro';
 import About from './components/About';
 import PaymentCalculator from './components/PaymentCalculator';
 import AmortizationSchedule from './components/AmortizationSchedule';
@@ -40,6 +39,10 @@ export function AppShell({ wasmModule }) {
   const [region, setRegion] = useState(() => detectRegion(wasmModule));
   // One loan, described from several angles — see src/scenario.js.
   const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
+  // Bumped whenever the "Your data" nav menu imports or clears scenarios,
+  // so whichever tab's SavedScenarios list is currently mounted refetches
+  // instead of showing stale entries until the next tab switch remounts it.
+  const [dataVersion, setDataVersion] = useState(0);
   // The market the current loan was seeded for, so a region switch reseeds.
   const seededFor = useRef(null);
   const { t } = useI18n();
@@ -70,6 +73,8 @@ export function AppShell({ wasmModule }) {
           rememberRegion(next);
           setRegion(next);
         }}
+        wasmModule={wasmModule}
+        onDataChanged={() => setDataVersion((v) => v + 1)}
       />
       <main className="app-main">
         <ActivePanel
@@ -77,9 +82,9 @@ export function AppShell({ wasmModule }) {
           region={region}
           scenario={scenario}
           onScenarioChange={setScenario}
+          dataVersion={dataVersion}
         />
         <About region={region} />
-        <Intro region={region} />
       </main>
       <footer className="app-footer">
         {t('app.footer')} {/* Relative so it resolves under a GitHub Pages project subpath. */}

@@ -13,11 +13,6 @@ export default {
   'meta.ogTitle': '房贷计算器 — meifio 出品',
   'meta.description':
     '免费房贷计算器，涵盖月供、还款明细、购房力与再融资，并内置新加坡 TDSR、公积金与印花税规则。全部在浏览器内计算——您的数据不会离开设备。',
-  'intro.lead': '算清一套房的真实成本——月供、还款明细、您能负担多少，以及再融资是否划算。',
-  'intro.privacy': '所有计算都在您的浏览器中完成。您输入的内容不会被发送、存储或记录。',
-  'intro.verify': '不必只听我们说——打开浏览器的网络面板，看它始终是空的。',
-  'intro.depth.US': '按邮编估算房产税、PMI，以及 2026 年合规贷款上限。',
-  'intro.depth.SG': '新加坡金管局 TDSR 与 MSR 上限、公积金、LTV 上限，以及税务局印花税。',
   'about.title': '这些数字是怎么算出来的',
 
   'about.us.payment.q': '月供包含哪些部分？',
@@ -251,6 +246,19 @@ export default {
   'saved.cancel': '取消',
   'saved.load': '载入',
   'saved.delete': '删除',
+
+  // Your data
+  'data.title': '您的数据',
+  'data.exportHint': '将所有已保存的方案下载为单个 JSON 文件，或从之前导出的文件中恢复。',
+  'data.export': '导出所有数据',
+  'data.import': '导入数据',
+  'data.clearAll': '清空所有数据',
+  'data.importConfirm': '用该文件中的 {count} 个方案替换全部已保存方案？现有数据将被清除。',
+  'data.clearConfirm': '删除所有计算器中已保存的全部方案？此操作无法撤销。',
+  'data.close': '关闭',
+  'confirm.cancel': '取消',
+  'confirm.replace': '替换',
+  'err.badImportFile': '该文件不是抵押贷款计算器导出的备份——未做任何更改。',
 
   'chart.moneyGoes': '您的钱花在哪里',
   'chart.balanceVsInterest': '剩余本金与已付利息',

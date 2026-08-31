@@ -19,7 +19,7 @@ const estimateSgd = makeFormatEstimate('SG');
  * duty payable in cash at completion. Every figure below comes from
  * `mortgage_calc::singapore` through the `calculate_sg_affordability` binding.
  */
-export default function SingaporeAffordability({ wasmModule }) {
+export default function SingaporeAffordability({ wasmModule, dataVersion }) {
   const { t } = useI18n();
   const [fixedIncome, setFixedIncome] = useState(12000);
   const [variableIncome, setVariableIncome] = useState(0);
@@ -282,6 +282,7 @@ export default function SingaporeAffordability({ wasmModule }) {
 
       <SavedScenarios
         wasmModule={wasmModule}
+        dataVersion={dataVersion}
         calculatorKind="affordability"
         getCurrentInputs={() => ({
           fixedIncome,

@@ -117,4 +117,18 @@ impl ScenarioStore for RedbScenarioStore {
 
         Ok(())
     }
+
+    async fn clear(&self) -> Result<(), StoreError> {
+        let write_txn = self.db.begin_write().map_err(Self::backend_err)?;
+        // Dropping the whole table rather than removing each row: `list`
+        // and `load` already treat a missing table as "empty" (see their
+        // `TableDoesNotExist` handling above), and `save` re-creates it on
+        // the next write via `open_table`, so this is a safe, atomic clear.
+        write_txn
+            .delete_table(SCENARIOS)
+            .map_err(Self::backend_err)?;
+        write_txn.commit().map_err(Self::backend_err)?;
+
+        Ok(())
+    }
 }

@@ -865,42 +865,6 @@ body {
   color: var(--text, #e6ecf3);
 }
 
-/* The pitch, above the calculator. The privacy claim is the strongest thing
-   this product can say and it used to be footer text in the lowest-contrast
-   style on the page. */
-.intro {
-  margin: 0 0 20px;
-  padding: 0 2px;
-}
-
-.intro-lead {
-  margin: 0 0 10px;
-  font-size: 1.05rem;
-  line-height: 1.55;
-  color: var(--text, #e6ecf3);
-  max-width: 68ch;
-}
-
-.intro-privacy {
-  margin: 0 0 8px;
-  font-size: 0.92rem;
-  line-height: 1.55;
-  color: var(--text, #e6ecf3);
-  max-width: 68ch;
-}
-
-.intro-verify {
-  color: var(--muted, #8b98a9);
-}
-
-.intro-depth {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--muted, #8b98a9);
-  max-width: 68ch;
-}
-
 /* Explanatory content under the calculator: useful to read, and the only
    substantial indexable text on the page. */
 .about {
@@ -975,11 +939,6 @@ body {
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--text, #e6ecf3);
-}
-
-/* The privacy notice, linked from the claim it belongs to. */
-.intro-privacy-link {
-  white-space: nowrap;
 }
 
 /* The reverted rate and instalment, shown under the promotional ones. Muted
@@ -1265,7 +1224,6 @@ body {
   body:has(.report) .app-tabs,
   body:has(.report) .app-footer,
   body:has(.report) .panel,
-  body:has(.report) .intro,
   body:has(.report) .about {
     display: none !important;
   }
@@ -1503,6 +1461,167 @@ body {
 .secondary-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.danger-button {
+  background: #ff8a8a;
+  color: #3a1d1d;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:hover {
+  background: #ffa8a8;
+}
+
+/* "Your data" nav dropdown -- same backdrop+dialog pattern as
+   .confirm-backdrop below, own namespaced classes per this codebase's
+   convention of not sharing one generic popup class across unrelated
+   components. */
+.data-menu {
+  display: inline-flex;
+}
+
+/* A caret marks this as a dropdown, not a sixth tab -- the other tabs
+   switch the main panel, this one opens a popup instead, and nothing
+   else in the row hints at that difference otherwise. */
+.data-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.data-menu-caret {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.data-menu-trigger[aria-expanded='true'] .data-menu-caret {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .data-menu-caret {
+    transition: none;
+  }
+}
+
+.data-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+.data-menu-dialog {
+  background: #161e2b;
+  border: 1px solid #2a3546;
+  border-radius: 14px;
+  padding: 22px;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.data-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.data-menu-title {
+  font-weight: 700;
+}
+
+.data-menu-close {
+  background: none;
+  border: none;
+  color: #9fb0c3;
+  cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.data-menu-close:hover {
+  color: #e6edf3;
+}
+
+.data-menu-hint {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #9fb0c3;
+}
+
+/* Stacked, full-width actions -- three independent one-shot actions, not
+   a choice between two, so a vertical list reads clearer than a row. */
+.data-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.data-menu-actions .secondary-button,
+.data-menu-actions .danger-button {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* Confirm dialog */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+.confirm-dialog {
+  background: #161e2b;
+  border: 1px solid #2a3546;
+  border-radius: 14px;
+  padding: 22px;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.confirm-message {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.confirm-actions .secondary-button,
+.confirm-actions .danger-button {
+  min-height: 44px;
 }
 
 .report-confirm {

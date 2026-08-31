@@ -6,7 +6,7 @@ import { currencySymbol, makeFormatEstimate, makeFormatMoney } from '../currency
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 
-export default function AffordabilityCalculator({ wasmModule, region }) {
+export default function AffordabilityCalculator({ wasmModule, region, dataVersion }) {
   const { t } = useI18n();
   const formatMoney = makeFormatMoney(region);
   // Ceilings are estimates, not quotes — see makeFormatEstimate.
@@ -142,6 +142,7 @@ export default function AffordabilityCalculator({ wasmModule, region }) {
 
       <SavedScenarios
         wasmModule={wasmModule}
+        dataVersion={dataVersion}
         calculatorKind="affordability"
         getCurrentInputs={() => ({
           income,

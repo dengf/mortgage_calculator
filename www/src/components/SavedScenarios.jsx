@@ -1,7 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
 
-export default function SavedScenarios({ wasmModule, calculatorKind, getCurrentInputs, onLoad }) {
+export default function SavedScenarios({
+  wasmModule,
+  calculatorKind,
+  getCurrentInputs,
+  onLoad,
+  dataVersion,
+}) {
   const { t } = useI18n();
   const [scenarios, setScenarios] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -17,7 +23,11 @@ export default function SavedScenarios({ wasmModule, calculatorKind, getCurrentI
     }
     setError(null);
     setScenarios(result.scenarios);
-  }, [wasmModule, calculatorKind]);
+    // dataVersion isn't read here -- it's a dependency purely so an
+    // import/clear-all from the nav's "Your data" menu (which bumps it)
+    // triggers this same refetch, instead of the list going stale until
+    // the next tab switch remounts this component.
+  }, [wasmModule, calculatorKind, dataVersion]);
 
   useEffect(() => {
     refresh();
