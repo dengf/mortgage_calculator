@@ -3,6 +3,15 @@ import { useI18n } from '../i18n';
 import { EXPORT_FORMAT, readBackup } from '../backup';
 import { useConfirm } from './ConfirmDialog';
 
+// A thrown value here is whatever the wasm boundary happened to reject
+// with -- not guaranteed to be an `Error`, so this is deliberately
+// defensive rather than assuming `.message` exists.
+function describeError(err) {
+  if (err instanceof Error && err.message) return err.message;
+  const text = String(err);
+  return text && text !== '[object Object]' ? text : 'unknown error';
+}
+
 /**
  * "Your data" as a nav-level dropdown rather than a tab -- it isn't a
  * page of its own, just three one-shot actions (export/import/clear)
@@ -39,6 +48,12 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
     URL.revokeObjectURL(url);
   };
 
+  // Every wasm-boundary call below is wrapped in try/catch, not just
+  // checked for a returned `{error}` -- a *thrown* exception (an IndexedDB
+  // failure inside a WebKit browser's private-mode quirks, a wasm panic, a
+  // rejected promise) otherwise dies silently inside this async handler:
+  // no `result.error` to display, nothing in the UI, no way for someone
+  // who can't reach devtools to even report what went wrong.
   const onImportFile = (e) => {
     const file = e.target.files?.[0];
     // Reset immediately so picking the same file twice still fires a change.
@@ -65,30 +80,34 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
       );
       if (!proceed) return;
 
-      const clearResult = await wasmModule.clear_all_scenarios();
-      if (clearResult.error) {
-        setImportResult({ error: clearResult.error });
-        return;
-      }
-      for (const scenario of backup.scenarios) {
-        const saveResult = await wasmModule.save_scenario({
-          calculator: scenario.calculator,
-          name: scenario.name,
-          inputs_json: scenario.inputs_json,
-          id: scenario.id,
-          created_at: scenario.created_at,
-        });
-        // Stop rather than pressing on into the rest of the file -- the
-        // store is already cleared at this point, so what's imported so
-        // far is genuinely what's there, not a false "done" over a partial
-        // restore.
-        if (saveResult.error) {
-          setImportResult({ error: saveResult.error });
+      try {
+        const clearResult = await wasmModule.clear_all_scenarios();
+        if (clearResult.error) {
+          setImportResult({ error: clearResult.error });
           return;
         }
+        for (const scenario of backup.scenarios) {
+          const saveResult = await wasmModule.save_scenario({
+            calculator: scenario.calculator,
+            name: scenario.name,
+            inputs_json: scenario.inputs_json,
+            id: scenario.id,
+            created_at: scenario.created_at,
+          });
+          // Stop rather than pressing on into the rest of the file -- the
+          // store is already cleared at this point, so what's imported so
+          // far is genuinely what's there, not a false "done" over a partial
+          // restore.
+          if (saveResult.error) {
+            setImportResult({ error: saveResult.error });
+            return;
+          }
+        }
+        onDataChanged?.();
+        setOpen(false);
+      } catch (err) {
+        setImportResult({ error: t('err.storageUnavailable', { detail: describeError(err) }) });
       }
-      onDataChanged?.();
-      setOpen(false);
     };
     reader.readAsText(file);
   };
@@ -96,13 +115,17 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
   const onClearAll = async () => {
     const proceed = await confirm(t('data.clearConfirm'), t('data.clearAll'));
     if (!proceed) return;
-    const result = await wasmModule.clear_all_scenarios();
-    if (result.error) {
-      setImportResult({ error: result.error });
-      return;
+    try {
+      const result = await wasmModule.clear_all_scenarios();
+      if (result.error) {
+        setImportResult({ error: result.error });
+        return;
+      }
+      onDataChanged?.();
+      setOpen(false);
+    } catch (err) {
+      setImportResult({ error: t('err.storageUnavailable', { detail: describeError(err) }) });
     }
-    onDataChanged?.();
-    setOpen(false);
   };
 
   const openMenu = () => {
@@ -173,8 +196,12 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
                 type="button"
                 className="secondary-button"
                 onClick={async () => {
-                  await exportData();
-                  setOpen(false);
+                  try {
+                    await exportData();
+                    setOpen(false);
+                  } catch (err) {
+                    setImportResult({ error: t('err.storageUnavailable', { detail: describeError(err) }) });
+                  }
                 }}
               >
                 {t('data.export')}

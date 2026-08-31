@@ -264,6 +264,7 @@ export default {
   'confirm.cancel': '取消',
   'confirm.replace': '取代',
   'err.badImportFile': '該檔案不是房貸計算機匯出的備份——未做任何變更。',
+  'err.storageUnavailable': '無法存取已儲存的資料（{detail}）。未做任何變更——請再試一次。',
 
   'chart.moneyGoes': '您的錢花在哪裡',
   'chart.balanceVsInterest': '剩餘本金與已付利息',

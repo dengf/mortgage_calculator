@@ -272,6 +272,7 @@ export default {
   'confirm.cancel': 'Cancel',
   'confirm.replace': 'Replace',
   'err.badImportFile': "That file isn't a Mortgage Calculator export — nothing was changed.",
+  'err.storageUnavailable': "Couldn't reach your saved data ({detail}). Nothing was changed — try again.",
 
   // Charts
   'chart.moneyGoes': 'Where your money goes',
