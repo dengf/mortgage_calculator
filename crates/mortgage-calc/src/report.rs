@@ -369,10 +369,18 @@ fn at_reversion(loan: &Loan, rows: &[crate::amortization::AmortizationRow]) -> (
         return (loan.principal(), total);
     };
 
-    let balance = rows
-        .get(reversion.after_periods as usize - 1)
-        .map(|row| row.remaining_balance)
-        .unwrap_or(loan.principal());
+    // `after_periods` payments have been made by the time the reversion
+    // takes effect. For `after_periods == 0` that's none at all -- the
+    // balance is still the untouched principal -- and indexing
+    // `rows[after_periods - 1]` would underflow, so that case is handled
+    // separately rather than folded into the lookup below.
+    let balance = if reversion.after_periods == 0 {
+        loan.principal()
+    } else {
+        rows.get(reversion.after_periods as usize - 1)
+            .map(|row| row.remaining_balance)
+            .unwrap_or(loan.principal())
+    };
 
     (balance, total.saturating_sub(reversion.after_periods))
 }

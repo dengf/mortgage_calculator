@@ -202,6 +202,7 @@ export default function PaymentCalculator({
           onChange={setUsInputs}
           result={usResult}
           homePrice={homePrice}
+          wasmModule={wasmModule}
         />
       )}
 

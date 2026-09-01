@@ -26,6 +26,19 @@ export function describeDuration(wasmModule, periods, frequency) {
 }
 
 /**
+ * The inverse of `describeDuration`: how many payment periods a term
+ * entered in years comes to at `frequency`. `PaymentFrequency` is the one
+ * table of periods-per-year in this app; multiplying years by 12 here would
+ * be a second, monthly-only copy of it.
+ */
+export function periodsInYears(wasmModule, years, frequency) {
+  if (!wasmModule?.periods_in_years) return 0;
+  return (
+    wasmModule.periods_in_years({ years: Number(years) || 0, frequency })?.periods ?? 0
+  );
+}
+
+/**
  * "10 yr 7 mo", dropping whichever half is zero so exact spans read cleanly
  * rather than as "20 yr 0 mo".
  */

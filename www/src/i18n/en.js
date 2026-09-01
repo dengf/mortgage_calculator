@@ -259,6 +259,7 @@ export default {
   'saved.cancel': 'Cancel',
   'saved.load': 'Load',
   'saved.delete': 'Delete',
+  'saved.deleteConfirm': 'Delete "{name}"? This cannot be undone.',
 
   // Your data
   'data.title': 'Your data',

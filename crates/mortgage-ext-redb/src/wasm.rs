@@ -42,7 +42,9 @@ impl RedbScenarioStore {
     /// [`IndexedDbBackend`]. Must run before any other wasm-bindgen call
     /// touches storage.
     pub async fn open_wasm() -> Result<Self, StoreError> {
-        let bytes = load_blob().await.map_err(StoreError::Backend)?;
+        let bytes = load_blob_with_timeout()
+            .await
+            .map_err(StoreError::Backend)?;
 
         let writer = Rc::new(PersistState::default());
         let backend = IndexedDbBackend {
@@ -161,7 +163,7 @@ impl StorageBackend for IndexedDbBackend {
 fn spawn_flush_loop(writer: Rc<PersistState>, mut snapshot: Vec<u8>) {
     wasm_bindgen_futures::spawn_local(async move {
         loop {
-            if let Err(e) = persist_blob(snapshot).await {
+            if let Err(e) = persist_blob_with_timeout(snapshot).await {
                 web_sys::console::error_1(
                     &format!("mortgage-ext-redb: persist failed: {e}").into(),
                 );
@@ -187,6 +189,24 @@ async fn open_object_store() -> Result<Rexie, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Bounds the initial IndexedDB read the same way [`wait_idle`] bounds a
+/// write's durability wait, and for the same reason: `load_blob` can stall
+/// forever on the same browsers `DURABILITY_TIMEOUT_MS` documents. Unlike a
+/// write, there is no fallback data to fall back to here, so a timeout is
+/// reported as an error rather than papered over with an empty store --
+/// `init_storage()` rejecting is what lets `www/src/index.js` degrade to
+/// its unavailable-engine fallback and still render, instead of the page
+/// never getting past the `await` before `root.render(...)`.
+async fn load_blob_with_timeout() -> Result<Vec<u8>, String> {
+    let timeout = gloo_timers::future::TimeoutFuture::new(DURABILITY_TIMEOUT_MS);
+    match futures_util::future::select(Box::pin(load_blob()), timeout).await {
+        futures_util::future::Either::Left((result, _)) => result,
+        futures_util::future::Either::Right(((), _)) => {
+            Err("timed out reading the saved data from IndexedDB".to_string())
+        }
+    }
+}
+
 async fn load_blob() -> Result<Vec<u8>, String> {
     let rexie = open_object_store().await?;
 
@@ -205,6 +225,26 @@ async fn load_blob() -> Result<Vec<u8>, String> {
         return Ok(Vec::new());
     };
     Ok(js_sys::Uint8Array::new(&value).to_vec())
+}
+
+/// Bounds a single persist attempt so [`spawn_flush_loop`] always reaches
+/// its cleanup (`flushing = false`, waiters drained) even when the
+/// underlying IndexedDB write stalls forever instead of settling either
+/// way. Without this, that one stalled write wedges `flushing` at `true`
+/// permanently: every later `sync_data()` just overwrites `pending` instead
+/// of starting a new flush, and [`wait_idle`]'s own timeout keeps reporting
+/// success on writes that are never reaching storage, with nothing ever
+/// logged. Dropping the timed-out future here doesn't cancel the
+/// already-issued IndexedDB request -- it may still complete in the
+/// background -- it only stops this loop from waiting on it forever.
+async fn persist_blob_with_timeout(bytes: Vec<u8>) -> Result<(), String> {
+    let timeout = gloo_timers::future::TimeoutFuture::new(DURABILITY_TIMEOUT_MS);
+    match futures_util::future::select(Box::pin(persist_blob(bytes)), timeout).await {
+        futures_util::future::Either::Left((result, _)) => result,
+        futures_util::future::Either::Right(((), _)) => {
+            Err("timed out writing to IndexedDB".to_string())
+        }
+    }
 }
 
 async fn persist_blob(bytes: Vec<u8>) -> Result<(), String> {

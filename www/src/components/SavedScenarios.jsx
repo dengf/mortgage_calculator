@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
+import { useConfirm } from './ConfirmDialog';
 
 export default function SavedScenarios({
   wasmModule,
@@ -13,6 +14,7 @@ export default function SavedScenarios({
   const [isSaving, setIsSaving] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [error, setError] = useState(null);
+  const [confirm, confirmDialog] = useConfirm();
 
   const refresh = useCallback(async () => {
     if (!wasmModule) return;
@@ -60,7 +62,9 @@ export default function SavedScenarios({
     onLoad(JSON.parse(result.scenario.inputs_json));
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, name) => {
+    const proceed = await confirm(t('saved.deleteConfirm', { name }), t('saved.delete'));
+    if (!proceed) return;
     await wasmModule.delete_scenario(id);
     refresh();
   };
@@ -105,13 +109,14 @@ export default function SavedScenarios({
               <button className="link-button" onClick={() => handleLoad(s.id)}>
                 {t('saved.load')}
               </button>
-              <button className="link-button danger" onClick={() => handleDelete(s.id)}>
+              <button className="link-button danger" onClick={() => handleDelete(s.id, s.name)}>
                 {t('saved.delete')}
               </button>
             </li>
           ))}
         </ul>
       )}
+      {confirmDialog}
     </div>
   );
 }

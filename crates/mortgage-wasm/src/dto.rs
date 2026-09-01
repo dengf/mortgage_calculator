@@ -376,9 +376,17 @@ pub struct UnitedStatesResult {
     pub property_tax_rate_percent: Option<f64>,
     pub monthly_property_tax: f64,
     pub down_payment: f64,
-    pub down_payment_percent: f64,
+    /// `None` without a home price to divide by -- see
+    /// `mortgage_calc::scenario::Scenario::down_payment_percent`. Rendering
+    /// 0% for an unfilled price would state something the inputs don't.
+    pub down_payment_percent: Option<f64>,
     pub pmi_required: bool,
     pub monthly_pmi: f64,
+    /// `mortgage_calc::united_states::PMI_DOWN_PAYMENT_THRESHOLD`, as a
+    /// percentage. Carried over so a front end explaining *why* PMI applies
+    /// (or what down payment would avoid it) reads the threshold from here
+    /// rather than hardcoding a second copy of it.
+    pub pmi_down_payment_threshold_percent: f64,
     /// Principal, interest, taxes and insurance. `None` without a payment.
     pub monthly_piti: Option<f64>,
     /// Both `None` unless the deduction estimate is switched on.

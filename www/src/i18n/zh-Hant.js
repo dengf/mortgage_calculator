@@ -251,6 +251,7 @@ export default {
   'saved.cancel': '取消',
   'saved.load': '載入',
   'saved.delete': '刪除',
+  'saved.deleteConfirm': '刪除「{name}」？此操作無法復原。',
 
   // Your data
   'data.title': '您的資料',

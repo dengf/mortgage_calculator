@@ -62,18 +62,15 @@ fn united_states_from_params(p: UnitedStatesParams) -> UnitedStatesResult {
     result.monthly_property_tax = decimal_to_f64(monthly_property_tax);
 
     let down_payment = (home_price - principal).max(Decimal::ZERO);
-    let down_payment_percent = if home_price > Decimal::ZERO {
-        down_payment / home_price
-    } else {
-        Decimal::ZERO
-    };
+    let scenario = mortgage_calc::scenario::Scenario::new(home_price, down_payment);
+    let down_payment_percent = scenario.down_payment_percent();
     result.down_payment = decimal_to_f64(round_currency(down_payment));
-    result.down_payment_percent = decimal_to_f64(down_payment_percent) * 100.0;
+    result.down_payment_percent = down_payment_percent.map(decimal_to_f64);
 
     // Without a home price there's no down payment to judge, so PMI can't be
     // said to be required -- rather than reading 0% down and demanding it.
-    let pmi_required =
-        home_price > Decimal::ZERO && united_states::requires_pmi(down_payment_percent);
+    let pmi_required = down_payment_percent
+        .is_some_and(|percent| united_states::requires_pmi(percent / Decimal::ONE_HUNDRED));
     result.pmi_required = pmi_required;
 
     let pmi_rate = p
@@ -87,6 +84,8 @@ fn united_states_from_params(p: UnitedStatesParams) -> UnitedStatesResult {
         Decimal::ZERO
     };
     result.monthly_pmi = decimal_to_f64(monthly_pmi);
+    result.pmi_down_payment_threshold_percent =
+        decimal_to_f64(united_states::PMI_DOWN_PAYMENT_THRESHOLD) * 100.0;
 
     if let Some(pi) = finite_positive(p.monthly_pi) {
         let pi = f64_to_decimal(pi);
@@ -173,9 +172,25 @@ mod tests {
     fn no_pmi_at_or_above_twenty_percent_down() {
         // 500k price, 400k loan = exactly 20% down.
         let r = united_states_from_params(params());
-        assert_eq!(r.down_payment_percent, 20.0);
+        assert_eq!(r.down_payment_percent, Some(20.0));
         assert!(!r.pmi_required);
         assert_eq!(r.monthly_pmi, 0.0);
+    }
+
+    #[test]
+    fn down_payment_percent_is_absent_without_a_price_to_divide_by() {
+        let r = united_states_from_params(UnitedStatesParams {
+            home_price: 0.0,
+            ..params()
+        });
+        assert_eq!(r.down_payment_percent, None);
+        assert!(!r.pmi_required);
+    }
+
+    #[test]
+    fn pmi_threshold_is_read_from_the_core_constant() {
+        let r = united_states_from_params(params());
+        assert_eq!(r.pmi_down_payment_threshold_percent, 20.0);
     }
 
     #[test]

@@ -12,7 +12,7 @@
 //! - [`singapore`] — `calculate_singapore`
 //! - [`united_states`] — `calculate_united_states`
 //! - [`region`] — `detect_region`
-//! - [`duration`] — `describe_duration`
+//! - [`duration`] — `describe_duration`, `periods_in_years`
 //! - [`scenario`] — `summarize_scenario`, `down_payment_for_percent`
 //! - [`storage`] (wasm32 only) — `init_storage`, `save_scenario`,
 //!   `list_scenarios`, `load_scenario`, `delete_scenario`, backed by

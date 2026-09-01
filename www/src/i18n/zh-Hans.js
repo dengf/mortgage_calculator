@@ -246,6 +246,7 @@ export default {
   'saved.cancel': '取消',
   'saved.load': '载入',
   'saved.delete': '删除',
+  'saved.deleteConfirm': '删除“{name}”？此操作无法撤销。',
 
   // Your data
   'data.title': '您的数据',
