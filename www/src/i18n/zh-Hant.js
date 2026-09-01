@@ -13,6 +13,8 @@
 export default {
   'app.title': '房貸試算器',
   'app.byline': '— {logo} 出品',
+  'app.updateAvailable': '房貸試算器已有新版本。',
+  'app.reload': '重新整理',
   'meta.title': '房貸試算器 — 月供、還款明細、購房力與再融資 | meifio',
   'meta.ogTitle': '房貸試算器 — meifio 出品',
   'meta.description':
@@ -266,6 +268,7 @@ export default {
   'confirm.replace': '取代',
   'err.badImportFile': '該檔案不是房貸計算機匯出的備份——未做任何變更。',
   'err.storageUnavailable': '無法存取已儲存的資料（{detail}）。未做任何變更——請再試一次。',
+  'errors.dismiss': '關閉',
 
   'chart.moneyGoes': '您的錢花在哪裡',
   'chart.balanceVsInterest': '剩餘本金與已付利息',

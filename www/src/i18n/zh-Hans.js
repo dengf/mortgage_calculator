@@ -9,6 +9,8 @@
 export default {
   'app.title': '房贷计算器',
   'app.byline': '— {logo} 出品',
+  'app.updateAvailable': '房贷计算器已有新版本。',
+  'app.reload': '刷新',
   'meta.title': '房贷计算器 — 月供、还款明细、购房力与再融资 | meifio',
   'meta.ogTitle': '房贷计算器 — meifio 出品',
   'meta.description':
@@ -261,6 +263,7 @@ export default {
   'confirm.replace': '替换',
   'err.badImportFile': '该文件不是抵押贷款计算器导出的备份——未做任何更改。',
   'err.storageUnavailable': '无法访问已保存的数据（{detail}）。未做任何更改——请重试。',
+  'errors.dismiss': '关闭',
 
   'chart.moneyGoes': '您的钱花在哪里',
   'chart.balanceVsInterest': '剩余本金与已付利息',

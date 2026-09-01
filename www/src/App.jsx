@@ -8,6 +8,7 @@ import SingaporeAffordability from './components/SingaporeAffordability';
 import RefinanceCalculator from './components/RefinanceCalculator';
 import ComparisonView from './components/ComparisonView';
 import ReportView from './components/ReportView';
+import UpdateBanner from './components/UpdateBanner';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
 import { DEFAULT_SCENARIO, seedRateForRegion } from './scenario';
 import { detectRegion, rememberRegion } from './region';
@@ -114,6 +115,7 @@ export function AppShell({ wasmModule }) {
         {' · '}
         <a href="https://github.com/dengf/mortgage_calculator">{t('app.source')}</a>
       </footer>
+      <UpdateBanner />
     </div>
   );
 }
