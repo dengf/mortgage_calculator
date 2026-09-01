@@ -74,4 +74,15 @@ describe('the module used when the engine cannot be loaded', () => {
 
     expect((await m.list_scenarios('refinance')).scenarios).toHaveLength(0);
   });
+
+  it('clears all saved scenarios, since YourDataMenu calls this unconditionally', async () => {
+    const m = createUnavailableModule();
+    await m.save_scenario({ calculator: 'payment', name: 'p', inputs_json: '{}' });
+    await m.save_scenario({ calculator: 'refinance', name: 'r', inputs_json: '{}' });
+
+    const result = await m.clear_all_scenarios();
+
+    expect(result.error).toBeNull();
+    expect((await m.list_scenarios()).scenarios).toHaveLength(0);
+  });
 });
