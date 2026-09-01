@@ -756,6 +756,36 @@ body {
   .comparison-entry-field input {
     width: 64px;
   }
+
+  /* The rate-shape picker (Fixed/Reverting) and the $/% unit toggle are
+     both small chip rows -- exactly where a target can look fine at
+     desktop padding and still measure well under the 44px minimum. */
+  .rate-kind {
+    gap: 8px;
+  }
+
+  .kind-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+  }
+
+  .field-unit-toggle {
+    gap: 8px;
+  }
+
+  .field-unit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 420px) {
