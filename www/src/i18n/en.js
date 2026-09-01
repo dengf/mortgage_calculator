@@ -11,6 +11,8 @@ export default {
   // App shell
   'app.title': 'Mortgage Calculator',
   'app.byline': '— a {logo} app',
+  'app.updateAvailable': 'A new version of Mortgage Calculator is ready.',
+  'app.reload': 'Reload',
   'meta.title': 'Mortgage Calculator — Payments, Amortization, Affordability & Refinance | meifio',
   'meta.ogTitle': 'Mortgage Calculator — a meifio app',
   'meta.description':
@@ -274,6 +276,7 @@ export default {
   'confirm.replace': 'Replace',
   'err.badImportFile': "That file isn't a Mortgage Calculator export — nothing was changed.",
   'err.storageUnavailable': "Couldn't reach your saved data ({detail}). Nothing was changed — try again.",
+  'errors.dismiss': 'Dismiss',
 
   // Charts
   'chart.moneyGoes': 'Where your money goes',

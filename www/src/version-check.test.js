@@ -112,6 +112,25 @@ describe('startVersionCheck', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
+  it('notifies onStale instead of reloading once the tab is in use and visible', async () => {
+    const replace = stubLocation();
+    respondWith('old111'); // matches current build -- nothing stale yet
+    const { startVersionCheck } = await loadModule('old111');
+    const onStale = vi.fn();
+
+    startVersionCheck({ onStale });
+    await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    // A deploy lands while the tab stays open and focused (document.hidden
+    // is false by default in jsdom) -- reloading would discard whatever
+    // the visitor has typed, so this must notify instead of navigating.
+    respondWith('new999');
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await vi.waitFor(() => expect(onStale).toHaveBeenCalledWith('new999'));
+    expect(replace).not.toHaveBeenCalled();
+  });
+
   it('is inert outside a webpack build, where no id is compiled in', async () => {
     const replace = stubLocation();
     globalThis.fetch = vi.fn();

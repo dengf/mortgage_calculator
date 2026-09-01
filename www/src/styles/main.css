@@ -1685,3 +1685,65 @@ body {
   gap: 10px;
   flex-wrap: wrap;
 }
+
+/* Update banner -- tells someone a new deploy landed while their tab stayed
+   open and focused, since version-check.js can't safely reload out from
+   under them in that state. See UpdateBanner.jsx's own doc comment. */
+.toast-region {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 480px;
+  width: 100%;
+  background: #161e2b;
+  border: 1px solid #2a3546;
+  color: #e6edf3;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.toast-message {
+  flex: 1 1 auto;
+}
+
+.toast .secondary-button {
+  flex: none;
+  min-height: 44px;
+}
+
+.toast-dismiss {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-dismiss:hover {
+  color: #7ee787;
+}
