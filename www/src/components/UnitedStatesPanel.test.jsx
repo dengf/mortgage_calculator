@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import UnitedStatesPanel from './UnitedStatesPanel';
+import { scenarioBindings } from '../test/wasm';
 
 const inputs = {
   home_price: 500000,
@@ -20,6 +21,7 @@ const result = {
   down_payment_percent: 20,
   pmi_required: false,
   monthly_pmi: 0,
+  pmi_down_payment_threshold_percent: 20,
   monthly_piti: 2819.94,
   monthly_tax_savings: null,
   net_monthly_cost: null,
@@ -47,13 +49,27 @@ describe('UnitedStatesPanel', () => {
         inputs={inputs}
         onChange={() => {}}
         homePrice={440000}
+        wasmModule={scenarioBindings()}
         result={{ ...result, pmi_required: true, monthly_pmi: 250, down_payment_percent: 9.1 }}
       />,
     );
 
     expect(screen.getByText('PMI (required)')).toBeInTheDocument();
-    // 20% of 440,000
+    // pmi_down_payment_threshold_percent (20) of homePrice, read from the
+    // result rather than a JS-side copy of the PMI threshold.
     expect(screen.getByText(/\$88,000\.00 removes it/)).toBeInTheDocument();
+  });
+
+  it('handles no down-payment percent yet, rather than crashing on a missing home price', () => {
+    render(
+      <UnitedStatesPanel
+        inputs={inputs}
+        onChange={() => {}}
+        result={{ ...result, down_payment_percent: null }}
+      />,
+    );
+
+    expect(screen.getByText('$100,000.00')).toBeInTheDocument();
   });
 
   it('explains an unrecognized ZIP rather than silently taxing at zero', () => {

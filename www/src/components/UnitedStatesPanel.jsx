@@ -2,6 +2,7 @@ import React from 'react';
 import NumberField from './NumberField';
 import { makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
+import { downPaymentForPercent } from '../scenario';
 
 // This panel only ever renders under the US region, so its currency is
 // fixed rather than passed in.
@@ -15,7 +16,7 @@ const formatUsd = makeFormatMoney('US');
  * Every figure comes from `mortgage_calc::united_states` through the
  * `calculate_united_states` binding — no US rules are reimplemented here.
  */
-export default function UnitedStatesPanel({ inputs, onChange, result, homePrice }) {
+export default function UnitedStatesPanel({ inputs, onChange, result, homePrice, wasmModule }) {
   const { t } = useI18n();
   const set = (key) => (value) => onChange({ ...inputs, [key]: value });
 
@@ -89,8 +90,10 @@ export default function UnitedStatesPanel({ inputs, onChange, result, homePrice 
             <div className="stat">
               <span className="stat-label">{t('us.downPayment')}</span>
               <span className="stat-value">
-                {formatUsd(result.down_payment)}{' '}
-                <small>({result.down_payment_percent.toFixed(1)}%)</small>
+                {formatUsd(result.down_payment)}
+                {result.down_payment_percent != null && (
+                  <> <small>({result.down_payment_percent.toFixed(1)}%)</small></>
+                )}
               </span>
             </div>
             <div className="stat">
@@ -132,7 +135,15 @@ export default function UnitedStatesPanel({ inputs, onChange, result, homePrice 
 
           {result.pmi_required && (
             <p className="chart-note">
-              {t('us.pmiHint', { amount: formatUsd((Number(homePrice) || 0) * 0.2) })}
+              {t('us.pmiHint', {
+                amount: formatUsd(
+                  downPaymentForPercent(
+                    wasmModule,
+                    homePrice,
+                    result.pmi_down_payment_threshold_percent,
+                  ) ?? 0,
+                ),
+              })}
             </p>
           )}
         </>
