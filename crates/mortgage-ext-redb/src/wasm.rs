@@ -83,19 +83,35 @@ pub(crate) struct PersistState {
     waiters: RefCell<Vec<futures_channel::oneshot::Sender<()>>>,
 }
 
-/// Waits until nothing is queued to persist. A caller that just committed a
-/// write and awaits this before reporting success is protected from the
-/// race a fire-and-forget flush otherwise allows: without it, a page
-/// reload that lands in the gap between "redb committed in memory" and
-/// "the blob actually reached IndexedDB" reloads the *previous* blob,
-/// silently reverting the write with no error anywhere.
+/// How long a caller will wait for a write to actually reach IndexedDB
+/// before giving up and returning anyway. A normal flush settles in a
+/// handful of milliseconds (open the store, one `put`, done) — this exists
+/// for the browsers where it doesn't: IndexedDB disabled, storage quota
+/// exhausted, or some WebKit-specific stall that never fires a callback
+/// either way. Bounding the wait trades "verified durable" back down to
+/// "probably durable" on exactly those browsers, which is still strictly
+/// better than the alternative: a save or clear that never returns, and an
+/// app that looks hung. See the incident this guarded against -- a first
+/// version of this wait had no bound and turned "your data doesn't survive
+/// a reload" into "the app doesn't respond at all" on a device where the
+/// flush apparently never settles either way.
+const DURABILITY_TIMEOUT_MS: u32 = 3_000;
+
+/// Waits until nothing is queued to persist, or [`DURABILITY_TIMEOUT_MS`]
+/// elapses, whichever comes first. A caller that just committed a write
+/// and awaits this before reporting success is protected from the race a
+/// fire-and-forget flush otherwise allows: without it, a page reload that
+/// lands in the gap between "redb committed in memory" and "the blob
+/// actually reached IndexedDB" reloads the *previous* blob, silently
+/// reverting the write with no error anywhere.
 pub(crate) async fn wait_idle(writer: &Rc<PersistState>) {
     if !*writer.flushing.borrow() {
         return;
     }
     let (tx, rx) = futures_channel::oneshot::channel();
     writer.waiters.borrow_mut().push(tx);
-    let _ = rx.await;
+    let timeout = gloo_timers::future::TimeoutFuture::new(DURABILITY_TIMEOUT_MS);
+    futures_util::future::select(rx, timeout).await;
 }
 
 // Safety: wasm32-unknown-unknown is single-threaded (no shared-memory

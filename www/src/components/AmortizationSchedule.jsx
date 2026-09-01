@@ -10,6 +10,7 @@ import { allFilled } from '../inputs';
 import { describeDuration, formatDuration, payoffDate } from '../duration';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 import { normalizeRate, rateValues, toRateTypeDto } from '../rate';
+import { useCurrentInputs } from '../currentInputs';
 
 export default function AmortizationSchedule({
   wasmModule,
@@ -26,6 +27,17 @@ export default function AmortizationSchedule({
   // the headline figure there.
   const [extraPayment, setExtraPayment] = useState(0);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
+
+  // Only extraPayment -- homePrice/rate/termYears/frequency are the shared
+  // scenario, auto-persisted once in AppShell rather than per-tab.
+  useCurrentInputs({
+    wasmModule,
+    storageKey: 'amortization-extras',
+    getCurrentInputs: () => ({ extraPayment }),
+    onLoad: (inputs) => setExtraPayment(inputs?.extraPayment ?? 0),
+    dataVersion,
+    defaultInputs: { extraPayment: 0 },
+  });
 
   const { rate, termYears, frequency } = scenario;
   const { principal } = useScenarioSummary(wasmModule, scenario);

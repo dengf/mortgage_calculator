@@ -19,6 +19,8 @@ wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["console"] }
 futures-channel = { version = "0.3", default-features = false, features = ["alloc"] }
+futures-util = { version = "0.3", default-features = false, features = ["std", "async-await"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }

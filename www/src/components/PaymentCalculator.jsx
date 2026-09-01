@@ -9,6 +9,7 @@ import { allFilled, useSticky } from '../inputs';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 import { normalizeRate, rateValues, toRateTypeDto } from '../rate';
 import { useI18n } from '../i18n';
+import { useCurrentInputs } from '../currentInputs';
 
 const US_DEFAULTS = {
   zip: '90210',
@@ -37,6 +38,21 @@ export default function PaymentCalculator({
 }) {
   const [sgInputs, setSgInputs] = useState(SG_DEFAULTS);
   const [usInputs, setUsInputs] = useState(US_DEFAULTS);
+
+  // Not captured by <SavedScenarios>'s getCurrentInputs/onLoad below --
+  // widening that pair would change what an explicit "Save current as..."
+  // captures, an unrelated behavior change to an already-hardened feature.
+  useCurrentInputs({
+    wasmModule,
+    storageKey: 'payment-extras',
+    getCurrentInputs: () => ({ sgInputs, usInputs }),
+    onLoad: (inputs) => {
+      if (inputs?.sgInputs) setSgInputs(inputs.sgInputs);
+      if (inputs?.usInputs) setUsInputs(inputs.usInputs);
+    },
+    dataVersion,
+    defaultInputs: { sgInputs: SG_DEFAULTS, usInputs: US_DEFAULTS },
+  });
 
   // Read from the shared scenario rather than local state, so a loan dialled
   // in here survives a move to Amortization or Compare.

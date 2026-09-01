@@ -8,6 +8,7 @@ import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 import { DEFAULT_RATE, rateFromPreset, toRateTypeDto } from '../rate';
+import { useCurrentInputs } from '../currentInputs';
 
 let nextId = 0;
 const newId = () => `entry-${nextId++}`;
@@ -131,6 +132,18 @@ export default function ComparisonView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, region]);
+
+  // Only `entries` — homePrice/downPayment/frequency are the shared
+  // scenario, auto-persisted once in AppShell rather than per-tab.
+  useCurrentInputs({
+    wasmModule,
+    storageKey: 'comparison-entries',
+    getCurrentInputs: () => entries,
+    onLoad: (persisted) =>
+      setEntries((persisted ?? []).map((e) => ({ ...EMPTY_ENTRY, ...e, id: newId() }))),
+    dataVersion,
+    defaultInputs: [],
+  });
 
   const result = useMemo(() => {
     if (!wasmModule || entries.length === 0) return null;

@@ -15,6 +15,7 @@ function mockWasmModule(overrides = {}) {
     })),
     save_scenario: vi.fn(async () => ({ id: 'x', error: null })),
     clear_all_scenarios: vi.fn(async () => ({ success: true, error: null })),
+    clear_current_inputs: vi.fn(async () => ({ success: true, error: null })),
     ...overrides,
   };
 }
@@ -95,6 +96,9 @@ describe('YourDataMenu', () => {
     );
     await waitFor(() => expect(onDataChanged).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // Import-replace only touches the named-scenario store -- it must not
+    // wipe whatever the user is mid-typing on an unrelated tab.
+    expect(wasmModule.clear_current_inputs).not.toHaveBeenCalled();
   });
 
   it('leaves the data cleared alone when the replace is cancelled', async () => {
@@ -148,6 +152,18 @@ describe('YourDataMenu', () => {
     await waitFor(() => expect(wasmModule.clear_all_scenarios).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onDataChanged).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('clears the in-progress draft alongside saved scenarios, not just on import', async () => {
+    const wasmModule = mockWasmModule();
+    render(<YourDataMenu wasmModule={wasmModule} onDataChanged={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Clear all data' }));
+
+    await waitFor(() => expect(wasmModule.clear_current_inputs).toHaveBeenCalledTimes(1));
   });
 
   it('shows the store error instead of silently succeeding when clear fails, and leaves the dialog open', async () => {

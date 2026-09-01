@@ -29,6 +29,7 @@ use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use mortgage_ports::{CalculatorKind, Scenario, ScenarioStore, StoreError};
 
 const SCENARIOS: TableDefinition<&str, &[u8]> = TableDefinition::new("scenarios");
+const CURRENT_INPUTS: TableDefinition<&str, &[u8]> = TableDefinition::new("current_inputs");
 
 /// Shared [`ScenarioStore`] implementation over an already-open
 /// [`redb::Database`], regardless of what [`redb::StorageBackend`] backs it.
@@ -157,6 +158,50 @@ impl ScenarioStore for RedbScenarioStore {
         // the next write via `open_table`, so this is a safe, atomic clear.
         write_txn
             .delete_table(SCENARIOS)
+            .map_err(Self::backend_err)?;
+        write_txn.commit().map_err(Self::backend_err)?;
+        self.wait_for_durability().await;
+
+        Ok(())
+    }
+
+    async fn save_current(&self, key: &str, inputs_json: String) -> Result<(), StoreError> {
+        let write_txn = self.db.begin_write().map_err(Self::backend_err)?;
+        {
+            let mut table = write_txn
+                .open_table(CURRENT_INPUTS)
+                .map_err(Self::backend_err)?;
+            table
+                .insert(key, inputs_json.as_bytes())
+                .map_err(Self::backend_err)?;
+        }
+        write_txn.commit().map_err(Self::backend_err)?;
+        self.wait_for_durability().await;
+
+        Ok(())
+    }
+
+    async fn load_current(&self, key: &str) -> Result<Option<String>, StoreError> {
+        let read_txn = self.db.begin_read().map_err(Self::backend_err)?;
+        let table = match read_txn.open_table(CURRENT_INPUTS) {
+            Ok(table) => table,
+            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+            Err(e) => return Err(Self::backend_err(e)),
+        };
+
+        let Some(value) = table.get(key).map_err(Self::backend_err)? else {
+            return Ok(None);
+        };
+
+        String::from_utf8(value.value().to_vec())
+            .map(Some)
+            .map_err(Self::serialization_err)
+    }
+
+    async fn clear_current_inputs(&self) -> Result<(), StoreError> {
+        let write_txn = self.db.begin_write().map_err(Self::backend_err)?;
+        write_txn
+            .delete_table(CURRENT_INPUTS)
             .map_err(Self::backend_err)?;
         write_txn.commit().map_err(Self::backend_err)?;
         self.wait_for_durability().await;

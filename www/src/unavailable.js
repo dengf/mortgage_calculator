@@ -72,5 +72,18 @@ export function createUnavailableModule() {
       this._scenarios = this._scenarios.filter((s) => s.id !== id);
       return { success: true, error: null };
     },
+
+    _currentInputs: {},
+    save_current_inputs: async function (key, inputsJson) {
+      this._currentInputs[key] = inputsJson;
+      return { success: true, error: null };
+    },
+    load_current_inputs: async function (key) {
+      return { inputs_json: this._currentInputs[key] ?? null, error: null };
+    },
+    clear_current_inputs: async function () {
+      this._currentInputs = {};
+      return { success: true, error: null };
+    },
   };
 }

@@ -17,8 +17,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::convert::{calculator_kind_to_str, parse_calculator_kind, to_js};
 use crate::dto::{
-    DeleteScenarioResult, SaveScenarioParams, SaveScenarioResult, ScenarioDto, ScenarioListResult,
-    ScenarioResult,
+    CurrentInputsResult, DeleteScenarioResult, SaveScenarioParams, SaveScenarioResult, ScenarioDto,
+    ScenarioListResult, ScenarioResult,
 };
 use crate::message::Message;
 
@@ -241,6 +241,93 @@ async fn clear_all_scenarios_impl() -> DeleteScenarioResult {
     };
 
     match store.clear().await {
+        Ok(()) => DeleteScenarioResult {
+            success: true,
+            error: None,
+        },
+        Err(e) => DeleteScenarioResult {
+            success: false,
+            error: Some(e.to_string()),
+        },
+    }
+}
+
+#[wasm_bindgen]
+pub async fn save_current_inputs(key: String, inputs_json: String) -> JsValue {
+    let result = save_current_inputs_impl(key, inputs_json).await;
+    to_js(&result)
+}
+
+async fn save_current_inputs_impl(key: String, inputs_json: String) -> DeleteScenarioResult {
+    let store = match get_store() {
+        Ok(s) => s,
+        Err(e) => {
+            return DeleteScenarioResult {
+                error: Some(e),
+                success: false,
+            }
+        }
+    };
+
+    match store.save_current(&key, inputs_json).await {
+        Ok(()) => DeleteScenarioResult {
+            success: true,
+            error: None,
+        },
+        Err(e) => DeleteScenarioResult {
+            success: false,
+            error: Some(e.to_string()),
+        },
+    }
+}
+
+#[wasm_bindgen]
+pub async fn load_current_inputs(key: String) -> JsValue {
+    let result = load_current_inputs_impl(key).await;
+    to_js(&result)
+}
+
+async fn load_current_inputs_impl(key: String) -> CurrentInputsResult {
+    let store = match get_store() {
+        Ok(s) => s,
+        Err(e) => {
+            return CurrentInputsResult {
+                error: Some(e),
+                ..Default::default()
+            }
+        }
+    };
+
+    match store.load_current(&key).await {
+        Ok(inputs_json) => CurrentInputsResult {
+            inputs_json,
+            error: None,
+        },
+        Err(e) => CurrentInputsResult {
+            error: Some(e.to_string()),
+            ..Default::default()
+        },
+    }
+}
+
+#[wasm_bindgen]
+pub async fn clear_current_inputs() -> JsValue {
+    let result = clear_current_inputs_impl().await;
+    to_js(&result)
+}
+
+async fn clear_current_inputs_impl() -> DeleteScenarioResult {
+    let store = match get_store() {
+        Ok(s) => s,
+        Err(e) => {
+            return DeleteScenarioResult {
+                error: Some(e),
+                success: false,
+            }
+        }
+    };
+
+    match store.clear_current_inputs().await {
         Ok(()) => DeleteScenarioResult {
             success: true,
             error: None,
