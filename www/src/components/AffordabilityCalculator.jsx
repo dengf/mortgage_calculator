@@ -5,6 +5,19 @@ import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatEstimate, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
+import { useCurrentInputs } from '../currentInputs';
+
+const DEFAULTS = {
+  income: 10000,
+  debts: 500,
+  downPayment: 60000,
+  rate: 6.5,
+  termYears: 30,
+  maxDti: 36,
+  taxRate: 1.2,
+  insurance: 1500,
+  hoa: 0,
+};
 
 export default function AffordabilityCalculator({ wasmModule, region, dataVersion }) {
   const { t } = useI18n();
@@ -12,15 +25,47 @@ export default function AffordabilityCalculator({ wasmModule, region, dataVersio
   // Ceilings are estimates, not quotes — see makeFormatEstimate.
   const formatEstimate = makeFormatEstimate(region);
   const money = currencySymbol(region);
-  const [income, setIncome] = useState(10000);
-  const [debts, setDebts] = useState(500);
-  const [downPayment, setDownPayment] = useState(60000);
-  const [rate, setRate] = useState(6.5);
-  const [termYears, setTermYears] = useState(30);
-  const [maxDti, setMaxDti] = useState(36);
-  const [taxRate, setTaxRate] = useState(1.2);
-  const [insurance, setInsurance] = useState(1500);
-  const [hoa, setHoa] = useState(0);
+  const [income, setIncome] = useState(DEFAULTS.income);
+  const [debts, setDebts] = useState(DEFAULTS.debts);
+  const [downPayment, setDownPayment] = useState(DEFAULTS.downPayment);
+  const [rate, setRate] = useState(DEFAULTS.rate);
+  const [termYears, setTermYears] = useState(DEFAULTS.termYears);
+  const [maxDti, setMaxDti] = useState(DEFAULTS.maxDti);
+  const [taxRate, setTaxRate] = useState(DEFAULTS.taxRate);
+  const [insurance, setInsurance] = useState(DEFAULTS.insurance);
+  const [hoa, setHoa] = useState(DEFAULTS.hoa);
+
+  const getCurrentInputs = () => ({
+    income,
+    debts,
+    downPayment,
+    rate,
+    termYears,
+    maxDti,
+    taxRate,
+    insurance,
+    hoa,
+  });
+  const onLoad = (inputs) => {
+    setIncome(inputs.income);
+    setDebts(inputs.debts);
+    setDownPayment(inputs.downPayment);
+    setRate(inputs.rate);
+    setTermYears(inputs.termYears);
+    setMaxDti(inputs.maxDti);
+    setTaxRate(inputs.taxRate);
+    setInsurance(inputs.insurance);
+    setHoa(inputs.hoa);
+  };
+
+  useCurrentInputs({
+    wasmModule,
+    storageKey: 'affordability-us',
+    getCurrentInputs,
+    onLoad,
+    dataVersion,
+    defaultInputs: DEFAULTS,
+  });
 
   const result = useMemo(() => {
     if (!wasmModule) return null;
@@ -144,28 +189,8 @@ export default function AffordabilityCalculator({ wasmModule, region, dataVersio
         wasmModule={wasmModule}
         dataVersion={dataVersion}
         calculatorKind="affordability"
-        getCurrentInputs={() => ({
-          income,
-          debts,
-          downPayment,
-          rate,
-          termYears,
-          maxDti,
-          taxRate,
-          insurance,
-          hoa,
-        })}
-        onLoad={(inputs) => {
-          setIncome(inputs.income);
-          setDebts(inputs.debts);
-          setDownPayment(inputs.downPayment);
-          setRate(inputs.rate);
-          setTermYears(inputs.termYears);
-          setMaxDti(inputs.maxDti);
-          setTaxRate(inputs.taxRate);
-          setInsurance(inputs.insurance);
-          setHoa(inputs.hoa);
-        }}
+        getCurrentInputs={getCurrentInputs}
+        onLoad={onLoad}
       />
     </section>
   );

@@ -4,11 +4,28 @@ import SavedScenarios from './SavedScenarios';
 import { makeFormatEstimate, makeFormatMoney } from './../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
+import { useCurrentInputs } from '../currentInputs';
 
 // This panel only renders under the SG region, so its currency is fixed.
 const formatSgd = makeFormatMoney('SG');
 // Ceilings are estimates, not quotes — see makeFormatEstimate.
 const estimateSgd = makeFormatEstimate('SG');
+
+const DEFAULTS = {
+  fixedIncome: 12000,
+  variableIncome: 0,
+  debts: 0,
+  cash: 400000,
+  cpf: 0,
+  rate: 1.42,
+  thereafterRate: 1.72,
+  termYears: 25,
+  age: 35,
+  isHdb: false,
+  residency: 'Citizen',
+  propertyCount: '1st',
+  outstandingLoans: 0,
+};
 
 /**
  * Singapore affordability: how much property a buyer can actually complete on.
@@ -21,22 +38,63 @@ const estimateSgd = makeFormatEstimate('SG');
  */
 export default function SingaporeAffordability({ wasmModule, dataVersion }) {
   const { t } = useI18n();
-  const [fixedIncome, setFixedIncome] = useState(12000);
-  const [variableIncome, setVariableIncome] = useState(0);
-  const [debts, setDebts] = useState(0);
-  const [cash, setCash] = useState(400000);
-  const [cpf, setCpf] = useState(0);
+  const [fixedIncome, setFixedIncome] = useState(DEFAULTS.fixedIncome);
+  const [variableIncome, setVariableIncome] = useState(DEFAULTS.variableIncome);
+  const [debts, setDebts] = useState(DEFAULTS.debts);
+  const [cash, setCash] = useState(DEFAULTS.cash);
+  const [cpf, setCpf] = useState(DEFAULTS.cpf);
   // The rate the package opens at, and the one it steps up to. Singapore
   // packages are quoted this way and MAS assesses servicing on the second --
   // see mortgage-calc/src/singapore.rs.
-  const [rate, setRate] = useState(1.42);
-  const [thereafterRate, setThereafterRate] = useState(1.72);
-  const [termYears, setTermYears] = useState(25);
-  const [age, setAge] = useState(35);
-  const [isHdb, setIsHdb] = useState(false);
-  const [residency, setResidency] = useState('Citizen');
-  const [propertyCount, setPropertyCount] = useState('1st');
-  const [outstandingLoans, setOutstandingLoans] = useState(0);
+  const [rate, setRate] = useState(DEFAULTS.rate);
+  const [thereafterRate, setThereafterRate] = useState(DEFAULTS.thereafterRate);
+  const [termYears, setTermYears] = useState(DEFAULTS.termYears);
+  const [age, setAge] = useState(DEFAULTS.age);
+  const [isHdb, setIsHdb] = useState(DEFAULTS.isHdb);
+  const [residency, setResidency] = useState(DEFAULTS.residency);
+  const [propertyCount, setPropertyCount] = useState(DEFAULTS.propertyCount);
+  const [outstandingLoans, setOutstandingLoans] = useState(DEFAULTS.outstandingLoans);
+
+  // Wider than <SavedScenarios>'s own getCurrentInputs/onLoad below (which
+  // predates thereafterRate and doesn't capture it) -- that pair is the
+  // named-save feature and is left as-is; this auto-persist can capture
+  // everything the form actually shows.
+  useCurrentInputs({
+    wasmModule,
+    storageKey: 'affordability-sg',
+    getCurrentInputs: () => ({
+      fixedIncome,
+      variableIncome,
+      debts,
+      cash,
+      cpf,
+      rate,
+      thereafterRate,
+      termYears,
+      age,
+      isHdb,
+      residency,
+      propertyCount,
+      outstandingLoans,
+    }),
+    onLoad: (inputs) => {
+      setFixedIncome(inputs.fixedIncome);
+      setVariableIncome(inputs.variableIncome);
+      setDebts(inputs.debts);
+      setCash(inputs.cash);
+      setCpf(inputs.cpf);
+      setRate(inputs.rate);
+      setThereafterRate(inputs.thereafterRate);
+      setTermYears(inputs.termYears);
+      setAge(inputs.age);
+      setIsHdb(inputs.isHdb);
+      setResidency(inputs.residency);
+      setPropertyCount(inputs.propertyCount);
+      setOutstandingLoans(inputs.outstandingLoans);
+    },
+    dataVersion,
+    defaultInputs: DEFAULTS,
+  });
 
   const result = useMemo(() => {
     if (!wasmModule?.calculate_sg_affordability) return null;

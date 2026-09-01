@@ -333,6 +333,16 @@ pub struct DeleteScenarioResult {
     pub error: Option<String>,
 }
 
+/// The in-progress inputs for one host-chosen key, as persisted by
+/// `save_current_inputs`/`load_current_inputs` — separate from the named
+/// [`Scenario`](mortgage_ports::Scenario) save/load feature above.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct CurrentInputsResult {
+    /// `None` when nothing has been saved under this key yet.
+    pub inputs_json: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Inputs for the United States panel.
 ///
 /// `monthly_pi` is the principal-and-interest payment from whichever

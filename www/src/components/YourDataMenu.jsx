@@ -121,6 +121,15 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
         setImportResult({ error: result.error });
         return;
       }
+      // A separate call, not folded into clear_all_scenarios: that call is
+      // also used internally by import-replace, and wiping the in-progress
+      // draft there too would silently blank whatever a user is mid-typing
+      // on an unrelated tab with no warning in the import confirm dialog.
+      const draftResult = await wasmModule.clear_current_inputs();
+      if (draftResult.error) {
+        setImportResult({ error: draftResult.error });
+        return;
+      }
       onDataChanged?.();
       setOpen(false);
     } catch (err) {

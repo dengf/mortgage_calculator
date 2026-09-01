@@ -9,22 +9,32 @@ import { allFilled } from '../inputs';
 import { describeDuration, formatDuration } from '../duration';
 import { DEFAULT_RATE, normalizeRate, rateValues, toRateTypeDto } from '../rate';
 import { seedRateForRegion } from '../scenario';
+import { useRegionAwareCurrentInputs } from '../currentInputs';
 
-export default function RefinanceCalculator({ wasmModule, region, dataVersion }) {
-  const { t } = useI18n();
-  const formatMoney = makeFormatMoney(region);
-  const money = currencySymbol(region);
-  const [currentBalance, setCurrentBalance] = useState(300000);
-  const [currentRate, setCurrentRate] = useState(7.5);
-  const [remainingPeriods, setRemainingPeriods] = useState(300);
+const DEFAULTS = {
+  currentBalance: 300000,
+  currentRate: 7.5,
+  remainingPeriods: 300,
   // The loan being refinanced *into* is a quote like any other, and in
   // Singapore refinancing means moving onto another package that steps up
   // after its own lock-in. A single "New rate" box could only describe the
   // promotional years of it -- which is exactly the number a switch gets
   // sold on, and the first one to stop being true.
-  const [newRate, setNewRate] = useState({ ...DEFAULT_RATE, ratePercent: 6.0 });
-  const [newTermYears, setNewTermYears] = useState(30);
-  const [closingCosts, setClosingCosts] = useState(6000);
+  newRate: { ...DEFAULT_RATE, ratePercent: 6.0 },
+  newTermYears: 30,
+  closingCosts: 6000,
+};
+
+export default function RefinanceCalculator({ wasmModule, region, dataVersion }) {
+  const { t } = useI18n();
+  const formatMoney = makeFormatMoney(region);
+  const money = currencySymbol(region);
+  const [currentBalance, setCurrentBalance] = useState(DEFAULTS.currentBalance);
+  const [currentRate, setCurrentRate] = useState(DEFAULTS.currentRate);
+  const [remainingPeriods, setRemainingPeriods] = useState(DEFAULTS.remainingPeriods);
+  const [newRate, setNewRate] = useState(DEFAULTS.newRate);
+  const [newTermYears, setNewTermYears] = useState(DEFAULTS.newTermYears);
+  const [closingCosts, setClosingCosts] = useState(DEFAULTS.closingCosts);
   const seededFor = useRef(null);
 
   useEffect(() => {
@@ -37,6 +47,42 @@ export default function RefinanceCalculator({ wasmModule, region, dataVersion })
     setNewRate(seeded.rate);
     setNewTermYears(seeded.termYears);
   }, [wasmModule, region]);
+
+  useRegionAwareCurrentInputs({
+    wasmModule,
+    storageKey: 'refinance',
+    region,
+    getCurrentInputs: () => ({
+      currentBalance,
+      currentRate,
+      remainingPeriods,
+      newRate,
+      newTermYears,
+      closingCosts,
+    }),
+    onLoad: (inputs) => {
+      setCurrentBalance(inputs.currentBalance);
+      setCurrentRate(inputs.currentRate);
+      setRemainingPeriods(inputs.remainingPeriods);
+      setNewRate(normalizeRate(inputs.newRate));
+      setNewTermYears(inputs.newTermYears);
+      setClosingCosts(inputs.closingCosts);
+    },
+    reseedForRegion: (rest) => {
+      const seeded = seedRateForRegion(wasmModule, region, {
+        rate: normalizeRate(rest.newRate),
+        termYears: rest.newTermYears,
+      });
+      return { ...rest, newRate: seeded.rate, newTermYears: seeded.termYears };
+    },
+    // The restore effect already decided whether to reseed for this region;
+    // stop the plain reseed effect above from redundantly re-firing for it.
+    onHydrated: () => {
+      seededFor.current = region;
+    },
+    dataVersion,
+    defaultInputs: DEFAULTS,
+  });
 
   const newRateType = toRateTypeDto(newRate);
   const newRateKey = JSON.stringify(newRateType);

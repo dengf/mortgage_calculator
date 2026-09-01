@@ -115,6 +115,116 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn save_then_load_current_returns_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store
+            .save_current("payment", "{\"homePrice\":600000}".to_string())
+            .await
+            .unwrap();
+
+        let loaded = store.load_current("payment").await.unwrap();
+        assert_eq!(loaded, Some("{\"homePrice\":600000}".to_string()));
+    }
+
+    #[tokio::test]
+    async fn load_current_with_nothing_saved_returns_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        assert_eq!(store.load_current("payment").await.unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn save_current_overwrites_previous_value_for_same_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store
+            .save_current("payment", "{\"homePrice\":500000}".to_string())
+            .await
+            .unwrap();
+        store
+            .save_current("payment", "{\"homePrice\":700000}".to_string())
+            .await
+            .unwrap();
+
+        let loaded = store.load_current("payment").await.unwrap();
+        assert_eq!(loaded, Some("{\"homePrice\":700000}".to_string()));
+    }
+
+    #[tokio::test]
+    async fn distinct_keys_do_not_collide() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store
+            .save_current("affordability-us", "{\"income\":10000}".to_string())
+            .await
+            .unwrap();
+        store
+            .save_current("affordability-sg", "{\"cpf\":true}".to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            store.load_current("affordability-us").await.unwrap(),
+            Some("{\"income\":10000}".to_string())
+        );
+        assert_eq!(
+            store.load_current("affordability-sg").await.unwrap(),
+            Some("{\"cpf\":true}".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn clear_current_inputs_removes_current_inputs_but_not_scenarios() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store.save(scenario("a", "30yr fixed")).await.unwrap();
+        store
+            .save_current("payment", "{\"homePrice\":600000}".to_string())
+            .await
+            .unwrap();
+
+        store.clear_current_inputs().await.unwrap();
+
+        assert_eq!(store.load_current("payment").await.unwrap(), None);
+        assert_eq!(store.list(None).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn clear_of_scenarios_does_not_touch_current_inputs() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store.save(scenario("a", "30yr fixed")).await.unwrap();
+        store
+            .save_current("payment", "{\"homePrice\":600000}".to_string())
+            .await
+            .unwrap();
+
+        store.clear().await.unwrap();
+
+        assert_eq!(store.list(None).await.unwrap().len(), 0);
+        assert_eq!(
+            store.load_current("payment").await.unwrap(),
+            Some("{\"homePrice\":600000}".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn clear_current_inputs_on_an_empty_store_does_not_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = RedbScenarioStore::open(dir.path().join("scenarios.redb")).unwrap();
+
+        store.clear_current_inputs().await.unwrap();
+        assert_eq!(store.load_current("payment").await.unwrap(), None);
+    }
+
+    #[tokio::test]
     async fn reopening_the_same_file_persists_data() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("scenarios.redb");

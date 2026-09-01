@@ -11,6 +11,7 @@ import ReportView from './components/ReportView';
 import { I18nProvider, detectLocale, useI18n } from './i18n';
 import { DEFAULT_SCENARIO, seedRateForRegion } from './scenario';
 import { detectRegion, rememberRegion } from './region';
+import { useRegionAwareCurrentInputs } from './currentInputs';
 
 const PANELS = {
   payment: PaymentCalculator,
@@ -59,6 +60,27 @@ export function AppShell({ wasmModule }) {
     seededFor.current = region;
     setScenario((current) => seedRateForRegion(wasmModule, region, current));
   }, [wasmModule, region]);
+
+  // Restores the shared scenario once, here rather than in each tab: Payment,
+  // Amortization and Compare all share this one object (that's the entire
+  // reason it lives in AppShell, not a child) — restoring it per-tab would
+  // let switching tabs mid-edit clobber whatever was just typed with a
+  // stale copy saved under a different tab's key.
+  useRegionAwareCurrentInputs({
+    wasmModule,
+    storageKey: 'scenario',
+    region,
+    getCurrentInputs: () => scenario,
+    onLoad: setScenario,
+    reseedForRegion: (rest) => seedRateForRegion(wasmModule, region, rest),
+    // The restore effect already decided whether to reseed for this region;
+    // stop the plain reseed effect above from redundantly re-firing for it.
+    onHydrated: () => {
+      seededFor.current = region;
+    },
+    dataVersion,
+    defaultInputs: DEFAULT_SCENARIO,
+  });
 
   return (
     <div className="app">
