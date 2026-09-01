@@ -19,6 +19,7 @@ const duration = (months) => ({
 function mockWasm(overrides = {}) {
   return {
     describe_duration: vi.fn(({ periods }) => duration(periods)),
+    periods_in_years: vi.fn(({ years }) => ({ periods: Math.round(years * 12) })),
     calculate_refinance: vi.fn(() => ({
       current_payment: 2216.04,
       new_payment: 1798.65,

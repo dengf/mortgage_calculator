@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::convert::{decimal_to_f64, parse_frequency, to_js};
+use crate::convert::{decimal_to_f64, f64_to_decimal, parse_frequency, to_js};
 
 #[derive(Debug, Default, Deserialize)]
 pub struct DurationParams {
@@ -61,6 +61,43 @@ fn duration_of(params: &DurationParams) -> DurationResult {
     }
 }
 
+/// The inverse of [`describe_duration`]: how many payment periods a term
+/// entered in years comes to at a given cadence. `PaymentFrequency` is the
+/// one table of periods-per-year in this app -- a front end that multiplies
+/// years by 12 itself is a second, monthly-only copy of it that silently
+/// mis-converts every other cadence.
+#[derive(Debug, Default, Deserialize)]
+pub struct PeriodsInYearsParams {
+    #[serde(default)]
+    pub years: f64,
+    #[serde(default)]
+    pub frequency: Option<String>,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub struct PeriodsInYearsResult {
+    pub periods: u32,
+}
+
+#[wasm_bindgen]
+pub fn periods_in_years(params: JsValue) -> JsValue {
+    let result = periods_in_years_impl(params);
+    to_js(&result)
+}
+
+fn periods_in_years_impl(params: JsValue) -> PeriodsInYearsResult {
+    let params: PeriodsInYearsParams = serde_wasm_bindgen::from_value(params).unwrap_or_default();
+    periods_in_years_of(&params)
+}
+
+/// The `JsValue`-free core, so this is testable on the native host.
+fn periods_in_years_of(params: &PeriodsInYearsParams) -> PeriodsInYearsResult {
+    let frequency = parse_frequency(params.frequency.as_deref());
+    PeriodsInYearsResult {
+        periods: frequency.periods_in_years(f64_to_decimal(params.years)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,5 +134,23 @@ mod tests {
     #[test]
     fn an_unknown_cadence_falls_back_to_monthly() {
         assert_eq!(describe(12, "fortnightly-ish").periods_per_year, 12);
+    }
+
+    fn periods(years: f64, frequency: &str) -> u32 {
+        periods_in_years_of(&PeriodsInYearsParams {
+            years,
+            frequency: Some(frequency.to_string()),
+        })
+        .periods
+    }
+
+    #[test]
+    fn thirty_years_monthly_is_three_hundred_sixty_periods() {
+        assert_eq!(periods(30.0, "monthly"), 360);
+    }
+
+    #[test]
+    fn ten_years_biweekly_is_measured_against_its_own_cadence_not_twelve() {
+        assert_eq!(periods(10.0, "biweekly"), 260);
     }
 }

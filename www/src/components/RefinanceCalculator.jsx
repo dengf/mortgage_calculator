@@ -6,7 +6,7 @@ import SavedScenarios from './SavedScenarios';
 import { currencySymbol, makeFormatMoney } from '../currency';
 import { useI18n } from '../i18n';
 import { allFilled } from '../inputs';
-import { describeDuration, formatDuration } from '../duration';
+import { describeDuration, formatDuration, periodsInYears } from '../duration';
 import { DEFAULT_RATE, normalizeRate, rateValues, toRateTypeDto } from '../rate';
 import { seedRateForRegion } from '../scenario';
 import { useRegionAwareCurrentInputs } from '../currentInputs';
@@ -123,9 +123,9 @@ export default function RefinanceCalculator({ wasmModule, region, dataVersion })
   // payment and lengthens the debt. Both facts matter.
   //
   // Refinance quotes are monthly here because `remainingPeriods` is entered
-  // as a number of monthly payments; the conversion to years and months is
-  // the core's either way.
-  const newPeriods = Math.round(Number(newTermYears) * 12);
+  // as a number of monthly payments; the years-to-periods conversion and
+  // the years/months breakdown are both the core's either way.
+  const newPeriods = periodsInYears(wasmModule, newTermYears, 'monthly');
   const newTerm = describeDuration(wasmModule, newPeriods, 'monthly');
   const remaining = describeDuration(wasmModule, remainingPeriods, 'monthly');
   const extra = describeDuration(wasmModule, newPeriods - Number(remainingPeriods), 'monthly');
