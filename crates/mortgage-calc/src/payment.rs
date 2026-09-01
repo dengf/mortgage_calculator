@@ -1,7 +1,7 @@
 //! Standard amortizing payment formula and lifetime cost summary.
 
 use mortgage_core::round_currency;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::Loan;
@@ -16,7 +16,19 @@ pub(crate) fn payment_factor(periodic_rate: Decimal, total_periods: u32) -> Deci
         return Decimal::ONE / Decimal::from(total_periods);
     }
 
-    let growth = (Decimal::ONE + periodic_rate).powi(total_periods as i64);
+    let base = Decimal::ONE + periodic_rate;
+    let mut growth = Decimal::ONE;
+    for _ in 0..total_periods {
+        growth = match growth.checked_mul(base) {
+            Some(next) => next,
+            // (1+r)^n has overflowed Decimal's range -- no loan in this app
+            // is meant to reach a rate this extreme, but nothing upstream
+            // guarantees it. At that scale k = r*g/(g-1) is converging on
+            // r anyway (g dominates both numerator and denominator), so
+            // returning the limit is the correct answer, not a panic.
+            None => return periodic_rate,
+        };
+    }
     periodic_rate * growth / (growth - Decimal::ONE)
 }
 
