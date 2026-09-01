@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import SavedScenarios from './SavedScenarios';
@@ -129,5 +129,56 @@ describe('SavedScenarios', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('storage quota exceeded')).toBeInTheDocument();
+  });
+
+  it('asks for confirmation before deleting a scenario, and does not delete until confirmed', async () => {
+    const wasmModule = mockWasmModule({
+      list_scenarios: vi.fn(async () => ({
+        scenarios: [{ id: 'a', name: '30yr fixed', created_at: Date.now() }],
+        error: null,
+      })),
+    });
+    render(
+      <SavedScenarios
+        wasmModule={wasmModule}
+        calculatorKind="payment"
+        getCurrentInputs={() => ({})}
+        onLoad={() => {}}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Delete "30yr fixed"? This cannot be undone.')).toBeInTheDocument();
+    expect(wasmModule.delete_scenario).not.toHaveBeenCalled();
+
+    const dialog = screen.getByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(wasmModule.delete_scenario).toHaveBeenCalledWith('a'));
+  });
+
+  it('leaves the scenario in place when the delete confirmation is cancelled', async () => {
+    const wasmModule = mockWasmModule({
+      list_scenarios: vi.fn(async () => ({
+        scenarios: [{ id: 'a', name: '30yr fixed', created_at: Date.now() }],
+        error: null,
+      })),
+    });
+    render(
+      <SavedScenarios
+        wasmModule={wasmModule}
+        calculatorKind="payment"
+        getCurrentInputs={() => ({})}
+        onLoad={() => {}}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    const dialog = screen.getByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(wasmModule.delete_scenario).not.toHaveBeenCalled();
+    expect(screen.getByText('30yr fixed')).toBeInTheDocument();
   });
 });
