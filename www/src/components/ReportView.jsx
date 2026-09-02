@@ -174,6 +174,17 @@ function buildReportCsv({ report, scenario, region, granularity, cadence, t, loc
     ]),
   );
 
+  // Same footer the printed page ends on -- the disclaimer and its sources
+  // read as caveats on figures already shown, not as a warning up front.
+  sections.push(
+    rowsToCsv([
+      [t('report.referenceOnly')],
+      [t(`about.disclaimer.${region}`)],
+      [t('report.sources')],
+      ...report.references.map((reference) => [t(reference.code), reference.url]),
+    ]),
+  );
+
   return sections.join('\r\n\r\n');
 }
 
