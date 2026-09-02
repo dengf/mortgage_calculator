@@ -49,6 +49,9 @@ describe('shared scenario', () => {
     await userEvent.type(price, '750000');
 
     await userEvent.click(screen.getByRole('button', { name: 'Amortization' }));
+    // Amortization starts with the shared loan fields folded away -- expand
+    // to reach the same price input the assertion below is checking.
+    await userEvent.click(await screen.findByRole('button', { name: /Loan details/ }));
 
     // The whole point of F4: the loan the user just dialled in is still here.
     await waitFor(() => expect(screen.getByDisplayValue('750,000')).toBeInTheDocument());

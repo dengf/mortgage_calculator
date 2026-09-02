@@ -287,6 +287,60 @@ body {
   border-radius: 12px;
 }
 
+/* Collapsible ScenarioFields (Amortization, Report) -- see that
+   component's own doc comment for why Payment never renders this wrapper
+   at all. */
+.scenario-fields-collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scenario-fields-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  background: #161e2b;
+  border: 1px solid #2a3546;
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: #e6edf3;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scenario-fields-toggle:hover {
+  border-color: #7ee787;
+}
+
+.scenario-fields-toggle-label {
+  flex: none;
+}
+
+.scenario-fields-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #9fb0c3;
+  font-weight: 400;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-fields-caret {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.scenario-fields-toggle[aria-expanded='true'] .scenario-fields-caret {
+  transform: rotate(180deg);
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -1535,7 +1589,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .data-menu-caret {
+  .data-menu-caret,
+  .scenario-fields-caret {
     transition: none;
   }
 }
