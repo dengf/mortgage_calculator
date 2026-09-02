@@ -176,6 +176,9 @@ export default {
   'report.print': '打印或另存为 PDF',
   'report.printNote':
     'PDF 由浏览器的打印对话框生成 —— 请在目标位置选择“另存为 PDF”。生成过程不会上传任何内容。',
+  'report.downloadCsv': '下载为 CSV',
+  'report.downloadCsvNote':
+    '本页的每张表格 —— 条款、还款计划、利率上升压力测试 —— 合并为一个文件，方便在表格软件中使用。生成过程不会上传任何内容。',
   'report.recipients': '发送给',
   'report.recipientsPlaceholder': 'name@example.com, another@example.com',
   'report.recipientsBad': '以下地址似乎有误，请检查：{addresses}',
