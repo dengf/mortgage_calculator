@@ -165,6 +165,16 @@ describe('downloading the report as CSV', () => {
     // The schedule itself, in whichever view is currently selected.
     expect(csv).toContain('Payment schedule');
     expect(csv).toContain('Payment,Year,Paid,Principal,Interest,Balance');
+
+    // The disclaimer and its sources, same wording as the printed page's
+    // footer, and appearing after the data the way the footer does.
+    const scheduleIndex = csv.indexOf('Payment schedule');
+    const disclaimerIndex = csv.indexOf('For reference only. This is an illustration');
+    expect(disclaimerIndex).toBeGreaterThan(scheduleIndex);
+    expect(csv).toContain('MAS and IRAS rules reflect published figures');
+    expect(csv).toContain('Where the rules come from');
+    expect(csv).toContain('MAS Notice 645');
+    expect(csv).toContain('https://www.mas.gov.sg/regulation/notices/notice-645');
   });
 
   it('downloads the yearly view once that is what the panel shows', async () => {
