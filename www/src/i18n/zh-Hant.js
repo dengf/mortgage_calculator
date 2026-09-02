@@ -65,6 +65,7 @@ export default {
   'nav.report': '報告',
 
   'field.loanAmount': '貸款金額',
+  'field.loanDetails': '貸款詳情',
   'field.homePrice': '房價',
   'field.downPayment': '首付',
   'field.interestRate': '年利率',

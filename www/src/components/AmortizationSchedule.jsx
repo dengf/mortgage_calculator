@@ -81,6 +81,7 @@ export default function AmortizationSchedule({
         onChange={onScenarioChange}
         money={money}
         formatMoney={formatMoney}
+        collapsible
       />
 
       <div className="panel-form">

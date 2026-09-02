@@ -106,6 +106,7 @@ export default function ReportView({
           onChange={onScenarioChange}
           money={money}
           formatMoney={formatMoney}
+          collapsible
         />
 
         <CalcError result={report} />

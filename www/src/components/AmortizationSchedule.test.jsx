@@ -43,6 +43,9 @@ describe('AmortizationSchedule saved scenarios', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'Load' }));
+    // The shared loan fields start folded away on this tab -- expand to
+    // reach the inputs the restore is supposed to have populated.
+    await user.click(screen.getByRole('button', { name: /Loan details/ }));
 
     expect(await screen.findByDisplayValue('900,000')).toBeInTheDocument();
     expect(screen.getByDisplayValue('180,000')).toBeInTheDocument();
@@ -64,6 +67,7 @@ describe('AmortizationSchedule saved scenarios', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('button', { name: /Loan details/ }));
 
     // The split was never recorded, so the saved loan becomes the price and
     // the deposit is zero -- no figure invented on the user's behalf. Asserted
@@ -121,7 +125,8 @@ describe('AmortizationSchedule yearly summary', () => {
 
     // Previously the component would have derived an empty list itself; now
     // an absent grouping must not render an empty table either.
-    expect(await screen.findByDisplayValue('500,000')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: /Loan details/ }));
+    expect(screen.getByDisplayValue('500,000')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });
