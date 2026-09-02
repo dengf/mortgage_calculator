@@ -188,6 +188,9 @@ export default {
   'report.print': 'Print or save as PDF',
   'report.printNote':
     'Your browser’s print dialog makes the PDF — choose “Save as PDF” as the destination. Nothing is uploaded to produce it.',
+  'report.downloadCsv': 'Download as CSV',
+  'report.downloadCsvNote':
+    'Every table on this page — the terms, the schedule, the rate-rise stress test — as one file for a spreadsheet. Nothing is uploaded to produce it.',
   'report.recipients': 'Email to',
   'report.recipientsPlaceholder': 'name@example.com, another@example.com',
   'report.recipientsBad': 'Check these — they do not look like addresses: {addresses}',

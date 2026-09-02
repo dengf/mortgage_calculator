@@ -124,3 +124,75 @@ describe('sending the report', () => {
     expect(screen.getByRole('button', { name: /Open in mail app/ })).toBeDisabled();
   });
 });
+
+describe('downloading the report as CSV', () => {
+  beforeEach(() => {
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock');
+    global.URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+
+  it('carries every section of the printed document, not just the schedule', async () => {
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: 'Download as CSV' }));
+
+    expect(global.URL.createObjectURL).toHaveBeenCalled();
+    const blob = global.URL.createObjectURL.mock.calls[0][0];
+    const csv = await blob.text();
+
+    expect(csv).toContain('Market,Singapore');
+
+    // The terms table, including the "can this change" column the printed
+    // document leads with -- a stepped package's rate is not the whole
+    // answer without it.
+    expect(csv).toContain('Home price,500000.00');
+    expect(csv).toContain('Home loan amount,400000.00');
+    expect(csv).toContain('Loan term,25 yr');
+    expect(csv).toContain('Interest rate,1.420%,"Yes — steps up after 2 yr, to 1.720%"');
+    expect(csv).toContain('Payment,1584.75,"Yes — rises after 2 yr, to 1637.12"');
+
+    // The year-by-year rate bands and their totals.
+    expect(csv).toContain('Period,Rate,Monthly instalment');
+    expect(csv).toContain('Years 1–2,1.420%,1584.75');
+    expect(csv).toContain('Total paid over the term,489880.62');
+    expect(csv).toContain('Total interest,89880.62');
+    expect(csv).toContain('Interest as a share of everything paid,18.347%');
+
+    // The rate-rise stress test.
+    expect(csv).toContain('Rise,Rate,Monthly instalment,More per payment');
+    expect(csv).toContain('+1.00%,2.720%,1819.26,182.14');
+
+    // The schedule itself, in whichever view is currently selected.
+    expect(csv).toContain('Payment schedule');
+    expect(csv).toContain('Payment,Year,Paid,Principal,Interest,Balance');
+  });
+
+  it('downloads the yearly view once that is what the panel shows', async () => {
+    const wasmModule = mockWasm({
+      build_report: vi.fn(() => ({
+        ...REPORT,
+        yearly: [
+          {
+            year: 1,
+            paid: 19017,
+            principal: 13424.16,
+            interest: 5592.84,
+            remaining_balance: 386575.84,
+          },
+        ],
+      })),
+    });
+    show(wasmModule);
+
+    await userEvent.click(screen.getByRole('button', { name: 'By year' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Download as CSV' }));
+
+    const blob = global.URL.createObjectURL.mock.calls[0][0];
+    const csv = await blob.text();
+    expect(csv).toContain('Yearly schedule');
+    expect(csv).toContain('Year,Paid,Principal,Interest,Balance');
+    expect(csv).toContain('1,19017.00,13424.16,5592.84,386575.84');
+    // Not the payment-by-payment header, which the toggle just moved away from.
+    expect(csv).not.toContain('Payment,Year,Paid,Principal,Interest,Balance');
+  });
+});

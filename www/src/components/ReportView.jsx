@@ -9,6 +9,174 @@ import { rateValues, toRateTypeDto } from '../rate';
 import { looksLikeAddress, mailtoUrl, parseRecipients } from '../mailto';
 import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 
+// Quoted only when a value needs it -- a sentence like the rate's "can this
+// change" column routinely carries a comma of its own; every plain number
+// here passes through untouched.
+function csvField(value) {
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function rowsToCsv(rows) {
+  return rows.map((row) => row.map(csvField).join(',')).join('\r\n');
+}
+
+function downloadCsv(filename, csv) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Every section of `ReportDocument`, translated into one CSV rather than one
+ * printed page -- same numbers, same order, same reasoning about what can
+ * change and why (see mortgage-calc's `report` module and CLAUDE.md's "carry
+ * what a figure assumed, next to the figure"). Plain decimals throughout
+ * rather than the document's locale-formatted currency strings: the point of
+ * a CSV is to be summed in a spreadsheet, not read on a page.
+ */
+function buildReportCsv({ report, scenario, region, granularity, cadence, t, locale }) {
+  const pct = (n) => (n == null ? '—' : `${n.toFixed(3)}%`);
+  const num = (n) => Number(n).toFixed(2);
+  const steps = report.payment_after_reversion != null;
+  const floats = report.floating_base_percent != null;
+  const benchmarkNote = floats ? ` ${t('report.andWithBenchmark')}` : '';
+  const byPayment = granularity !== 'year';
+  const preparedOn = new Date().toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const sections = [
+    rowsToCsv([
+      [t('report.prepared'), preparedOn],
+      [t('report.market'), t(`region.${region}`)],
+    ]),
+    rowsToCsv([
+      [t('report.terms')],
+      [t('report.item'), t('report.value'), t('report.canChange')],
+      [t('field.homePrice'), num(scenario.homePrice), t('report.no')],
+      [t('field.loanAmount'), num(report.principal), t('report.no')],
+      [t('field.loanTerm'), t('duration.years', { years: report.term_years }), t('report.no')],
+      [
+        t('field.interestRate'),
+        pct(report.initial_rate_percent),
+        (steps
+          ? t('report.ratePlan', {
+              years: report.lock_in_years,
+              rate: pct(report.final_rate_percent),
+            })
+          : t('report.no')) + benchmarkNote,
+      ],
+      [
+        t('payment.payment'),
+        num(report.initial_payment),
+        (steps
+          ? t('report.paymentPlan', {
+              years: report.lock_in_years,
+              payment: num(report.payment_after_reversion),
+            })
+          : t('report.no')) + benchmarkNote,
+      ],
+    ]),
+  ];
+
+  // The disclosure travels with the figures it qualifies, same as it does
+  // on the printed page -- see CLAUDE.md's "carry what a figure assumed".
+  if (report.rate_note) {
+    sections.push(
+      rowsToCsv([[t(report.rate_note.code, report.rate_note.params) || report.rate_note.text]]),
+    );
+  }
+
+  sections.push(
+    rowsToCsv([
+      [t('report.overTime')],
+      [t('report.period'), t('rate.rate'), t('report.instalment', { cadence })],
+      ...report.bands.map((band) => [
+        t('report.yearRange', { from: band.from_year, to: band.to_year }),
+        pct(band.annual_rate_percent),
+        num(band.payment),
+      ]),
+    ]),
+  );
+
+  sections.push(
+    rowsToCsv([
+      [t('report.totalPaid'), num(report.total_paid)],
+      [t('payment.totalInterest'), num(report.total_interest)],
+      [t('report.interestShare'), pct(report.interest_share_percent)],
+    ]),
+  );
+
+  sections.push(
+    rowsToCsv([
+      [t('report.ifRatesRise')],
+      [
+        t('report.increase'),
+        t('rate.rate'),
+        t('report.instalment', { cadence }),
+        t('report.paymentIncrease'),
+      ],
+      ...report.rate_rise.map((row) => [
+        t('report.plusPoints', { points: row.increase_percent.toFixed(2) }),
+        pct(row.annual_rate_percent),
+        num(row.payment),
+        num(row.payment_increase),
+      ]),
+    ]),
+  );
+
+  const scheduleHeader = byPayment
+    ? [
+        t('report.paymentNo'),
+        t('amort.year'),
+        t('amort.paid'),
+        t('amort.principal'),
+        t('amort.interest'),
+        t('amort.balance'),
+      ]
+    : [
+        t('amort.year'),
+        t('amort.paid'),
+        t('amort.principal'),
+        t('amort.interest'),
+        t('amort.balance'),
+      ];
+  const scheduleRows = (byPayment ? report.schedule : report.yearly).map((row) =>
+    byPayment
+      ? [
+          row.period,
+          row.year,
+          num(row.paid),
+          num(row.principal),
+          num(row.interest),
+          num(row.remaining_balance),
+        ]
+      : [
+          row.year,
+          num(row.paid),
+          num(row.principal),
+          num(row.interest),
+          num(row.remaining_balance),
+        ],
+  );
+  sections.push(
+    rowsToCsv([
+      [t(byPayment ? 'report.schedule' : 'report.scheduleYearly')],
+      scheduleHeader,
+      ...scheduleRows,
+    ]),
+  );
+
+  return sections.join('\r\n\r\n');
+}
+
 /**
  * The document tab: the same loan as everywhere else, laid out to be handed
  * to somebody who was not sitting at the screen.
@@ -24,7 +192,7 @@ export default function ReportView({
   scenario = DEFAULT_SCENARIO,
   onScenarioChange,
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [recipients, setRecipients] = useState('');
   // Handing a message to a mail client is the one thing this page does that
   // points outward. It gets a confirmation naming exactly who it is
@@ -57,6 +225,13 @@ export default function ReportView({
   const sourceUrl = window.location.origin + window.location.pathname;
   const addresses = parseRecipients(recipients);
   const rejected = addresses.filter((address) => !looksLikeAddress(address));
+  const cadence = t(`freq.${report?.frequency ?? frequency}`);
+
+  function downloadReportCsv() {
+    const csv = buildReportCsv({ report, scenario, region, granularity, cadence, t, locale });
+    const kind = granularity === 'year' ? 'yearly' : 'payment';
+    downloadCsv(`mortgage-report-${kind}-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  }
 
   /**
    * Hands the message to the reader's own mail client. Nothing is sent from
@@ -145,6 +320,15 @@ export default function ReportView({
                 </button>
               </div>
               <p className="report-actions-note">{t('report.printNote')}</p>
+            </div>
+
+            <div className="report-action">
+              <div className="report-action-row">
+                <button className="secondary-button" onClick={downloadReportCsv}>
+                  {t('report.downloadCsv')}
+                </button>
+              </div>
+              <p className="report-actions-note">{t('report.downloadCsvNote')}</p>
             </div>
 
             <div className="report-action">

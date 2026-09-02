@@ -180,6 +180,9 @@ export default {
   'report.print': '列印或另存為 PDF',
   'report.printNote':
     'PDF 由瀏覽器的列印對話框產生 —— 請在目的地選擇「另存為 PDF」。產生過程不會上傳任何內容。',
+  'report.downloadCsv': '下載為 CSV',
+  'report.downloadCsvNote':
+    '本頁的每張表格 —— 條款、還款計畫、利率上升壓力測試 —— 合併為一個檔案，方便在試算表軟體中使用。產生過程不會上傳任何內容。',
   'report.recipients': '寄送給',
   'report.recipientsPlaceholder': 'name@example.com, another@example.com',
   'report.recipientsBad': '以下地址似乎有誤，請檢查：{addresses}',
