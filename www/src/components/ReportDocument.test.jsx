@@ -94,6 +94,18 @@ describe('what the document must always say', () => {
     expect(foot).toHaveTextContent(/no bank has seen these figures/i);
   });
 
+  it('says it again right after the header, not only in the footer', () => {
+    // The footer sits after a schedule that can run to hundreds of rows --
+    // many printed pages away. A reader who only keeps the first page must
+    // still see what this document is not.
+    show();
+    const lede = document.querySelector('.report-lede-disclaimer');
+    expect(lede).toHaveTextContent(/not a loan offer/i);
+    expect(lede.compareDocumentPosition(document.querySelector('.report-foot'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it('cites every authority the core handed it, with somewhere to check', () => {
     show();
     for (const reference of REPORT.references) {
