@@ -271,6 +271,7 @@ export default {
   'confirm.cancel': '取消',
   'confirm.replace': '取代',
   'err.badImportFile': '該檔案不是房貸計算機匯出的備份——未做任何變更。',
+  'err.corruptScenario': '該已儲存方案已損毀，無法載入。',
   'err.storageUnavailable': '無法存取已儲存的資料（{detail}）。未做任何變更——請再試一次。',
   'errors.dismiss': '關閉',
 
@@ -370,6 +371,7 @@ export default {
 
   'err.invalidPrincipal': '貸款金額必須大於零（目前為 {value}）。',
   'err.invalidRate': '利率不得為負數（目前為 {value}）。',
+  'err.rateTooHigh': '利率過高，超出合理範圍（目前為 {value}）。請檢查是否輸入有誤。',
   'err.invalidTerm': '貸款年限至少須包含一期還款（目前為 {value}）。',
   'err.termTooLong': '貸款年限過長（{value} 期）。',
   'err.downPaymentTooLarge': '頭期款（{downPayment}）不得超過房價（{homePrice}）。',

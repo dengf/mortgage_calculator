@@ -266,6 +266,7 @@ export default {
   'confirm.cancel': '取消',
   'confirm.replace': '替换',
   'err.badImportFile': '该文件不是抵押贷款计算器导出的备份——未做任何更改。',
+  'err.corruptScenario': '该已保存方案已损坏，无法加载。',
   'err.storageUnavailable': '无法访问已保存的数据（{detail}）。未做任何更改——请重试。',
   'errors.dismiss': '关闭',
 
@@ -365,6 +366,7 @@ export default {
 
   'err.invalidPrincipal': '贷款金额必须大于零（当前为 {value}）。',
   'err.invalidRate': '利率不能为负数（当前为 {value}）。',
+  'err.rateTooHigh': '利率过高，超出合理范围（当前为 {value}）。请检查是否输入有误。',
   'err.invalidTerm': '贷款年限至少须包含一期还款（当前为 {value}）。',
   'err.termTooLong': '贷款年限过长（{value} 期）。',
   'err.downPaymentTooLarge': '首付（{downPayment}）不能超过房价（{homePrice}）。',
