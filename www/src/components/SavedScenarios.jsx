@@ -59,7 +59,15 @@ export default function SavedScenarios({
       setError(result.error);
       return;
     }
-    onLoad(JSON.parse(result.scenario.inputs_json));
+    // A record that doesn't even parse can only have gotten into storage
+    // through something other than this app's own save path -- surfacing it
+    // as a load error is the right failure mode, not an uncaught exception
+    // that leaves the tab in whatever state it was already in.
+    try {
+      onLoad(JSON.parse(result.scenario.inputs_json));
+    } catch {
+      setError(t('err.corruptScenario'));
+    }
   };
 
   const handleDelete = async (id, name) => {

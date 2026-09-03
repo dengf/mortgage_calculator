@@ -110,6 +110,38 @@ describe('SavedScenarios', () => {
     await waitFor(() => expect(onLoad).toHaveBeenCalledWith({ principal: 400000, rate: 6.5 }));
   });
 
+  it('reports a corrupt scenario instead of throwing when its inputs_json will not parse', async () => {
+    // A record that got into storage some other way than this app's own save
+    // path (a poisoned import predating the backup.js validation, or direct
+    // tampering) must surface as a load error, not an uncaught exception.
+    const wasmModule = mockWasmModule({
+      list_scenarios: vi.fn(async () => ({
+        scenarios: [{ id: 'a', name: '30yr fixed', created_at: Date.now() }],
+        error: null,
+      })),
+      load_scenario: vi.fn(async () => ({
+        scenario: { inputs_json: '{not valid json' },
+        error: null,
+      })),
+    });
+    const onLoad = vi.fn();
+    render(
+      <SavedScenarios
+        wasmModule={wasmModule}
+        calculatorKind="payment"
+        getCurrentInputs={() => ({})}
+        onLoad={onLoad}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Load' }));
+
+    expect(
+      await screen.findByText("This saved scenario is corrupted and can't be loaded."),
+    ).toBeInTheDocument();
+    expect(onLoad).not.toHaveBeenCalled();
+  });
+
   it('shows the store error instead of silently failing on a save error', async () => {
     const wasmModule = mockWasmModule({
       save_scenario: vi.fn(async () => ({ error: 'storage quota exceeded' })),

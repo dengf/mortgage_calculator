@@ -10,20 +10,52 @@
 
 export const EXPORT_FORMAT = 'meifio.mortgage_calculator.v1';
 
+// Nobody exporting their own data produces a file anywhere near these sizes.
+// They exist so a corrupted or adversarial file -- forwarded as a "shared
+// scenario", say -- can't pass the shape check and then, after
+// `clear_all_scenarios` has already wiped what was really there, either
+// stall the import loop on an unbounded number of records or hand a later
+// reader (`SavedScenarios`, `currentInputs`) a string too large to be a real
+// scenario's saved inputs.
+const MAX_SCENARIOS = 10_000;
+const MAX_ID_LENGTH = 200;
+const MAX_NAME_LENGTH = 500;
+const MAX_INPUTS_JSON_LENGTH = 100_000;
+
 function isScenarioArray(value) {
   return (
     Array.isArray(value) &&
+    value.length <= MAX_SCENARIOS &&
     value.every(
       (s) =>
         s &&
         typeof s === 'object' &&
         typeof s.id === 'string' &&
+        s.id.length <= MAX_ID_LENGTH &&
         typeof s.calculator === 'string' &&
+        s.calculator.length <= MAX_ID_LENGTH &&
         typeof s.name === 'string' &&
+        s.name.length <= MAX_NAME_LENGTH &&
         typeof s.created_at === 'number' &&
-        typeof s.inputs_json === 'string',
+        typeof s.inputs_json === 'string' &&
+        s.inputs_json.length <= MAX_INPUTS_JSON_LENGTH &&
+        parsesAsJson(s.inputs_json),
     )
   );
+}
+
+// A scenario's `inputs_json` is read back with a bare `JSON.parse` wherever
+// a saved scenario is loaded (`SavedScenarios`, `currentInputs`) -- rejecting
+// a file that doesn't even parse here means the failure surfaces as "this
+// file isn't a backup" at import time, not as an uncaught exception on
+// whatever later screen tries to load the poisoned record.
+function parsesAsJson(text) {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
