@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import ReportView from './ReportView';
+import ReportView, { csvField } from './ReportView';
 import { I18nProvider } from '../i18n';
 import { scenarioBindings } from '../test/wasm';
 
@@ -59,6 +59,35 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('csvField', () => {
+  it('leaves an ordinary number or sentence untouched', () => {
+    expect(csvField(1584.75)).toBe('1584.75');
+    expect(csvField('Home price')).toBe('Home price');
+  });
+
+  it('quotes a value that contains a comma, quote, or newline', () => {
+    expect(csvField('Years 1, 2')).toBe('"Years 1, 2"');
+    expect(csvField('say "hi"')).toBe('"say ""hi"""');
+  });
+
+  it('does not treat a leading + or - as a formula, since the report has real values shaped that way', () => {
+    // The rate-rise column reads "+0.50%"; a total could in principle be
+    // negative. Neither is an attacker-supplied string, so neither should be
+    // mangled with a defensive prefix.
+    expect(csvField('+0.50%')).toBe('+0.50%');
+    expect(csvField('-100.00')).toBe('-100.00');
+  });
+
+  it('escapes a leading = or @ so a spreadsheet cannot read it as a formula', () => {
+    // Nothing in today's report can produce one of these, but this file is
+    // explicitly built to be opened in Excel/Sheets, so a future free-text
+    // field (a scenario note, say) inherits the guard rather than needing
+    // its own.
+    expect(csvField('=1+1')).toBe("'=1+1");
+    expect(csvField('@SUM(A1:A10)')).toBe("'@SUM(A1:A10)");
+  });
 });
 
 describe('sending the report', () => {
