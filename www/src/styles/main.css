@@ -283,6 +283,18 @@ body {
   gap: 24px;
 }
 
+/* Amortization and Report both lead with the collapsible "Loan details" bar
+   ahead of `.panel` rather than inside it: on the Report tab, `.panel` and
+   the printable `.report` document are already siblings by design (see
+   ReportView's own "sibling of the panel" comment), and pinning that bar
+   across both on a phone needs a container tall enough to hold all of it --
+   see `.scenario-fields-collapsible`'s own sticky rule below. */
+.tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .panel-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -770,6 +782,44 @@ body {
     gap: 16px;
   }
 
+  /* Amortization and Report both restate the loan as a folded "Loan
+     details" bar (see ScenarioFields' collapsible doc comment) and then run
+     long underneath it -- a schedule or a printable report, either one
+     scrolled well past the point where the loan it describes is still on
+     screen. Pinning the bar keeps that context in view the whole way down.
+
+     Sticky is set on the wrapper (`.scenario-fields-collapsible`), not the
+     button: a stuck element can never travel past the bounds of its own
+     containing block, which is its immediate parent. That parent used to be
+     this wrapper itself, sized to fit nothing but the button -- giving the
+     button zero room to stay stuck before its own tiny parent scrolled out
+     from under it. Now the wrapper is a direct child of `.tab-body`, which
+     spans the tab's full height (including the sibling `.report` document
+     on the Report tab -- see that component's own "sibling of the panel"
+     comment), so the wrapper has the run of the page to stick within.
+
+     Gated to the collapsed state with :has(): the expanded form is several
+     fields tall, and pinning all of it would eat most of a phone screen for
+     the length of the edit rather than just holding a one-line summary.
+
+     `top` is the tab nav's own rendered height, kept current by the
+     ResizeObserver in Header.jsx: the nav wraps onto a different number of
+     rows depending on viewport width and the locale's label lengths, so a
+     fixed offset would either leave a gap or sit underneath the nav. */
+  .scenario-fields-collapsible:has(.scenario-fields-toggle[aria-expanded='false']) {
+    position: sticky;
+    top: var(--app-tabs-height, 0px);
+    z-index: 5;
+  }
+
+  .scenario-fields-toggle {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  .tab-body {
+    gap: 16px;
+  }
+
   .panel-form {
     padding: 16px;
     gap: 14px;
@@ -1061,6 +1111,16 @@ body {
   color: #16202c;
   padding: 32px 36px;
   border-radius: 12px;
+  /* A definite width, not auto: as a flex item of .tab-body, an auto width
+     with auto margins disables stretch and falls back to shrink-to-fit,
+     which is bounded below by content's min-content width. The payment
+     schedule's own .report-table-wrap is built to scroll wide content
+     inside itself rather than push the page sideways, but shrink-to-fit
+     read that same content's min-content and sized .report to fit it
+     anyway, carrying the overflow up past the table wrap it was meant to
+     stay inside. width: 100% gives .report a definite size instead, so it
+     fills .tab-body's actual available width and the wrap can do its job. */
+  width: 100%;
   max-width: 860px;
   margin: 0 auto;
   font-size: 0.9rem;
@@ -1318,6 +1378,8 @@ body {
   body:has(.report) .app-tabs,
   body:has(.report) .app-footer,
   body:has(.report) .panel,
+  body:has(.report) .scenario-fields-collapsible,
+  body:has(.report) .report-options-fab,
   body:has(.report) .about {
     display: none !important;
   }
@@ -1763,6 +1825,91 @@ body {
 .report-confirm-actions .primary-button,
 .report-confirm-actions .secondary-button {
   min-height: 44px;
+}
+
+/* Report options -- the schedule-view toggle, print, CSV and email used to
+   sit inline ahead of the document, which on a phone meant a screen or more
+   of buttons before the report itself (the reason anyone opened this tab)
+   ever came into view. Behind a trigger instead, same backdrop+dialog shape
+   as "Your data" in the nav (own namespaced classes per this codebase's
+   convention -- see .data-menu's own comment).
+
+   Fixed, not inline: it has to stay reachable from anywhere on a document
+   that can run to hundreds of schedule rows, not just from the top. */
+.report-options-fab {
+  position: fixed;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 50;
+  min-height: 44px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #7ee787;
+  color: #0f1720;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.report-options-fab:hover {
+  background: #9df0a4;
+}
+
+.report-options-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+.report-options-dialog {
+  background: #161e2b;
+  border: 1px solid #2a3546;
+  border-radius: 14px;
+  padding: 22px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.report-options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-options-title {
+  font-weight: 700;
+}
+
+.report-options-close {
+  background: none;
+  border: none;
+  color: #9fb0c3;
+  cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-options-close:hover {
+  color: #e6edf3;
 }
 
 /* Update banner -- tells someone a new deploy landed while their tab stayed

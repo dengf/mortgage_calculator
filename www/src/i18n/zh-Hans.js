@@ -173,6 +173,7 @@ export default {
 
   // 可打印的测算报告。
   'report.title': '房贷测算报告',
+  'report.options': '报告选项',
   'report.print': '打印或另存为 PDF',
   'report.printNote':
     'PDF 由浏览器的打印对话框生成 —— 请在目标位置选择“另存为 PDF”。生成过程不会上传任何内容。',

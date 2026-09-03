@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { LOCALES, useI18n } from '../i18n';
 import MeifioMark from './MeifioMark';
 import YourDataMenu from './YourDataMenu';
@@ -30,6 +30,28 @@ export default function Header({
   onDataChanged,
 }) {
   const { t, locale, setLocale } = useI18n();
+  const tabsRef = useRef(null);
+
+  // Amortization and Report pin their "Loan details" bar just below this nav
+  // on a phone (see .scenario-fields-collapsible), so a reader scrolling a
+  // long schedule never loses sight of which loan it describes. That bar
+  // needs this nav's actual rendered height to stack under rather than
+  // overlap it -- and the nav wraps onto a different number of rows
+  // depending on the viewport width and the locale's tab label lengths, so
+  // no fixed number would stay right. A ResizeObserver keeps the custom
+  // property true across both. jsdom has no ResizeObserver, so this is a
+  // no-op under test.
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const rootStyle = document.documentElement.style;
+    const setCustomProperty = rootStyle.setProperty.bind(rootStyle);
+    const observer = new ResizeObserver(() => {
+      setCustomProperty('--app-tabs-height', el.offsetHeight + 'px');
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     // A fragment, not one <header>: the tab nav needs to be a direct child
@@ -53,9 +75,9 @@ export default function Header({
               locale ("a meifio app" vs "meifio 出品"), so the mark cannot simply be
               pinned to one end. */}
           <a className="app-byline" href={MEIFIO_HOME}>
-            {t('app.byline').split('{logo}').flatMap((part, i) =>
-              i === 0 ? [part] : [<MeifioMark key="mark" />, part],
-            )}
+            {t('app.byline')
+              .split('{logo}')
+              .flatMap((part, i) => (i === 0 ? [part] : [<MeifioMark key="mark" />, part]))}
           </a>
         </div>
 
@@ -96,7 +118,7 @@ export default function Header({
         </div>
       </header>
 
-      <nav className="app-tabs">
+      <nav className="app-tabs" ref={tabsRef}>
         {TABS.map((tab) => (
           <button
             key={tab.id}

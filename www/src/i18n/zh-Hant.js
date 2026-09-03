@@ -177,6 +177,7 @@ export default {
 
   // 可列印的測算報告。
   'report.title': '房貸測算報告',
+  'report.options': '報告選項',
   'report.print': '列印或另存為 PDF',
   'report.printNote':
     'PDF 由瀏覽器的列印對話框產生 —— 請在目的地選擇「另存為 PDF」。產生過程不會上傳任何內容。',
