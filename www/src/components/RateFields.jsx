@@ -73,6 +73,7 @@ export default function RateFields({ rate, onChange, label = 'field.interestRate
           onChange={(value) => onChange({ ...shape, [field.key]: value })}
           suffix={t(field.unit)}
           min={field.min ?? 0}
+          max={field.max}
         />
       ))}
 

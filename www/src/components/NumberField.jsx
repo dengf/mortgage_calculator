@@ -23,6 +23,7 @@ export default function NumberField({
   suffix,
   step = 'any',
   min,
+  max,
   grouped = false,
 }) {
   const [focused, setFocused] = useState(false);
@@ -37,6 +38,7 @@ export default function NumberField({
             value={value}
             step={step}
             min={min}
+            max={max}
             onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
           />
           {suffix && <span className="field-suffix">{suffix}</span>}
