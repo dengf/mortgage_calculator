@@ -493,12 +493,17 @@ body {
 }
 
 .link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: #7ee787;
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
+  padding: 4px 8px;
+  min-height: 44px;
 }
 
 .schedule-table {
