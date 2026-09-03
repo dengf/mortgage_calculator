@@ -41,6 +41,13 @@ const show = (wasmModule = mockWasm()) =>
     </I18nProvider>,
   );
 
+// The schedule-view toggle, print, CSV and email controls all live behind
+// this trigger now (see ReportView's own doc comment on `optionsOpen`), so
+// every test that reaches one of them has to open it first.
+async function openOptions() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Report options' }));
+}
+
 let assigned;
 
 beforeEach(() => {
@@ -95,27 +102,30 @@ describe('sending the report', () => {
     // The one action on this page that points outward. A single click is
     // how a half-edited recipient list gets sent.
     show();
+    await openOptions();
     await userEvent.type(screen.getByLabelText(/Email to/), 'jane@example.com');
     await userEvent.click(screen.getByRole('button', { name: /Open in mail app/ }));
 
     expect(assigned).toEqual([]);
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 
   it('spells out every recipient before it will go anywhere', async () => {
     // Not "2 recipients" — the count is exactly the phrasing that lets a
     // stale address through unnoticed.
     show();
+    await openOptions();
     await userEvent.type(screen.getByLabelText(/Email to/), 'jane@example.com, bob@example.com');
     await userEvent.click(screen.getByRole('button', { name: /Open in mail app/ }));
 
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
     expect(dialog).toHaveTextContent('jane@example.com');
     expect(dialog).toHaveTextContent('bob@example.com');
   });
 
   it('opens the mail client only after the confirmation is accepted', async () => {
     show();
+    await openOptions();
     await userEvent.type(screen.getByLabelText(/Email to/), 'jane@example.com, bob@example.com');
     await userEvent.click(screen.getByRole('button', { name: /Open in mail app/ }));
     await userEvent.click(screen.getByRole('button', { name: /Yes, open my mail app/ }));
@@ -127,18 +137,20 @@ describe('sending the report', () => {
 
   it('backs out without sending', async () => {
     show();
+    await openOptions();
     await userEvent.type(screen.getByLabelText(/Email to/), 'jane@example.com');
     await userEvent.click(screen.getByRole('button', { name: /Open in mail app/ }));
     await userEvent.click(screen.getByRole('button', { name: /Not yet/ }));
 
     expect(assigned).toEqual([]);
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 
   it('says in the body that the attachment has to be added by hand', async () => {
     // A mailto: link cannot carry one. Leaving that unsaid is how a client
     // gets an email promising a document that is not there.
     show();
+    await openOptions();
     await userEvent.type(screen.getByLabelText(/Email to/), 'jane@example.com');
     await userEvent.click(screen.getByRole('button', { name: /Open in mail app/ }));
     await userEvent.click(screen.getByRole('button', { name: /Yes, open my mail app/ }));
@@ -148,8 +160,9 @@ describe('sending the report', () => {
     expect(decodeURIComponent(assigned[0])).toContain('For reference only');
   });
 
-  it('refuses to offer sending with nobody addressed', () => {
+  it('refuses to offer sending with nobody addressed', async () => {
     show();
+    await openOptions();
     expect(screen.getByRole('button', { name: /Open in mail app/ })).toBeDisabled();
   });
 });
@@ -163,6 +176,7 @@ describe('downloading the report as CSV', () => {
 
   it('carries every section of the printed document, not just the schedule', async () => {
     show();
+    await openOptions();
     await userEvent.click(await screen.findByRole('button', { name: 'Download as CSV' }));
 
     expect(global.URL.createObjectURL).toHaveBeenCalled();
@@ -222,6 +236,7 @@ describe('downloading the report as CSV', () => {
       })),
     });
     show(wasmModule);
+    await openOptions();
 
     await userEvent.click(screen.getByRole('button', { name: 'By year' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Download as CSV' }));

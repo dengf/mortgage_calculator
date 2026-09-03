@@ -185,6 +185,7 @@ export default {
   // The printable illustration. `ref.*` label the authorities the Rust
   // report cites; the codes come from mortgage-calc's `Authority`.
   'report.title': 'Mortgage illustration',
+  'report.options': 'Report options',
   'report.print': 'Print or save as PDF',
   'report.printNote':
     'Your browser’s print dialog makes the PDF — choose “Save as PDF” as the destination. Nothing is uploaded to produce it.',

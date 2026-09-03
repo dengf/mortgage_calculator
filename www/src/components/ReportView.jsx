@@ -222,6 +222,13 @@ export default function ReportView({
   // addressed to, because a mistyped or half-edited recipient list is only
   // obvious once it is spelled back.
   const [confirming, setConfirming] = useState(false);
+  // The schedule-view toggle, print, CSV and email controls used to sit
+  // inline, ahead of the document -- pushing the actual report, the reason
+  // anyone opened this tab, below a screen or more of buttons on a phone.
+  // They now live behind this trigger instead, the same floating-menu shape
+  // as "Your data" in the nav (see YourDataMenu), so the document is the
+  // first thing to appear after the loan summary.
+  const [optionsOpen, setOptionsOpen] = useState(false);
   // How much of the schedule goes on the document. A view choice, not a
   // loan input: both cuts arrive from one `build_report` call, so flipping
   // this re-renders and never recalculates.
@@ -314,106 +321,154 @@ export default function ReportView({
           nested inside one printed as a blank page. */}
       <section className="panel">
         <CalcError result={report} />
+      </section>
 
-        {report && !report.error && (
-          <div className="report-actions">
-            {/* What the document contains, before what to do with it. The
-                two used to sit on one wrapping row, so a setting and a
-                call to action read as one control group -- and each note
-                was squeezed into whatever width was left beside its
-                button. Three stacked rows, each with its explanation
-                underneath it at full width. */}
-            <div className="report-option" role="group" aria-labelledby={scheduleViewId}>
-              <span className="field-label" id={scheduleViewId}>
-                {t('report.scheduleView')}
-              </span>
-              <div className="rate-kind">
-                {['payment', 'year'].map((option) => (
+      {report && !report.error && (
+        <>
+          {/* Fixed, not sticky: this needs to stay reachable from anywhere
+              on what can be a very long document, not just within one
+              ancestor's box -- the same reason `.scenario-fields-collapsible`
+              had to move out of `.panel` above. */}
+          <button
+            type="button"
+            className="report-options-fab"
+            aria-haspopup="true"
+            aria-expanded={optionsOpen}
+            onClick={() => setOptionsOpen(true)}
+          >
+            {t('report.options')}
+          </button>
+
+          {optionsOpen && (
+            <div
+              className="report-options-backdrop"
+              role="presentation"
+              onClick={() => setOptionsOpen(false)}
+            >
+              <div
+                className="report-options-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('report.options')}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="report-options-header">
+                  <span className="report-options-title">{t('report.options')}</span>
                   <button
-                    key={option}
                     type="button"
-                    className={granularity === option ? 'kind-toggle active' : 'kind-toggle'}
-                    aria-pressed={granularity === option}
-                    onClick={() => setGranularity(option)}
+                    className="report-options-close"
+                    aria-label={t('data.close')}
+                    onClick={() => setOptionsOpen(false)}
                   >
-                    {t(option === 'payment' ? 'report.byPayment' : 'report.byYear')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="report-action">
-              <div className="report-action-row">
-                <button className="primary-button" onClick={() => window.print()}>
-                  {t('report.print')}
-                </button>
-              </div>
-              <p className="report-actions-note">{t('report.printNote')}</p>
-            </div>
-
-            <div className="report-action">
-              <div className="report-action-row">
-                <button className="secondary-button" onClick={downloadReportCsv}>
-                  {t('report.downloadCsv')}
-                </button>
-              </div>
-              <p className="report-actions-note">{t('report.downloadCsvNote')}</p>
-            </div>
-
-            <div className="report-action">
-              <div className="report-action-row">
-                <label className="field report-recipients">
-                  <span className="field-label">{t('report.recipients')}</span>
-                  <div className="field-input">
-                    <input
-                      type="text"
-                      value={recipients}
-                      onChange={(e) => setRecipients(e.target.value)}
-                      placeholder={t('report.recipientsPlaceholder')}
-                    />
-                  </div>
-                </label>
-                <button
-                  className="secondary-button"
-                  onClick={() => setConfirming(true)}
-                  disabled={addresses.length === 0 || rejected.length > 0}
-                >
-                  {t('report.email', { count: addresses.length })}
-                </button>
-              </div>
-              {rejected.length > 0 && (
-                <p className="report-actions-warning">
-                  {t('report.recipientsBad', { addresses: rejected.join(', ') })}
-                </p>
-              )}
-              <p className="report-actions-note">{t('report.emailNote')}</p>
-            </div>
-
-            {confirming && (
-              <div className="report-confirm" role="dialog" aria-label={t('report.confirmTitle')}>
-                <h3>{t('report.confirmTitle')}</h3>
-                {/* Spelled out one per line rather than summarised as a
-                    count: "2 recipients" is exactly the phrasing that lets a
-                    stale address through. */}
-                <ul className="report-confirm-list">
-                  {addresses.map((address) => (
-                    <li key={address}>{address}</li>
-                  ))}
-                </ul>
-                <p>{t('report.confirmBody')}</p>
-                <div className="report-confirm-actions">
-                  <button className="primary-button" onClick={email}>
-                    {t('report.confirmSend')}
-                  </button>
-                  <button className="secondary-button" onClick={() => setConfirming(false)}>
-                    {t('report.confirmCancel')}
+                    ×
                   </button>
                 </div>
+
+                <div className="report-actions">
+                  {/* What the document contains, before what to do with it. The
+                      two used to sit on one wrapping row, so a setting and a
+                      call to action read as one control group -- and each note
+                      was squeezed into whatever width was left beside its
+                      button. Three stacked rows, each with its explanation
+                      underneath it at full width. */}
+                  <div className="report-option" role="group" aria-labelledby={scheduleViewId}>
+                    <span className="field-label" id={scheduleViewId}>
+                      {t('report.scheduleView')}
+                    </span>
+                    <div className="rate-kind">
+                      {['payment', 'year'].map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={granularity === option ? 'kind-toggle active' : 'kind-toggle'}
+                          aria-pressed={granularity === option}
+                          onClick={() => setGranularity(option)}
+                        >
+                          {t(option === 'payment' ? 'report.byPayment' : 'report.byYear')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="report-action">
+                    <div className="report-action-row">
+                      <button className="primary-button" onClick={() => window.print()}>
+                        {t('report.print')}
+                      </button>
+                    </div>
+                    <p className="report-actions-note">{t('report.printNote')}</p>
+                  </div>
+
+                  <div className="report-action">
+                    <div className="report-action-row">
+                      <button className="secondary-button" onClick={downloadReportCsv}>
+                        {t('report.downloadCsv')}
+                      </button>
+                    </div>
+                    <p className="report-actions-note">{t('report.downloadCsvNote')}</p>
+                  </div>
+
+                  <div className="report-action">
+                    <div className="report-action-row">
+                      <label className="field report-recipients">
+                        <span className="field-label">{t('report.recipients')}</span>
+                        <div className="field-input">
+                          <input
+                            type="text"
+                            value={recipients}
+                            onChange={(e) => setRecipients(e.target.value)}
+                            placeholder={t('report.recipientsPlaceholder')}
+                          />
+                        </div>
+                      </label>
+                      <button
+                        className="secondary-button"
+                        onClick={() => setConfirming(true)}
+                        disabled={addresses.length === 0 || rejected.length > 0}
+                      >
+                        {t('report.email', { count: addresses.length })}
+                      </button>
+                    </div>
+                    {rejected.length > 0 && (
+                      <p className="report-actions-warning">
+                        {t('report.recipientsBad', { addresses: rejected.join(', ') })}
+                      </p>
+                    )}
+                    <p className="report-actions-note">{t('report.emailNote')}</p>
+                  </div>
+
+                  {confirming && (
+                    <div
+                      className="report-confirm"
+                      role="alertdialog"
+                      aria-label={t('report.confirmTitle')}
+                    >
+                      <h3>{t('report.confirmTitle')}</h3>
+                      {/* Spelled out one per line rather than summarised as a
+                          count: "2 recipients" is exactly the phrasing that lets a
+                          stale address through. */}
+                      <ul className="report-confirm-list">
+                        {addresses.map((address) => (
+                          <li key={address}>{address}</li>
+                        ))}
+                      </ul>
+                      <p>{t('report.confirmBody')}</p>
+                      <div className="report-confirm-actions">
+                        <button className="primary-button" onClick={email}>
+                          {t('report.confirmSend')}
+                        </button>
+                        <button className="secondary-button" onClick={() => setConfirming(false)}>
+                          {t('report.confirmCancel')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
+        </>
+      )}
 
       {report && !report.error && (
         <ReportDocument
