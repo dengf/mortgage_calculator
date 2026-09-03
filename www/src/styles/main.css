@@ -1111,6 +1111,16 @@ body {
   color: #16202c;
   padding: 32px 36px;
   border-radius: 12px;
+  /* A definite width, not auto: as a flex item of .tab-body, an auto width
+     with auto margins disables stretch and falls back to shrink-to-fit,
+     which is bounded below by content's min-content width. The payment
+     schedule's own .report-table-wrap is built to scroll wide content
+     inside itself rather than push the page sideways, but shrink-to-fit
+     read that same content's min-content and sized .report to fit it
+     anyway, carrying the overflow up past the table wrap it was meant to
+     stay inside. width: 100% gives .report a definite size instead, so it
+     fills .tab-body's actual available width and the wrap can do its job. */
+  width: 100%;
   max-width: 860px;
   margin: 0 auto;
   font-size: 0.9rem;
