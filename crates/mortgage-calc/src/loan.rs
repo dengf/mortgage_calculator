@@ -339,7 +339,10 @@ mod tests {
             .frequency(PaymentFrequency::Monthly)
             .build();
 
-        assert_eq!(result, Err(MortgageError::RateTooHigh(dec!(9.99).to_string())));
+        assert_eq!(
+            result,
+            Err(MortgageError::RateTooHigh(dec!(9.99).to_string()))
+        );
     }
 
     #[test]
@@ -365,6 +368,9 @@ mod tests {
             .frequency(PaymentFrequency::Monthly)
             .build();
 
-        assert_eq!(result, Err(MortgageError::RateTooHigh(dec!(9.99).to_string())));
+        assert_eq!(
+            result,
+            Err(MortgageError::RateTooHigh(dec!(9.99).to_string()))
+        );
     }
 }
