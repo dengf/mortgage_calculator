@@ -72,6 +72,13 @@ export default function ReportDocument({
         </dl>
       </header>
 
+      {/* The same sentence the footer ends on, said again here. The footer
+          disclaimer and the sources sit after a schedule that can run to
+          hundreds of rows -- on paper that is many pages away, and a reader
+          who only keeps or reads the first page must not be the one who
+          misses what this document is not. */}
+      <p className="report-note report-lede-disclaimer">{t('report.referenceOnly')}</p>
+
       {/* The CFPB's "Can this amount increase after closing?" column. On a
           package it is the only honest way to state a rate or an
           instalment, and it is the question a borrower does not know to
