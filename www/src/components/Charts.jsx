@@ -146,7 +146,6 @@ export function PrincipalInterestSplit({
   // would assert that none of the money is interest, rather than that there
   // is no money.
   if (interestSharePercent == null) return null;
-  const total = principal + totalInterest;
   const interestShare = interestSharePercent;
 
   return (
