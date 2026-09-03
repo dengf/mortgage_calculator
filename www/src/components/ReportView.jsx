@@ -293,20 +293,26 @@ export default function ReportView({
   }
 
   return (
-    <>
+    <div className="tab-body">
+      {/* Also a sibling of the panel, ahead of it rather than inside it: on
+          a phone this bar pins itself below the tab nav while everything
+          under it scrolls -- the panel's own actions, then the (also
+          sibling) report document -- which needs a container spanning the
+          whole tab. See `.scenario-fields-collapsible`'s sticky rule in
+          main.css. */}
+      <ScenarioFields
+        wasmModule={wasmModule}
+        scenario={scenario}
+        onChange={onScenarioChange}
+        money={money}
+        formatMoney={formatMoney}
+        collapsible
+      />
+
       {/* The document is a sibling of the panel, not a child of it. The
           print stylesheet hides the calculator's panels, and a report
           nested inside one printed as a blank page. */}
       <section className="panel">
-        <ScenarioFields
-          wasmModule={wasmModule}
-          scenario={scenario}
-          onChange={onScenarioChange}
-          money={money}
-          formatMoney={formatMoney}
-          collapsible
-        />
-
         <CalcError result={report} />
 
         {report && !report.error && (
@@ -418,6 +424,6 @@ export default function ReportView({
           granularity={granularity}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -283,6 +283,18 @@ body {
   gap: 24px;
 }
 
+/* Amortization and Report both lead with the collapsible "Loan details" bar
+   ahead of `.panel` rather than inside it: on the Report tab, `.panel` and
+   the printable `.report` document are already siblings by design (see
+   ReportView's own "sibling of the panel" comment), and pinning that bar
+   across both on a phone needs a container tall enough to hold all of it --
+   see `.scenario-fields-collapsible`'s own sticky rule below. */
+.tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .panel-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -767,6 +779,44 @@ body {
   }
 
   .panel {
+    gap: 16px;
+  }
+
+  /* Amortization and Report both restate the loan as a folded "Loan
+     details" bar (see ScenarioFields' collapsible doc comment) and then run
+     long underneath it -- a schedule or a printable report, either one
+     scrolled well past the point where the loan it describes is still on
+     screen. Pinning the bar keeps that context in view the whole way down.
+
+     Sticky is set on the wrapper (`.scenario-fields-collapsible`), not the
+     button: a stuck element can never travel past the bounds of its own
+     containing block, which is its immediate parent. That parent used to be
+     this wrapper itself, sized to fit nothing but the button -- giving the
+     button zero room to stay stuck before its own tiny parent scrolled out
+     from under it. Now the wrapper is a direct child of `.tab-body`, which
+     spans the tab's full height (including the sibling `.report` document
+     on the Report tab -- see that component's own "sibling of the panel"
+     comment), so the wrapper has the run of the page to stick within.
+
+     Gated to the collapsed state with :has(): the expanded form is several
+     fields tall, and pinning all of it would eat most of a phone screen for
+     the length of the edit rather than just holding a one-line summary.
+
+     `top` is the tab nav's own rendered height, kept current by the
+     ResizeObserver in Header.jsx: the nav wraps onto a different number of
+     rows depending on viewport width and the locale's label lengths, so a
+     fixed offset would either leave a gap or sit underneath the nav. */
+  .scenario-fields-collapsible:has(.scenario-fields-toggle[aria-expanded='false']) {
+    position: sticky;
+    top: var(--app-tabs-height, 0px);
+    z-index: 5;
+  }
+
+  .scenario-fields-toggle {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  .tab-body {
     gap: 16px;
   }
 
@@ -1318,6 +1368,7 @@ body {
   body:has(.report) .app-tabs,
   body:has(.report) .app-footer,
   body:has(.report) .panel,
+  body:has(.report) .scenario-fields-collapsible,
   body:has(.report) .about {
     display: none !important;
   }
