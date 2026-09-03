@@ -115,10 +115,15 @@ body {
 }
 
 .app-region {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: #9fb0c3;
   padding: 8px 14px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -1489,6 +1494,15 @@ body {
   flex-wrap: wrap;
 }
 
+/* Same 44px floor already applied in `.data-menu-actions`, `.confirm-actions`
+   and `.toast` -- these three (print, CSV, email) are this tab's actual
+   reason for existing, and were sized like everything else on the page
+   instead of like something meant to be tapped. */
+.report-action-row .primary-button,
+.report-action-row .secondary-button {
+  min-height: 44px;
+}
+
 .report-actions-note {
   margin: 0;
   min-width: 0;
@@ -1739,6 +1753,11 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.report-confirm-actions .primary-button,
+.report-confirm-actions .secondary-button {
+  min-height: 44px;
 }
 
 /* Update banner -- tells someone a new deploy landed while their tab stayed
