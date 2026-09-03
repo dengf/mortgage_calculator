@@ -91,6 +91,9 @@ impl From<&MortgageError> for Message {
             MortgageError::InvalidRate(v) => {
                 Message::with_value("err.invalidRate", v.clone(), text)
             }
+            MortgageError::RateTooHigh(v) => {
+                Message::with_value("err.rateTooHigh", v.clone(), text)
+            }
             MortgageError::InvalidTerm(v) => {
                 Message::with_value("err.invalidTerm", v.to_string(), text)
             }
@@ -162,6 +165,7 @@ mod tests {
         let all = [
             MortgageError::InvalidPrincipal("1".into()),
             MortgageError::InvalidRate("1".into()),
+            MortgageError::RateTooHigh("1".into()),
             MortgageError::InvalidTerm(1),
             MortgageError::TermTooLong(1),
             MortgageError::DownPaymentExceedsPrice {

@@ -39,21 +39,37 @@ export const DEFAULT_RATE = {
  * so a shape can't grow a field on one tab and not the other. Labels are
  * catalog keys, not sentences.
  */
+// `mortgage-calc` rejects a combined rate above 100% (see `MAX_ANNUAL_RATE`
+// in `crates/mortgage-calc/src/loan.rs`) -- that is the authoritative check.
+// This mirrors it on each percent field only so a fat-fingered "999" is
+// caught by the input itself rather than round-tripping to Rust first.
+const MAX_RATE_PERCENT = 100;
+
 export const RATE_FIELDS = {
-  fixed: [{ key: 'ratePercent', label: 'rate.rate', unit: 'rate.percent' }],
+  fixed: [{ key: 'ratePercent', label: 'rate.rate', unit: 'rate.percent', max: MAX_RATE_PERCENT }],
   floating: [
-    { key: 'baseRatePercent', label: 'rate.base', unit: 'rate.percent' },
-    { key: 'spreadPercent', label: 'rate.spread', unit: 'rate.percent' },
+    { key: 'baseRatePercent', label: 'rate.base', unit: 'rate.percent', max: MAX_RATE_PERCENT },
+    { key: 'spreadPercent', label: 'rate.spread', unit: 'rate.percent', max: MAX_RATE_PERCENT },
   ],
   // Every field of a Singapore package is editable, because every one of
   // them is negotiated: the index, the promotional spread, how long it
   // lasts, and the spread it steps up to. The last decides most of the
   // interest and is the one buyers are least often shown.
   reverting: [
-    { key: 'baseRatePercent', label: 'rate.base', unit: 'rate.percent' },
-    { key: 'initialSpreadPercent', label: 'rate.initialSpread', unit: 'rate.percent' },
+    { key: 'baseRatePercent', label: 'rate.base', unit: 'rate.percent', max: MAX_RATE_PERCENT },
+    {
+      key: 'initialSpreadPercent',
+      label: 'rate.initialSpread',
+      unit: 'rate.percent',
+      max: MAX_RATE_PERCENT,
+    },
     { key: 'initialYears', label: 'rate.lockIn', unit: 'rate.yrs', min: 0 },
-    { key: 'thereafterSpreadPercent', label: 'rate.thereafterSpread', unit: 'rate.percent' },
+    {
+      key: 'thereafterSpreadPercent',
+      label: 'rate.thereafterSpread',
+      unit: 'rate.percent',
+      max: MAX_RATE_PERCENT,
+    },
   ],
 };
 

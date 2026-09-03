@@ -12,8 +12,20 @@ import { DEFAULT_SCENARIO, useScenarioSummary } from '../scenario';
 // Quoted only when a value needs it -- a sentence like the rate's "can this
 // change" column routinely carries a comma of its own; every plain number
 // here passes through untouched.
-function csvField(value) {
-  const text = String(value);
+export function csvField(value) {
+  let text = String(value);
+  // Excel and Sheets can treat a cell starting with = or @ as a formula to
+  // evaluate rather than text to display -- a leading `'` forces text
+  // rendering and is not itself shown. `+` and `-` are deliberately not
+  // guarded: this report legitimately produces values like "+0.50%" (the
+  // rate-rise column) and could produce a negative total, and treating
+  // those as suspicious would corrupt real content. Nothing here is
+  // free-text today, but this file is explicitly meant to be opened in a
+  // spreadsheet, so it stays safe if a free-text field (a scenario note,
+  // say) is ever added to it.
+  if (/^[=@]/.test(text)) {
+    text = `'${text}`;
+  }
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

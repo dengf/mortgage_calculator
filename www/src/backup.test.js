@@ -66,4 +66,33 @@ describe('readBackup', () => {
     expect(result.ok).toBe(true);
     expect(result.count).toBe(0);
   });
+
+  it('rejects a scenario whose inputs_json is not actually JSON', () => {
+    // Every reader of a saved scenario (SavedScenarios, currentInputs) trusts
+    // this string enough to hand it straight to JSON.parse. Catching a
+    // corrupt or adversarial payload here means the failure is "this file
+    // isn't a backup" at import time, before `clear_all_scenarios` has
+    // already wiped whatever was really there -- not an uncaught exception
+    // on whatever screen loads the poisoned record later.
+    const result = readBackup(
+      valid({ scenarios: [scenario({ inputs_json: '{not valid json' })] }),
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects an unreasonably large number of scenarios', () => {
+    const scenarios = Array.from({ length: 10_001 }, (_, i) => scenario({ id: `s${i}` }));
+    expect(readBackup(valid({ scenarios })).ok).toBe(false);
+  });
+
+  it('rejects a scenario with an unreasonably long name or inputs_json', () => {
+    expect(readBackup(valid({ scenarios: [scenario({ name: 'x'.repeat(501) })] })).ok).toBe(
+      false,
+    );
+    expect(
+      readBackup(
+        valid({ scenarios: [scenario({ inputs_json: JSON.stringify('x'.repeat(100_001)) })] }),
+      ).ok,
+    ).toBe(false);
+  });
 });

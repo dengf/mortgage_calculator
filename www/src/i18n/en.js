@@ -269,17 +269,22 @@ export default {
 
   // Your data
   'data.title': 'Your data',
-  'data.exportHint': 'Download every saved scenario as a single JSON file, or restore one from a file you exported before.',
+  'data.exportHint':
+    'Download every saved scenario as a single JSON file, or restore one from a file you exported before.',
   'data.export': 'Export all data',
   'data.import': 'Import data',
   'data.clearAll': 'Clear all data',
-  'data.importConfirm': 'Replace every saved scenario with the {count} in that file? What is here now will be gone.',
-  'data.clearConfirm': 'Delete every saved scenario, across every calculator? This cannot be undone.',
+  'data.importConfirm':
+    'Replace every saved scenario with the {count} in that file? What is here now will be gone.',
+  'data.clearConfirm':
+    'Delete every saved scenario, across every calculator? This cannot be undone.',
   'data.close': 'Close',
   'confirm.cancel': 'Cancel',
   'confirm.replace': 'Replace',
   'err.badImportFile': "That file isn't a Mortgage Calculator export — nothing was changed.",
-  'err.storageUnavailable': "Couldn't reach your saved data ({detail}). Nothing was changed — try again.",
+  'err.corruptScenario': "This saved scenario is corrupted and can't be loaded.",
+  'err.storageUnavailable':
+    "Couldn't reach your saved data ({detail}). Nothing was changed — try again.",
   'errors.dismiss': 'Dismiss',
 
   // Charts
@@ -388,6 +393,7 @@ export default {
   // Messages produced by the Rust layer, keyed by the code it returns.
   'err.invalidPrincipal': 'Loan amount must be greater than zero (got {value}).',
   'err.invalidRate': 'Interest rate cannot be negative (got {value}).',
+  'err.rateTooHigh': 'Interest rate is unreasonably high (got {value}). Check for a typo.',
   'err.invalidTerm': 'Loan term must cover at least one payment (got {value}).',
   'err.termTooLong': 'Loan term is unreasonably long ({value} payments).',
   'err.downPaymentTooLarge':

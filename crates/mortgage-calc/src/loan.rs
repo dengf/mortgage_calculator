@@ -1,5 +1,6 @@
 use mortgage_core::{MortgageError, MortgageResult, PaymentFrequency};
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 use crate::rate::RateType;
 
@@ -9,6 +10,14 @@ use crate::rate::RateType;
 /// allocation — which aborts the whole process on failure rather than
 /// returning a catchable error.
 const MAX_TOTAL_PERIODS: u32 = 52 * 100; // 100 years, even at the most frequent (weekly) schedule
+
+/// No real mortgage anywhere charges anywhere near this. Without a ceiling, a
+/// fat-fingered or adversarial rate (`999` typed into a field meant for
+/// `9.99`) produces a fully-formed, confidently-displayed report -- payment
+/// table, amortization schedule, rate-rise stress test -- built on a number
+/// nobody intended. That is exactly the "quietly wrong" failure this crate
+/// exists to prevent, so it is rejected the same way an impossible term is.
+const MAX_ANNUAL_RATE: Decimal = dec!(1); // 100%
 
 /// The point at which a loan's rate changes, and what it changes to.
 ///
@@ -196,6 +205,9 @@ impl LoanBuilder {
         if annual_rate < Decimal::ZERO {
             return Err(MortgageError::InvalidRate(annual_rate.to_string()));
         }
+        if annual_rate > MAX_ANNUAL_RATE {
+            return Err(MortgageError::RateTooHigh(annual_rate.to_string()));
+        }
 
         let reversion = self.reversion.or_else(|| {
             self.reversion_after_years
@@ -208,6 +220,9 @@ impl LoanBuilder {
         if let Some(r) = reversion {
             if r.annual_rate < Decimal::ZERO {
                 return Err(MortgageError::InvalidRate(r.annual_rate.to_string()));
+            }
+            if r.annual_rate > MAX_ANNUAL_RATE {
+                return Err(MortgageError::RateTooHigh(r.annual_rate.to_string()));
             }
         }
 
@@ -284,7 +299,6 @@ mod tests {
     }
 
     use mortgage_core::{MortgageError, PaymentFrequency};
-    use rust_decimal_macros::dec;
 
     #[test]
     fn rejects_a_term_long_enough_to_have_forced_a_multi_gigabyte_allocation() {
@@ -312,5 +326,51 @@ mod tests {
             .unwrap();
 
         assert_eq!(loan.total_periods(), 600);
+    }
+
+    #[test]
+    fn rejects_a_fat_fingered_rate_instead_of_reporting_it_with_confidence() {
+        // A stray extra digit -- 999 typed where 9.99 was meant -- must not
+        // sail through and produce a fully-rendered, exact-looking report.
+        let result = Loan::builder()
+            .principal(dec!(500_000))
+            .annual_rate(dec!(9.99))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .build();
+
+        assert_eq!(
+            result,
+            Err(MortgageError::RateTooHigh(dec!(9.99).to_string()))
+        );
+    }
+
+    #[test]
+    fn accepts_a_rate_right_at_the_ceiling() {
+        let loan = Loan::builder()
+            .principal(dec!(500_000))
+            .annual_rate(dec!(1.0))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .build()
+            .unwrap();
+
+        assert_eq!(loan.annual_rate(), dec!(1.0));
+    }
+
+    #[test]
+    fn rejects_a_reversion_rate_above_the_ceiling_even_when_the_initial_rate_is_fine() {
+        let result = Loan::builder()
+            .principal(dec!(500_000))
+            .annual_rate(dec!(0.02))
+            .reversion_after_years(dec!(2), dec!(9.99))
+            .term_years(dec!(25))
+            .frequency(PaymentFrequency::Monthly)
+            .build();
+
+        assert_eq!(
+            result,
+            Err(MortgageError::RateTooHigh(dec!(9.99).to_string()))
+        );
     }
 }

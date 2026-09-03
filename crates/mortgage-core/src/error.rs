@@ -9,6 +9,9 @@ pub enum MortgageError {
     #[error("annual interest rate must be zero or positive, got {0}")]
     InvalidRate(String),
 
+    #[error("annual interest rate is unreasonably high, got {0}")]
+    RateTooHigh(String),
+
     #[error("loan term must be at least one payment period, got {0} periods")]
     InvalidTerm(u32),
 
