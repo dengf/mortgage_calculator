@@ -117,13 +117,27 @@ export default function Header({
 
       <nav className="app-tabs">
         {TABS.map(({ id, key, Icon }) => (
+          // aria-label pins the accessible name to the full word regardless
+          // of which of the two spans below main.css shows at the current
+          // width -- without it, the name would silently change between
+          // "Refinance" (desktop) and "Refi" (phone) along with the visual
+          // swap, which a screen-reader user gets no equivalent visual cue
+          // for and a test asserting one fixed name would flake on.
           <button
             key={id}
             className={id === activeTab ? 'app-tab active' : 'app-tab'}
+            aria-label={t(key)}
             onClick={() => onTabChange(id)}
           >
             <Icon />
-            <span className="app-tab-label">{t(key)}</span>
+            {/* Full label at desktop width; a shorter abbreviation on the
+                phone bottom bar, where six tabs sharing one row leaves no
+                room for "Amortization"/"Affordability" unabbreviated (see
+                main.css's own comment on the phone .app-tab-label rules).
+                Both render always; main.css's media query is what decides
+                which one is visible at the current width. */}
+            <span className="app-tab-label app-tab-label-full">{t(key)}</span>
+            <span className="app-tab-label app-tab-label-short">{t(`${key}.short`)}</span>
           </button>
         ))}
       </nav>

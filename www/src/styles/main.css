@@ -248,6 +248,15 @@ body {
   color: var(--positive-ink);
 }
 
+/* Two label spans always render (see Header.jsx); this default picks the
+   full word, matching the desktop pill row's plenty of width. The phone
+   media query below swaps which one is visible -- the button's own
+   aria-label (not this text) is what an assistive tech reads either way,
+   so the swap has no accessibility side effect, only a visual one. */
+.app-tab-label-short {
+  display: none;
+}
+
 .app-switches {
   display: flex;
   align-items: center;
@@ -971,25 +980,29 @@ body {
     font-size: 0.68rem;
   }
 
+  /* Swap which of the two spans is visible -- see the base
+     .app-tab-label-short rule and Header.jsx's own comment. At an even
+     six-way split of a 375px phone there's no room for "Amortization"/
+     "Affordability" unabbreviated at a legible size, so the phone bar
+     shows "Amort"/"Afford" (etc. -- see en.js's nav.*.short keys)
+     instead of wrapping the full word onto two lines. */
+  .app-tab-label-full {
+    display: none;
+  }
+
+  .app-tab-label-short {
+    display: block;
+    text-align: center;
+  }
+
+  /* Safety net, not the primary fix: a translated abbreviation this app
+     doesn't control the length of, or a future locale with no short-label
+     convention, still shouldn't overflow silently the way the unabbreviated
+     labels originally did (see the min-width/align-items comments above). */
   .app-tab-label {
-    /* Not nowrap: at an even six-way split of a 375px phone, the two
-       longest labels ("Amortization", "Affordability") don't fit on one
-       line at a legible size. Wrapping them to two lines under the icon
-       still reads fine; the alternative (shrinking every label's font
-       further to fit the longest one on one line) made the five short
-       labels needlessly tiny just to accommodate the two long ones.
-       Both are also a single unbroken word each, so `normal` alone
-       doesn't actually wrap them -- there's no space for the browser's
-       default wrapping to break on. `hyphens: auto` (keyed off the
-       lang attribute i18n/index.jsx keeps on <html>) breaks at a real
-       syllable with a hyphen instead of an arbitrary character --
-       "Amorti-zation" instead of "Amortiza-tion". `overflow-wrap` stays
-       as the fallback for a script or word its dictionary doesn't cover. */
     white-space: normal;
     overflow-wrap: break-word;
     hyphens: auto;
-    text-align: center;
-    line-height: 1.15;
   }
 
   .app-main {
