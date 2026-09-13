@@ -4,6 +4,7 @@ use mortgage_core::{round_currency, MortgageError, MortgageResult, PaymentFreque
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use crate::loan::{validate_annual_rate, validate_principal};
 use crate::payment::payment_factor;
 use crate::rate::RateType;
 use crate::Loan;
@@ -53,6 +54,8 @@ pub fn analyze_refinance(input: &RefinanceInput) -> MortgageResult<RefinanceResu
     if input.remaining_periods == 0 {
         return Err(MortgageError::InvalidTerm(0));
     }
+    validate_principal(input.current_balance)?;
+    validate_annual_rate(input.current_annual_rate)?;
 
     let current_periodic_rate = input.frequency.periodic_rate(input.current_annual_rate);
     let current_factor = payment_factor(current_periodic_rate, input.remaining_periods);
@@ -181,6 +184,42 @@ mod tests {
                 ..input()
             }),
             Err(MortgageError::InvalidTerm(0))
+        ));
+    }
+
+    #[test]
+    fn rejects_a_negative_current_balance_instead_of_reporting_it() {
+        // The "current loan" side never passes through Loan::builder(), so it
+        // used to skip every check that side gets -- a negative balance
+        // produced a confidently-displayed (and nonsensical) comparison.
+        assert!(matches!(
+            analyze_refinance(&RefinanceInput {
+                current_balance: dec!(-300000),
+                ..input()
+            }),
+            Err(MortgageError::InvalidPrincipal(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_a_fat_fingered_current_rate_instead_of_reporting_it() {
+        assert!(matches!(
+            analyze_refinance(&RefinanceInput {
+                current_annual_rate: dec!(9.99), // 999%, not 9.99%
+                ..input()
+            }),
+            Err(MortgageError::RateTooHigh(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_a_negative_current_rate_instead_of_reporting_it() {
+        assert!(matches!(
+            analyze_refinance(&RefinanceInput {
+                current_annual_rate: dec!(-0.01),
+                ..input()
+            }),
+            Err(MortgageError::InvalidRate(_))
         ));
     }
 

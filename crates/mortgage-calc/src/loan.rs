@@ -128,6 +128,28 @@ impl Loan {
     }
 }
 
+/// Shared with [`crate::refinance`]'s "current loan" side, which describes an
+/// existing loan rather than building a new [`Loan`] and so never otherwise
+/// passes through [`LoanBuilder::build`] -- without this it quietly skipped
+/// every check below, and a `999` typed into "current rate" produced a
+/// confidently-displayed refinance comparison built on it.
+pub(crate) fn validate_principal(principal: Decimal) -> MortgageResult<()> {
+    if principal <= Decimal::ZERO {
+        return Err(MortgageError::InvalidPrincipal(principal.to_string()));
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_annual_rate(annual_rate: Decimal) -> MortgageResult<()> {
+    if annual_rate < Decimal::ZERO {
+        return Err(MortgageError::InvalidRate(annual_rate.to_string()));
+    }
+    if annual_rate > MAX_ANNUAL_RATE {
+        return Err(MortgageError::RateTooHigh(annual_rate.to_string()));
+    }
+    Ok(())
+}
+
 /// Validating builder for [`Loan`]: construction is the single place inputs
 /// are checked, so every downstream calculation can assume a valid loan.
 #[derive(Debug, Default, Clone, Copy)]
@@ -199,15 +221,8 @@ impl LoanBuilder {
         let term_years = self.term_years.unwrap_or_default();
         let frequency = self.frequency.unwrap_or_default();
 
-        if principal <= Decimal::ZERO {
-            return Err(MortgageError::InvalidPrincipal(principal.to_string()));
-        }
-        if annual_rate < Decimal::ZERO {
-            return Err(MortgageError::InvalidRate(annual_rate.to_string()));
-        }
-        if annual_rate > MAX_ANNUAL_RATE {
-            return Err(MortgageError::RateTooHigh(annual_rate.to_string()));
-        }
+        validate_principal(principal)?;
+        validate_annual_rate(annual_rate)?;
 
         let reversion = self.reversion.or_else(|| {
             self.reversion_after_years
@@ -218,12 +233,7 @@ impl LoanBuilder {
         });
 
         if let Some(r) = reversion {
-            if r.annual_rate < Decimal::ZERO {
-                return Err(MortgageError::InvalidRate(r.annual_rate.to_string()));
-            }
-            if r.annual_rate > MAX_ANNUAL_RATE {
-                return Err(MortgageError::RateTooHigh(r.annual_rate.to_string()));
-            }
+            validate_annual_rate(r.annual_rate)?;
         }
 
         let total_periods = frequency.periods_in_years(term_years);
