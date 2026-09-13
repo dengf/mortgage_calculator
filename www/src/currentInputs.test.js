@@ -18,7 +18,10 @@ afterEach(() => {
 describe('useCurrentInputs', () => {
   it('restores via onLoad only when a persisted draft exists', async () => {
     const wasmModule = mockWasmModule({
-      load_current_inputs: vi.fn(async () => ({ inputs_json: '{"homePrice":600000}', error: null })),
+      load_current_inputs: vi.fn(async () => ({
+        inputs_json: '{"homePrice":600000}',
+        error: null,
+      })),
     });
     const onLoad = vi.fn();
 

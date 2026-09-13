@@ -54,6 +54,7 @@ export default function AmortizationSchedule({
     if (!allFilled(scenario.homePrice, scenario.downPayment, ...rateValues(rate), termYears))
       return null;
     return wasmModule.calculate_amortization_schedule({ loan, extra_payment: extraPayment || 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, principal, rateKey, termYears, frequency, extraPayment]);
 
   const impact = useMemo(() => {
@@ -61,6 +62,7 @@ export default function AmortizationSchedule({
     if (!allFilled(scenario.homePrice, scenario.downPayment, ...rateValues(rate), termYears))
       return null;
     return wasmModule.calculate_extra_payment_impact({ loan, extra_payment: extraPayment });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, principal, rateKey, termYears, frequency, extraPayment]);
 
   // Cadence and every period-to-time conversion come from the core rather

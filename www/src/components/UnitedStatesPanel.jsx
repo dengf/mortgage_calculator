@@ -92,7 +92,10 @@ export default function UnitedStatesPanel({ inputs, onChange, result, homePrice,
               <span className="stat-value">
                 {formatUsd(result.down_payment)}
                 {result.down_payment_percent != null && (
-                  <> <small>({result.down_payment_percent.toFixed(1)}%)</small></>
+                  <>
+                    {' '}
+                    <small>({result.down_payment_percent.toFixed(1)}%)</small>
+                  </>
                 )}
               </span>
             </div>

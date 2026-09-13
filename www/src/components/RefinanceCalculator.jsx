@@ -46,6 +46,7 @@ export default function RefinanceCalculator({ wasmModule, region, dataVersion })
     });
     setNewRate(seeded.rate);
     setNewTermYears(seeded.termYears);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, region]);
 
   useRegionAwareCurrentInputs({
@@ -109,6 +110,7 @@ export default function RefinanceCalculator({ wasmModule, region, dataVersion })
       closing_costs: closingCosts,
       frequency: 'monthly',
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     wasmModule,
     currentBalance,

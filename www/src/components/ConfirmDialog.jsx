@@ -33,7 +33,11 @@ export function useConfirm() {
   }, []);
 
   const dialog = state ? (
-    <ConfirmDialogView message={state.message} confirmLabel={state.confirmLabel} onAnswer={answer} />
+    <ConfirmDialogView
+      message={state.message}
+      confirmLabel={state.confirmLabel}
+      onAnswer={answer}
+    />
   ) : null;
 
   return [confirm, dialog];

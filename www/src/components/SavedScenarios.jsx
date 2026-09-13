@@ -29,6 +29,7 @@ export default function SavedScenarios({
     // import/clear-all from the nav's "My data" menu (which bumps it)
     // triggers this same refetch, instead of the list going stale until
     // the next tab switch remounts this component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, calculatorKind, dataVersion]);
 
   useEffect(() => {

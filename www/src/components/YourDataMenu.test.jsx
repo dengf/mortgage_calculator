@@ -9,7 +9,13 @@ function mockWasmModule(overrides = {}) {
   return {
     list_scenarios: vi.fn(async () => ({
       scenarios: [
-        { id: 'a', calculator: 'payment', name: '30yr fixed', created_at: 1700000000000, inputs_json: '{}' },
+        {
+          id: 'a',
+          calculator: 'payment',
+          name: '30yr fixed',
+          created_at: 1700000000000,
+          inputs_json: '{}',
+        },
       ],
       error: null,
     })),
@@ -68,14 +74,22 @@ describe('YourDataMenu', () => {
   it('imports a valid file once the replace is confirmed, then closes', async () => {
     const wasmModule = mockWasmModule();
     const onDataChanged = vi.fn();
-    const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
+    const { container } = render(
+      <YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
 
     const file = makeFile({
       format: EXPORT_FORMAT,
       exported_at: '2026-08-29T00:00:00.000Z',
       scenarios: [
-        { id: 'imp-1', calculator: 'refinance', name: 'Imported', created_at: 1700000001000, inputs_json: '{}' },
+        {
+          id: 'imp-1',
+          calculator: 'refinance',
+          name: 'Imported',
+          created_at: 1700000001000,
+          inputs_json: '{}',
+        },
       ],
     });
     const input = container.querySelector('input[type="file"]');
@@ -108,7 +122,15 @@ describe('YourDataMenu', () => {
 
     const file = makeFile({
       format: EXPORT_FORMAT,
-      scenarios: [{ id: 'imp-1', calculator: 'refinance', name: 'Imported', created_at: 1, inputs_json: '{}' }],
+      scenarios: [
+        {
+          id: 'imp-1',
+          calculator: 'refinance',
+          name: 'Imported',
+          created_at: 1,
+          inputs_json: '{}',
+        },
+      ],
     });
     const input = container.querySelector('input[type="file"]');
     await userEvent.upload(input, file);
@@ -197,7 +219,9 @@ describe('YourDataMenu', () => {
     const confirmDialog = await screen.findByRole('alertdialog');
     await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Clear all data' }));
 
-    expect(await screen.findByText(/IndexedDB is unavailable in Private Browsing/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/IndexedDB is unavailable in Private Browsing/),
+    ).toBeInTheDocument();
     expect(onDataChanged).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -207,12 +231,22 @@ describe('YourDataMenu', () => {
       save_scenario: vi.fn(async () => ({ error: 'storage quota exceeded' })),
     });
     const onDataChanged = vi.fn();
-    const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
+    const { container } = render(
+      <YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
 
     const file = makeFile({
       format: EXPORT_FORMAT,
-      scenarios: [{ id: 'imp-1', calculator: 'refinance', name: 'Imported', created_at: 1, inputs_json: '{}' }],
+      scenarios: [
+        {
+          id: 'imp-1',
+          calculator: 'refinance',
+          name: 'Imported',
+          created_at: 1,
+          inputs_json: '{}',
+        },
+      ],
     });
     const input = container.querySelector('input[type="file"]');
     await userEvent.upload(input, file);

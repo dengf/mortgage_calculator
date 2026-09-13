@@ -181,7 +181,9 @@ describe('SavedScenarios', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
 
-    expect(await screen.findByText('Delete "30yr fixed"? This cannot be undone.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Delete "30yr fixed"? This cannot be undone.'),
+    ).toBeInTheDocument();
     expect(wasmModule.delete_scenario).not.toHaveBeenCalled();
 
     const dialog = screen.getByRole('alertdialog');

@@ -32,7 +32,9 @@ describe('UpdateBanner', () => {
 
     dispatchStale('new999');
 
-    expect(screen.getByRole('status')).toHaveTextContent('A new version of Mortgage Calculator is ready.');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'A new version of Mortgage Calculator is ready.',
+    );
   });
 
   it('reloads onto the announced build when Reload is clicked', async () => {
