@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#0f1720">
+  <meta name="theme-color" id="theme-color-meta" content="#0f1720">
 
   <!-- Open Graph / Twitter need absolute URLs; relative ones are ignored by
        most crawlers, so these can't use the same relative paths as the
@@ -54,6 +54,27 @@
     ]
   }
   </script>
+  <script>
+    // Stamps `data-theme` on <html> from the stored preference (theme.js's
+    // `applyTheme`, same key) before this document's own <style> below or
+    // main.css ever paint anything -- React doesn't mount until after an
+    // async WASM load (see src/index.js), so waiting for its useEffect to
+    // do this would flash the wrong theme on the loading screen for
+    // however long that takes. Duplicated here rather than imported
+    // because this has to run synchronously, inline, before first paint;
+    // theme.js's copy is what every later render (a locale switch, the
+    // theme picker itself) uses instead.
+    (function () {
+      var t = null;
+      try {
+        t = localStorage.getItem('mc:theme');
+      } catch (e) {}
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      var isLight = t === 'light' || (t !== 'dark' && window.matchMedia('(prefers-color-scheme: light)').matches);
+      var meta = document.getElementById('theme-color-meta');
+      if (meta) meta.setAttribute('content', isLight ? '#f7f8fa' : '#0f1720');
+    })();
+  </script>
   <style>
     body {
       margin: 0;
@@ -73,6 +94,12 @@
       font-size: 1.2rem;
       color: #7ee787;
     }
+    @media (prefers-color-scheme: light) {
+      html:not([data-theme='dark']), html:not([data-theme='dark']) body { background-color: #f7f8fa; }
+      html:not([data-theme='dark']) body { color: #16202c; }
+    }
+    html[data-theme='light'], html[data-theme='light'] body { background-color: #f7f8fa; }
+    html[data-theme='light'] body { color: #16202c; }
   </style>
 </head>
 <body>

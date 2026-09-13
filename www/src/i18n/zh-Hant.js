@@ -56,6 +56,10 @@ export default {
   'app.loading': '正在載入試算器…',
   'app.region': '地區',
   'app.language': '語言',
+  'app.theme': '主題',
+  'app.themeSystem': '系統',
+  'app.themeLight': '淺色',
+  'app.themeDark': '深色',
 
   'nav.payment': '月付金',
   'nav.amortization': '攤還明細',

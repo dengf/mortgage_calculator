@@ -1,11 +1,143 @@
+/* Token system. Dark values are this file's original literals; light values
+   are a first pass, not run through a formal contrast checker -- same bar
+   budget_planner's own light palette shipped at (see that repo's main.css).
+
+   Three-tier light/dark, ported from budget_planner: this `:root` block is
+   the dark default, the `prefers-color-scheme: light` block below applies
+   whenever the OS says light *and* nothing has overridden it, and
+   `:root[data-theme='light']`/`[data-theme='dark']` (YourDataMenu's theme
+   picker, via theme.js) forces a choice regardless of OS preference in
+   either direction. The media-query rule is guarded with
+   `:not([data-theme='dark'])` rather than `:not([data-theme])` so picking
+   "System" again (which clears the attribute -- see theme.js's
+   `applyTheme`) still falls back to it correctly, and so an explicit dark
+   override on a light-OS device isn't fought by the media query. The light
+   values are necessarily written out twice (media-guarded and explicit)
+   since plain CSS custom properties have no shared-block/mixin mechanism to
+   avoid it.
+
+   The accent stays this app's own blue -- unlike budget_planner, adding a
+   light theme is not also a brand-hue decision here.
+
+   `.report`/`.report-*` and the printable stylesheet further down are
+   deliberately NOT tokenized: the printable document always renders
+   black-on-white regardless of the app's on-screen theme, the same way
+   paper always has, so those rules keep their own hardcoded light colors
+   untouched by this system. */
+:root {
+  --bg: #0f1720;
+  --panel: #161e2b;
+  /* A secondary, more recessed panel tone than --panel -- the Singapore
+     regulatory card and the rate-assumption note. Consolidates two
+     near-identical literals this file had (#131b27 and #131c26) into one
+     value. */
+  --panel-alt: #131c26;
+  --panel-hover: #1b2432;
+  --surface: #0f1720;
+  --ink: #e6edf3;
+  --muted: #9fb0c3;
+  /* Was #5c6b7d -- ~3.16:1 on --panel, under WCAG AA's 4.5:1 floor for the
+     normal-size text this token is actually used on. #7a8ca0 clears
+     4.5:1 -- the same fix budget_planner made to its own equivalent
+     token, applied here for the same reason. */
+  --muted-2: #7a8ca0;
+  --byline: #9aa7b4;
+  --line: #223;
+  --line-soft: #1f2937;
+  --input-border: #2a3546;
+
+  --accent: #4f8cff;
+  --accent-ink: #0f1720;
+  --positive: #7ee787;
+  --positive-ink: #0f1720;
+  --positive-hover: #9df0a4;
+  --positive-bg: #16311f;
+  --positive-border: #2f6b3f;
+  --negative: #ff8a8a;
+  --negative-ink: #3a1d1d;
+  --negative-hover: #ffa8a8;
+  --negative-bg: #3a1d1d;
+  --negative-border: #7a3535;
+  --negative-text: #ffb4b4;
+  /* Consolidates four near-identical ambers this file had for warning/
+     attention accents (#f59e0b, #eab308, #e8b45c, #ffb454) into one. */
+  --gold: #e8b45c;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --panel-alt: #eef1f5;
+    --panel-hover: #f0f3f7;
+    --surface: #ffffff;
+    --ink: #16202c;
+    --muted: #5a6b7d;
+    --muted-2: #66788c;
+    --byline: #6b7a8a;
+    --line: #dde3ea;
+    --line-soft: #e2e8ef;
+    --input-border: #c7d0da;
+
+    --accent: #2f6fe0;
+    --accent-ink: #ffffff;
+    --positive: #1f7a3d;
+    --positive-ink: #ffffff;
+    --positive-hover: #2f9650;
+    --positive-bg: #e4f3e8;
+    --positive-border: #b8ddc2;
+    --negative: #b3261e;
+    --negative-ink: #ffffff;
+    --negative-hover: #c53a30;
+    --negative-bg: #fbeae9;
+    --negative-border: #e7b7b3;
+    --negative-text: #8a2620;
+    --gold: #8a6a2c;
+  }
+}
+
+/* Explicit override from YourDataMenu's theme picker (theme.js's
+   `applyTheme`) -- forces light regardless of OS preference. Values kept
+   identical to the media-guarded block above; see this file's opening
+   comment for why they can't be shared instead of duplicated. */
+:root[data-theme='light'] {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --panel-alt: #eef1f5;
+  --panel-hover: #f0f3f7;
+  --surface: #ffffff;
+  --ink: #16202c;
+  --muted: #5a6b7d;
+  --muted-2: #66788c;
+  --byline: #6b7a8a;
+  --line: #dde3ea;
+  --line-soft: #e2e8ef;
+  --input-border: #c7d0da;
+
+  --accent: #2f6fe0;
+  --accent-ink: #ffffff;
+  --positive: #1f7a3d;
+  --positive-ink: #ffffff;
+  --positive-hover: #2f9650;
+  --positive-bg: #e4f3e8;
+  --positive-border: #b8ddc2;
+  --negative: #b3261e;
+  --negative-ink: #ffffff;
+  --negative-hover: #c53a30;
+  --negative-bg: #fbeae9;
+  --negative-border: #e7b7b3;
+  --negative-text: #8a2620;
+  --gold: #8a6a2c;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #0f1720;
-  color: #e6edf3;
+  background: var(--bg);
+  color: var(--ink);
 }
 
 .app {
@@ -54,13 +186,13 @@ body {
   gap: 0.32em;
   margin: 0.25rem 0 0;
   font-size: 0.82rem;
-  color: #9aa7b4;
+  color: var(--byline);
   letter-spacing: 0.01em;
 }
 
 .app-byline:hover,
 .app-byline:focus-visible {
-  color: #e6edf3;
+  color: var(--ink);
 }
 
 .meifio-mark {
@@ -68,14 +200,14 @@ body {
      width:auto keeps the aspect ratio the viewBox defines. */
   width: auto;
   display: block;
-  color: #e6edf3;
+  color: var(--ink);
   vertical-align: middle;
 }
 
 .app-tabs {
   display: flex;
   gap: 4px;
-  background: #161e2b;
+  background: var(--panel);
   padding: 4px;
   border-radius: 10px;
   /* Now a sibling of .app-header rather than nested in it (see Header.jsx),
@@ -87,7 +219,7 @@ body {
 .app-tab {
   border: none;
   background: transparent;
-  color: #9fb0c3;
+  color: var(--muted);
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -96,20 +228,36 @@ body {
 }
 
 .app-tab.active {
-  background: #7ee787;
-  color: #0f1720;
+  background: var(--positive);
+  color: var(--positive-ink);
 }
 
 .app-switches {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Shared by the header's language picker and the in-dialog theme picker
+   below -- one native <select> styling rule for both, matching
+   budget_planner's own reuse of this class in the same two places. */
+.app-language-select {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 6px 8px;
+  min-height: 44px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .app-regions {
   display: flex;
   gap: 4px;
-  background: #161e2b;
+  background: var(--panel);
   padding: 4px;
   border-radius: 10px;
 }
@@ -120,7 +268,7 @@ body {
   justify-content: center;
   border: none;
   background: transparent;
-  color: #9fb0c3;
+  color: var(--muted);
   padding: 8px 14px;
   min-width: 44px;
   min-height: 44px;
@@ -131,8 +279,8 @@ body {
 }
 
 .app-region.active {
-  background: #4f8cff;
-  color: #0f1720;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .app-main {
@@ -142,7 +290,7 @@ body {
      moved out to be sticky-able (see Header.jsx) and content is the next
      thing after it either way. */
   margin-top: 16px;
-  border-top: 1px solid #223;
+  border-top: 1px solid var(--line);
   padding: 24px 0 48px;
 }
 
@@ -153,7 +301,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: #161e2b;
+  background: var(--panel);
   border-radius: 12px;
   padding: 18px 20px;
 }
@@ -168,7 +316,7 @@ body {
   flex-wrap: wrap;
   gap: 16px;
   font-size: 0.78rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 .chart-key {
@@ -192,7 +340,7 @@ body {
   width: 100%;
   height: 180px;
   display: block;
-  background: #0f1720;
+  background: var(--surface);
   border-radius: 8px;
 }
 
@@ -200,14 +348,14 @@ body {
   display: flex;
   justify-content: space-between;
   font-size: 0.72rem;
-  color: #5c6b7d;
+  color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
 
 .chart-note {
   margin: 0;
   font-size: 0.8rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 .split-bar {
@@ -215,15 +363,15 @@ body {
   height: 28px;
   border-radius: 6px;
   overflow: hidden;
-  background: #0f1720;
+  background: var(--surface);
 }
 
 .split-bar-principal {
-  background: #4f8cff;
+  background: var(--accent);
 }
 
 .split-bar-interest {
-  background: #f59e0b;
+  background: var(--gold);
 }
 
 /* --- Singapore regulatory panel --- */
@@ -232,8 +380,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #131b27;
-  border: 1px solid #2a3546;
+  background: var(--panel-alt);
+  border: 1px solid var(--input-border);
   border-radius: 12px;
   padding: 20px;
 }
@@ -253,28 +401,28 @@ body {
 .sg-ratio {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #7ee787;
+  color: var(--positive);
 }
 
 /* Within the warning band below a MAS ceiling, but not yet over it. */
 .sg-ratio.near {
-  color: #eab308;
+  color: var(--gold);
 }
 
 .sg-ratio.breach {
-  color: #ff8a8a;
+  color: var(--negative);
 }
 
 .app-footer {
   padding: 16px 0 32px;
-  color: #5c6b7d;
+  color: var(--muted-2);
   font-size: 0.8rem;
   text-align: center;
-  border-top: 1px solid #223;
+  border-top: 1px solid var(--line);
 }
 
 .app-footer a {
-  color: #7ee787;
+  color: var(--positive);
 }
 
 .panel {
@@ -299,7 +447,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-  background: #161e2b;
+  background: var(--panel);
   padding: 20px;
   border-radius: 12px;
 }
@@ -319,11 +467,11 @@ body {
   gap: 12px;
   width: 100%;
   min-height: 44px;
-  background: #161e2b;
-  border: 1px solid #2a3546;
+  background: var(--panel);
+  border: 1px solid var(--input-border);
   border-radius: 12px;
   padding: 12px 20px;
-  color: #e6edf3;
+  color: var(--ink);
   font-size: 0.9rem;
   font-weight: 700;
   text-align: left;
@@ -331,7 +479,7 @@ body {
 }
 
 .scenario-fields-toggle:hover {
-  border-color: #7ee787;
+  border-color: var(--positive);
 }
 
 .scenario-fields-toggle-label {
@@ -341,7 +489,7 @@ body {
 .scenario-fields-summary {
   flex: 1 1 auto;
   min-width: 0;
-  color: #9fb0c3;
+  color: var(--muted);
   font-weight: 400;
   font-size: 0.85rem;
   overflow: hidden;
@@ -358,6 +506,12 @@ body {
   transform: rotate(180deg);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .scenario-fields-caret {
+    transition: none;
+  }
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -366,7 +520,7 @@ body {
 
 .field-label {
   font-size: 0.8rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 /* A yes/no answer, not a value: the control sits beside its label rather
@@ -379,7 +533,7 @@ body {
 }
 
 .field-check input {
-  accent-color: #4c8dff;
+  accent-color: var(--accent);
   width: 15px;
   height: 15px;
   margin: 0;
@@ -391,10 +545,10 @@ body {
 .rate-note {
   margin: -2px 0 0;
   padding: 8px 10px;
-  border-left: 2px solid #3a4a5e;
-  background: #131c26;
+  border-left: 2px solid var(--input-border);
+  background: var(--panel-alt);
   border-radius: 0 6px 6px 0;
-  color: #9fb0c3;
+  color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.5;
 }
@@ -402,8 +556,8 @@ body {
 .field-input {
   display: flex;
   align-items: center;
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   padding: 0 10px;
 }
@@ -411,7 +565,7 @@ body {
 .field-input input {
   background: transparent;
   border: none;
-  color: #e6edf3;
+  color: var(--ink);
   padding: 10px 4px;
   width: 100%;
   font-size: 0.95rem;
@@ -433,16 +587,16 @@ body {
 }
 
 .field-suffix {
-  color: #5c6b7d;
+  color: var(--muted-2);
   font-size: 0.8rem;
   white-space: nowrap;
 }
 
 .field-select {
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  color: #e6edf3;
+  color: var(--ink);
   padding: 10px;
   font-size: 0.95rem;
 }
@@ -454,7 +608,7 @@ body {
 }
 
 .stat {
-  background: #161e2b;
+  background: var(--panel);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -463,13 +617,13 @@ body {
 }
 
 .stat-primary {
-  background: #16311f;
-  border: 1px solid #2f6b3f;
+  background: var(--positive-bg);
+  border: 1px solid var(--positive-border);
 }
 
 .stat-label {
   font-size: 0.78rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 .stat-value {
@@ -478,15 +632,15 @@ body {
 }
 
 .error {
-  background: #3a1d1d;
-  border: 1px solid #7a3535;
-  color: #ffb4b4;
+  background: var(--negative-bg);
+  border: 1px solid var(--negative-border);
+  color: var(--negative-text);
   padding: 12px 16px;
   border-radius: 8px;
 }
 
 .schedule-table-wrap {
-  background: #161e2b;
+  background: var(--panel);
   border-radius: 12px;
   padding: 16px;
   overflow-x: auto;
@@ -510,7 +664,7 @@ body {
   justify-content: center;
   background: none;
   border: none;
-  color: #7ee787;
+  color: var(--positive);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
@@ -528,7 +682,7 @@ body {
 .schedule-table td {
   text-align: right;
   padding: 8px 10px;
-  border-bottom: 1px solid #1f2937;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .schedule-table th:first-child,
@@ -537,7 +691,7 @@ body {
 }
 
 .schedule-table tbody tr:hover {
-  background: #1b2432;
+  background: var(--panel-hover);
 }
 
 .loading {
@@ -546,17 +700,17 @@ body {
   align-items: center;
   height: 100vh;
   font-size: 1.2rem;
-  color: #7ee787;
+  color: var(--positive);
 }
 
 .link-button.danger {
-  color: #ff8a8a;
+  color: var(--negative);
 }
 
 /* Saved scenarios */
 
 .saved-scenarios {
-  background: #161e2b;
+  background: var(--panel);
   border-radius: 12px;
   padding: 16px 20px;
 }
@@ -581,16 +735,16 @@ body {
 }
 
 .save-form input {
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  color: #e6edf3;
+  color: var(--ink);
   padding: 6px 10px;
   font-size: 0.85rem;
 }
 
 .saved-scenarios-empty {
-  color: #5c6b7d;
+  color: var(--muted-2);
   font-size: 0.85rem;
   margin: 12px 0 0;
 }
@@ -610,7 +764,7 @@ body {
   gap: 12px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #0f1720;
+  background: var(--surface);
 }
 
 .saved-scenarios-list .scenario-name {
@@ -620,7 +774,7 @@ body {
 }
 
 .saved-scenarios-list .scenario-date {
-  color: #5c6b7d;
+  color: var(--muted-2);
   font-size: 0.78rem;
 }
 
@@ -631,7 +785,7 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  background: #161e2b;
+  background: var(--panel);
   padding: 12px 20px;
   border-radius: 12px;
 }
@@ -647,16 +801,16 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  background: #161e2b;
+  background: var(--panel);
   padding: 12px 16px;
   border-radius: 12px;
 }
 
 .comparison-entry-label {
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  color: #e6edf3;
+  color: var(--ink);
   padding: 8px 10px;
   font-size: 0.9rem;
   font-weight: 600;
@@ -669,8 +823,8 @@ body {
 .rate-kind {
   display: flex;
   gap: 4px;
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   padding: 3px;
 }
@@ -682,7 +836,7 @@ body {
 .kind-toggle {
   border: none;
   background: transparent;
-  color: #9fb0c3;
+  color: var(--muted);
   padding: 5px 10px;
   border-radius: 6px;
   cursor: pointer;
@@ -691,8 +845,8 @@ body {
 }
 
 .kind-toggle.active {
-  background: #7ee787;
-  color: #0f1720;
+  background: var(--positive);
+  color: var(--positive-ink);
 }
 
 .comparison-entry-field {
@@ -700,25 +854,25 @@ body {
   align-items: center;
   gap: 6px;
   font-size: 0.8rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 .comparison-entry-field input {
   width: 70px;
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
-  color: #e6edf3;
+  color: var(--ink);
   padding: 5px 8px;
   font-size: 0.85rem;
 }
 
 .comparison-entry-field .unit {
-  color: #5c6b7d;
+  color: var(--muted-2);
 }
 
 .comparison-entry-check input {
-  accent-color: #4c8dff;
+  accent-color: var(--accent);
   width: 15px;
   height: 15px;
   margin: 0;
@@ -762,7 +916,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #161e2b;
+    background: var(--panel);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   }
 
@@ -942,7 +1096,7 @@ body {
   margin-top: 4px;
   font-size: 0.75rem;
   line-height: 1.35;
-  color: var(--muted, #8b98a9);
+  color: var(--muted);
 }
 
 /* Names the rule that actually caps the buyer's budget. Not an error and not
@@ -951,12 +1105,12 @@ body {
 .sg-constraint {
   margin: 12px 0 0;
   padding: 12px 14px;
-  border-left: 3px solid var(--accent, #4f8cff);
+  border-left: 3px solid var(--accent);
   background: rgba(79, 140, 255, 0.08);
   border-radius: 0 6px 6px 0;
   font-size: 0.9rem;
   line-height: 1.5;
-  color: var(--text-muted, #c2ccd8);
+  color: var(--muted);
 }
 
 /* Unit toggle inside the deposit field's label — buyers hold the figure as
@@ -973,24 +1127,24 @@ body {
   font-size: 0.7rem;
   line-height: 1.5;
   font-family: inherit;
-  color: var(--muted, #8b98a9);
+  color: var(--muted);
   background: transparent;
-  border: 1px solid var(--border, #263041);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   cursor: pointer;
 }
 
 .field-unit.active {
-  color: #fff;
-  background: var(--accent, #4f8cff);
-  border-color: var(--accent, #4f8cff);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .field-hint {
   display: block;
   margin-top: 4px;
   font-size: 0.72rem;
-  color: var(--muted, #8b98a9);
+  color: var(--muted);
 }
 
 /* The loan amount: derived from price minus deposit, never typed. Styled as
@@ -1006,7 +1160,7 @@ body {
   font-size: 1rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text, #e6ecf3);
+  color: var(--ink);
 }
 
 /* Explanatory content under the calculator: useful to read, and the only
@@ -1014,15 +1168,15 @@ body {
 .about {
   margin: 28px 0 0;
   padding: 22px 24px;
-  background: var(--panel, #151b26);
-  border: 1px solid var(--border, #263041);
+  background: var(--panel);
+  border: 1px solid var(--input-border);
   border-radius: 10px;
 }
 
 .about h2 {
   margin: 0 0 16px;
   font-size: 1.05rem;
-  color: var(--text, #e6ecf3);
+  color: var(--ink);
 }
 
 .about dl {
@@ -1035,29 +1189,29 @@ body {
   margin: 0 0 4px;
   font-weight: 600;
   font-size: 0.92rem;
-  color: var(--text, #e6ecf3);
+  color: var(--ink);
 }
 
 .about-item dd {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.6;
-  color: var(--muted, #8b98a9);
+  color: var(--muted);
   max-width: 78ch;
 }
 
 .about-disclaimer {
   margin: 18px 0 0;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #263041);
+  border-top: 1px solid var(--input-border);
   font-size: 0.78rem;
   line-height: 1.55;
-  color: var(--muted, #8b98a9);
+  color: var(--muted);
 }
 
 /* Best value in a comparison column. */
 .schedule-table .best {
-  color: var(--good, #7ee787);
+  color: var(--positive);
   font-weight: 600;
 }
 
@@ -1065,24 +1219,24 @@ body {
 .cmp-tradeoff {
   margin: 14px 0 0;
   padding: 12px 14px;
-  border-left: 3px solid var(--accent, #4f8cff);
+  border-left: 3px solid var(--accent);
   background: rgba(79, 140, 255, 0.08);
   border-radius: 0 6px 6px 0;
   font-size: 0.9rem;
   line-height: 1.55;
-  color: var(--text, #e6ecf3);
+  color: var(--ink);
 }
 
 /* A refinance that lengthens the debt: worth saying before the savings. */
 .refi-term-warning {
   margin: 0 0 14px;
   padding: 12px 14px;
-  border-left: 3px solid var(--warn, #e8b45c);
+  border-left: 3px solid var(--gold);
   background: rgba(232, 180, 92, 0.09);
   border-radius: 0 6px 6px 0;
   font-size: 0.88rem;
   line-height: 1.55;
-  color: var(--text, #e6ecf3);
+  color: var(--ink);
 }
 
 /* The reverted rate and instalment, shown under the promotional ones. Muted
@@ -1545,7 +1699,7 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   padding-bottom: 16px;
-  border-bottom: 1px solid #2a3546;
+  border-bottom: 1px solid var(--input-border);
 }
 
 .report-action {
@@ -1575,12 +1729,12 @@ body {
   min-width: 0;
   max-width: 62ch;
   font-size: 0.8rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 .primary-button {
-  background: #7ee787;
-  color: #0f1720;
+  background: var(--positive);
+  color: var(--positive-ink);
   border: none;
   border-radius: 8px;
   padding: 10px 18px;
@@ -1590,7 +1744,7 @@ body {
 }
 
 .primary-button:hover {
-  background: #9df0a4;
+  background: var(--positive-hover);
 }
 
 /* Sized to the content, not to the row: growing to fill pushed the send
@@ -1605,13 +1759,13 @@ body {
 .report-actions-warning {
   margin: 0;
   font-size: 0.8rem;
-  color: #ffb454;
+  color: var(--gold);
 }
 
 .secondary-button {
   background: transparent;
-  color: #e6edf3;
-  border: 1px solid #2a3546;
+  color: var(--ink);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   padding: 10px 16px;
   font-size: 0.9rem;
@@ -1620,7 +1774,7 @@ body {
 }
 
 .secondary-button:hover:not(:disabled) {
-  border-color: #7ee787;
+  border-color: var(--positive);
 }
 
 .secondary-button:disabled {
@@ -1629,8 +1783,8 @@ body {
 }
 
 .danger-button {
-  background: #ff8a8a;
-  color: #3a1d1d;
+  background: var(--negative);
+  color: var(--negative-ink);
   border: none;
   border-radius: 8px;
   padding: 10px 18px;
@@ -1640,40 +1794,73 @@ body {
 }
 
 .danger-button:hover {
-  background: #ffa8a8;
+  background: var(--negative-hover);
 }
 
-/* "My data" nav dropdown -- same backdrop+dialog pattern as
-   .confirm-backdrop below, own namespaced classes per this codebase's
-   convention of not sharing one generic popup class across unrelated
-   components. */
+/* "My data" -- now a settings menu (theme picker plus the three data
+   actions), so its trigger lives in the header's .app-switches row next to
+   the language picker rather than the tab strip -- see Header.jsx. Same
+   backdrop+dialog pattern as .confirm-backdrop below, own namespaced
+   classes per this codebase's convention of not sharing one generic popup
+   class across unrelated components. */
 .data-menu {
   display: inline-flex;
 }
 
-/* A caret marks this as a dropdown, not a sixth tab -- the other tabs
-   switch the main panel, this one opens a popup instead, and nothing
-   else in the row hints at that difference otherwise. */
 .data-menu-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 }
 
-.data-menu-caret {
+/* Icon-only trigger -- the accessible name comes from aria-label, not
+   visible text (see YourDataMenu.jsx). A gear read as a brightness/sun
+   icon at this size in review, so this is three sliders instead, same
+   rationale budget_planner's SettingsIcon documents. */
+.app-data-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.app-data-trigger:hover,
+.app-data-trigger:focus-visible,
+.app-data-trigger[aria-expanded='true'] {
+  background: var(--panel-alt);
+  color: var(--ink);
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
   flex: none;
-  transition: transform 0.15s ease;
 }
 
-.data-menu-trigger[aria-expanded='true'] .data-menu-caret {
-  transform: rotate(180deg);
+/* The Theme row inside the "My data" dialog -- a label beside its control,
+   same shape as a settings list row. Named generically rather than after
+   budget_planner's "currency" (this app has no currency concept), kept
+   reusable for a future settings row of the same shape. */
+.settings-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-alt);
+  padding: 6px 12px;
+  border-radius: 10px;
+  min-height: 44px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .data-menu-caret,
-  .scenario-fields-caret {
-    transition: none;
-  }
+.settings-field-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .data-menu-backdrop {
@@ -1688,8 +1875,8 @@ body {
 }
 
 .data-menu-dialog {
-  background: #161e2b;
-  border: 1px solid #2a3546;
+  background: var(--panel);
+  border: 1px solid var(--input-border);
   border-radius: 14px;
   padding: 22px;
   max-width: 360px;
@@ -1713,7 +1900,7 @@ body {
 .data-menu-close {
   background: none;
   border: none;
-  color: #9fb0c3;
+  color: var(--muted);
   cursor: pointer;
   font-size: 1.3rem;
   line-height: 1;
@@ -1726,13 +1913,13 @@ body {
 }
 
 .data-menu-close:hover {
-  color: #e6edf3;
+  color: var(--ink);
 }
 
 .data-menu-hint {
   margin: 0;
   font-size: 0.83rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 /* Stacked, full-width actions -- three independent one-shot actions, not
@@ -1762,8 +1949,8 @@ body {
 }
 
 .confirm-dialog {
-  background: #161e2b;
-  border: 1px solid #2a3546;
+  background: var(--panel);
+  border: 1px solid var(--input-border);
   border-radius: 14px;
   padding: 22px;
   max-width: 360px;
@@ -1792,8 +1979,8 @@ body {
 
 .report-confirm {
   flex-basis: 100%;
-  background: #0f1720;
-  border: 1px solid #2a3546;
+  background: var(--surface);
+  border: 1px solid var(--input-border);
   border-radius: 10px;
   padding: 16px 18px;
 }
@@ -1806,7 +1993,7 @@ body {
 .report-confirm p {
   margin: 0 0 14px;
   font-size: 0.83rem;
-  color: #9fb0c3;
+  color: var(--muted);
 }
 
 .report-confirm-list {
@@ -1845,8 +2032,8 @@ body {
   padding: 12px 20px;
   border: none;
   border-radius: 999px;
-  background: #7ee787;
-  color: #0f1720;
+  background: var(--positive);
+  color: var(--positive-ink);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
@@ -1854,7 +2041,7 @@ body {
 }
 
 .report-options-fab:hover {
-  background: #9df0a4;
+  background: var(--positive-hover);
 }
 
 .report-options-backdrop {
@@ -1869,8 +2056,8 @@ body {
 }
 
 .report-options-dialog {
-  background: #161e2b;
-  border: 1px solid #2a3546;
+  background: var(--panel);
+  border: 1px solid var(--input-border);
   border-radius: 14px;
   padding: 22px;
   max-width: 420px;
@@ -1896,7 +2083,7 @@ body {
 .report-options-close {
   background: none;
   border: none;
-  color: #9fb0c3;
+  color: var(--muted);
   cursor: pointer;
   font-size: 1.3rem;
   line-height: 1;
@@ -1909,7 +2096,7 @@ body {
 }
 
 .report-options-close:hover {
-  color: #e6edf3;
+  color: var(--ink);
 }
 
 /* Update banner -- tells someone a new deploy landed while their tab stayed
@@ -1937,9 +2124,9 @@ body {
   flex-wrap: wrap;
   max-width: 480px;
   width: 100%;
-  background: #161e2b;
-  border: 1px solid #2a3546;
-  color: #e6edf3;
+  background: var(--panel);
+  border: 1px solid var(--input-border);
+  color: var(--ink);
   border-radius: 10px;
   padding: 12px 14px;
   font-size: 0.88rem;
@@ -1971,5 +2158,5 @@ body {
 }
 
 .toast-dismiss:hover {
-  color: #7ee787;
+  color: var(--positive);
 }

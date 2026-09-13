@@ -54,6 +54,10 @@ export default {
   'app.loading': 'Loading calculator...',
   'app.region': 'Region',
   'app.language': 'Language',
+  'app.theme': 'Theme',
+  'app.themeSystem': 'System',
+  'app.themeLight': 'Light',
+  'app.themeDark': 'Dark',
 
   // Tabs
   'nav.payment': 'Payment',
