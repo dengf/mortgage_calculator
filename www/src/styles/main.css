@@ -230,6 +230,9 @@ body {
 }
 
 .app-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   background: transparent;
   color: var(--muted);
@@ -243,6 +246,15 @@ body {
 .app-tab.active {
   background: var(--positive);
   color: var(--positive-ink);
+}
+
+/* Two label spans always render (see Header.jsx); this default picks the
+   full word, matching the desktop pill row's plenty of width. The phone
+   media query below swaps which one is visible -- the button's own
+   aria-label (not this text) is what an assistive tech reads either way,
+   so the swap has no accessibility side effect, only a visual one. */
+.app-tab-label-short {
+  display: none;
 }
 
 .app-switches {
@@ -915,34 +927,96 @@ body {
     font-size: 1.15rem;
   }
 
-  /* Wrap onto as many rows as it takes: every tab stays visible and
-     tappable, which a horizontally scrolling strip would not guarantee.
-
-     Sticky rather than fixed: it stays at the top of the viewport once
-     scrolled to, the same visual effect as fixed, without needing extra
-     top-padding elsewhere to keep the first scroll from covering content.
-     On a phone the schedule and report views run long, and switching
-     tabs used to mean scrolling all the way back up first. */
+  /* Bottom tab bar on phone -- six labeled tabs used to wrap onto two
+     uneven rows at the top of the screen (text alone doesn't compress
+     enough to fit six across at 375px), and a sticky top bar still asks
+     for a reach/scroll on a tall one-handed grip regardless. Icon
+     stacked above a small label, `flex: 1 1 0` on each tab so all six
+     stay evenly spaced across exactly one row no matter the screen
+     width -- ported from budget_planner's own bottom nav, same
+     rationale. `.app-main`'s matching `padding-bottom` below keeps the
+     last bit of every tab's content from sitting underneath this fixed
+     bar. */
   .app-tabs {
-    flex-wrap: wrap;
-    margin-top: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--panel);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    margin: 0;
+    border-radius: 0;
+    justify-content: space-around;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.35);
+    /* iOS home-indicator safe area -- a bare padding leaves the last row
+       of tabs sitting under the gesture bar on notched devices. Only
+       takes effect with index.html's `viewport-fit=cover`; without it
+       env(safe-area-inset-bottom) resolves to 0. */
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 
   .app-tab {
-    flex: 1 1 auto;
+    flex-direction: column;
+    /* The base rule's `align-items: center` (for the desktop row, where
+       icon and label sit side by side) otherwise cascades in here too --
+       in a column flex container that's the CROSS axis, so it sizes the
+       label to its own unwrapped content instead of stretching it to the
+       tab's width, which silently defeats the label's own wrap rules
+       below no matter what they say. Stretch is what actually lets a
+       label wrap within its tab's real width. */
+    align-items: stretch;
+    gap: 2px;
+    flex: 1 1 0;
+    /* Flex items default to min-width:auto, which refuses to shrink a tab
+       below its label's unwrapped width -- with "Amortization"/
+       "Affordability" in the mix that pushed the *total* row past 375px
+       and clipped "Report" clean off the right edge, invisibly, until
+       measured. Explicit 0 is what makes all six actually share the row
+       evenly instead of the row silently overflowing. */
+    min-width: 0;
     /* 44px is the minimum comfortable touch target. */
     min-height: 44px;
-    padding: 10px 12px;
-    font-size: 0.85rem;
+    padding: 6px 4px;
+    font-size: 0.68rem;
+  }
+
+  /* `align-items: stretch` above only stretches a child with no definite
+     cross-size of its own; .nav-icon sets an explicit width/height, so it
+     never stretches and instead falls back to sitting at the cross axis's
+     start edge -- flush left, not centered, while the label beside it
+     (which does stretch) correctly centers its own text. This is what
+     actually centers the icon over the label under it. */
+  .app-tab .nav-icon {
+    align-self: center;
+  }
+
+  /* Swap which of the two spans is visible -- see the base
+     .app-tab-label-short rule and Header.jsx's own comment. At an even
+     six-way split of a 375px phone there's no room for "Amortization"/
+     "Affordability" unabbreviated at a legible size, so the phone bar
+     shows "Amort."/"Afford." (etc. -- see en.js's nav.*.short keys)
+     instead of wrapping the full word onto two lines. */
+  .app-tab-label-full {
+    display: none;
+  }
+
+  .app-tab-label-short {
+    display: block;
+    text-align: center;
+  }
+
+  /* Safety net, not the primary fix: a translated abbreviation this app
+     doesn't control the length of, or a future locale with no short-label
+     convention, still shouldn't overflow silently the way the unabbreviated
+     labels originally did (see the min-width/align-items comments above). */
+  .app-tab-label {
+    white-space: normal;
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
 
   .app-main {
-    padding: 20px 0 40px;
+    padding: 20px 0 calc(64px + env(safe-area-inset-bottom));
   }
 
   .panel {
@@ -969,13 +1043,12 @@ body {
      fields tall, and pinning all of it would eat most of a phone screen for
      the length of the edit rather than just holding a one-line summary.
 
-     `top` is the tab nav's own rendered height, kept current by the
-     ResizeObserver in Header.jsx: the nav wraps onto a different number of
-     rows depending on viewport width and the locale's label lengths, so a
-     fixed offset would either leave a gap or sit underneath the nav. */
+     `top: 0` rather than an offset for the tab nav's height: the nav is a
+     fixed *bottom* bar on phone (see .app-tabs above), so nothing of its
+     own sits at the top of the viewport to stack under any more. */
   .scenario-fields-collapsible:has(.scenario-fields-toggle[aria-expanded='false']) {
     position: sticky;
-    top: var(--app-tabs-height, 0px);
+    top: 0;
     z-index: 5;
   }
 
@@ -1072,11 +1145,6 @@ body {
 @media (max-width: 420px) {
   .app {
     padding: 0 12px;
-  }
-
-  .app-tab {
-    padding: 10px 8px;
-    font-size: 0.8rem;
   }
 
   .stat-value {
@@ -1850,6 +1918,11 @@ body {
   color: var(--ink);
 }
 
+/* Shared by the settings trigger above and the tab-nav icons in
+   Header.jsx -- one size for any icon that sits alone in a tap target
+   (inline with a label on the desktop pill row, stacked above one on the
+   phone bottom bar, or standing alone in the settings trigger) rather
+   than squeezed beside form text. */
 .nav-icon {
   width: 20px;
   height: 20px;

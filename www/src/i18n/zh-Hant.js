@@ -68,6 +68,15 @@ export default {
   'nav.compare': '方案比較',
   'nav.report': '報告',
 
+  // Same as the full labels above -- unlike English these already fit the
+  // phone bottom bar unabbreviated, see en.js's own comment.
+  'nav.payment.short': '月付金',
+  'nav.amortization.short': '攤還明細',
+  'nav.affordability.short': '購屋力',
+  'nav.refinance.short': '轉貸',
+  'nav.compare.short': '方案比較',
+  'nav.report.short': '報告',
+
   'field.loanAmount': '貸款金額',
   'field.loanDetails': '貸款詳情',
   'field.homePrice': '房價',
