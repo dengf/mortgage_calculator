@@ -56,6 +56,10 @@ export default {
   'app.loading': '正在載入試算器…',
   'app.region': '地區',
   'app.language': '語言',
+  'app.theme': '主題',
+  'app.themeSystem': '系統',
+  'app.themeLight': '淺色',
+  'app.themeDark': '深色',
 
   'nav.payment': '月付金',
   'nav.amortization': '攤還明細',
@@ -260,8 +264,8 @@ export default {
   'saved.delete': '刪除',
   'saved.deleteConfirm': '刪除「{name}」？此操作無法復原。',
 
-  // Your data
-  'data.title': '您的資料',
+  // My data
+  'data.title': '我的資料',
   'data.exportHint': '將所有已儲存的方案下載為單一 JSON 檔案，或從先前匯出的檔案中復原。',
   'data.export': '匯出所有資料',
   'data.import': '匯入資料',

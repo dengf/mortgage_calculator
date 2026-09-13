@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { EXPORT_FORMAT, readBackup } from '../backup';
 import { useConfirm } from './ConfirmDialog';
+import { SettingsIcon } from './icons';
 
 // A thrown value here is whatever the wasm boundary happened to reject
 // with -- not guaranteed to be an `Error`, so this is deliberately
@@ -13,19 +14,21 @@ function describeError(err) {
 }
 
 /**
- * "Your data" as a nav-level dropdown rather than a tab -- it isn't a
- * page of its own, just three one-shot actions (export/import/clear)
- * that apply to every saved scenario across every calculator, regardless
- * of which tab happens to be open. Living in the nav means it's reachable
- * without a tab switch losing whatever the person was looking at, and it
- * rides along on the sticky-on-mobile nav for free.
+ * "My data" as a header-level dropdown rather than a tab -- it isn't a
+ * page of its own, just the theme picker plus three one-shot actions
+ * (export/import/clear) that apply to every saved scenario across every
+ * calculator, regardless of which tab happens to be open. Living in the
+ * header's .app-switches row means it's reachable without a tab switch
+ * losing whatever the person was looking at.
  *
  * Ported from budget_planner's YourDataMenu with its fixes already in
  * place rather than rediscovered: the file input lives outside the
- * fixed-position dialog (see the comment on it below), and a successful
- * import or clear closes the dropdown instead of leaving it open.
+ * fixed-position dialog (see the comment on it below), a successful
+ * import or clear closes the dropdown instead of leaving it open, and the
+ * icon-only trigger plus the conditionally-rendered Theme row match that
+ * app's own settings-menu shape.
  */
-export default function YourDataMenu({ wasmModule, onDataChanged }) {
+export default function YourDataMenu({ wasmModule, onDataChanged, theme, onThemeChange }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -146,22 +149,13 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
     <div className="data-menu">
       <button
         type="button"
-        className="app-tab data-menu-trigger"
+        className="app-data-trigger data-menu-trigger"
         aria-haspopup="true"
         aria-expanded={open}
+        aria-label={t('data.title')}
         onClick={openMenu}
       >
-        {t('data.title')}
-        <svg className="data-menu-caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-          <path
-            d="M1.5 3.5L5 7L8.5 3.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <SettingsIcon />
       </button>
 
       {/* Deliberately NOT inside .data-menu-dialog (position: fixed) --
@@ -198,6 +192,23 @@ export default function YourDataMenu({ wasmModule, onDataChanged }) {
                 ×
               </button>
             </div>
+
+            {onThemeChange && (
+              <label className="settings-field">
+                <span className="settings-field-label">{t('app.theme')}</span>
+                <select
+                  className="app-language-select"
+                  aria-label={t('app.theme')}
+                  value={theme}
+                  onChange={(e) => onThemeChange(e.target.value)}
+                >
+                  <option value="system">{t('app.themeSystem')}</option>
+                  <option value="light">{t('app.themeLight')}</option>
+                  <option value="dark">{t('app.themeDark')}</option>
+                </select>
+              </label>
+            )}
+
             <p className="data-menu-hint">{t('data.exportHint')}</p>
 
             <div className="data-menu-actions">

@@ -13,6 +13,7 @@ import { I18nProvider, detectLocale, useI18n } from './i18n';
 import { DEFAULT_SCENARIO, seedRateForRegion } from './scenario';
 import { detectRegion, rememberRegion } from './region';
 import { useRegionAwareCurrentInputs } from './currentInputs';
+import { applyTheme, loadTheme, saveTheme } from './theme';
 
 const PANELS = {
   payment: PaymentCalculator,
@@ -39,9 +40,10 @@ function panelFor(tab, region) {
 export function AppShell({ wasmModule }) {
   const [activeTab, setActiveTab] = useState('payment');
   const [region, setRegion] = useState(() => detectRegion(wasmModule));
+  const [theme, setTheme] = useState(() => loadTheme());
   // One loan, described from several angles — see src/scenario.js.
   const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
-  // Bumped whenever the "Your data" nav menu imports or clears scenarios,
+  // Bumped whenever the "My data" nav menu imports or clears scenarios,
   // so whichever tab's SavedScenarios list is currently mounted refetches
   // instead of showing stale entries until the next tab switch remounts it.
   const [dataVersion, setDataVersion] = useState(0);
@@ -95,6 +97,12 @@ export function AppShell({ wasmModule }) {
           // signal.
           rememberRegion(next);
           setRegion(next);
+        }}
+        theme={theme}
+        onThemeChange={(next) => {
+          saveTheme(next);
+          applyTheme(next);
+          setTheme(next);
         }}
         wasmModule={wasmModule}
         onDataChanged={() => setDataVersion((v) => v + 1)}

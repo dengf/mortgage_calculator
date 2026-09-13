@@ -226,7 +226,7 @@ export default function ReportView({
   // inline, ahead of the document -- pushing the actual report, the reason
   // anyone opened this tab, below a screen or more of buttons on a phone.
   // They now live behind this trigger instead, the same floating-menu shape
-  // as "Your data" in the nav (see YourDataMenu), so the document is the
+  // as "My data" in the nav (see YourDataMenu), so the document is the
   // first thing to appear after the loan summary.
   const [optionsOpen, setOptionsOpen] = useState(false);
   // How much of the schedule goes on the document. A view choice, not a

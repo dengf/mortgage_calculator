@@ -26,6 +26,8 @@ export default function Header({
   onTabChange,
   region,
   onRegionChange,
+  theme,
+  onThemeChange,
   wasmModule,
   onDataChanged,
 }) {
@@ -84,21 +86,18 @@ export default function Header({
         <div className="app-switches">
           {/* Language and region are separate axes on purpose: someone reading
               in Chinese may well be buying in the US, and vice versa. */}
-          <div className="app-regions" role="group" aria-label={t('app.language')}>
+          <select
+            className="app-language-select"
+            aria-label={t('app.language')}
+            value={locale}
+            onChange={(e) => setLocale(e.target.value)}
+          >
             {LOCALES.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                className={l.id === locale ? 'app-region active' : 'app-region'}
-                aria-pressed={l.id === locale}
-                title={l.name}
-                lang={l.id}
-                onClick={() => setLocale(l.id)}
-              >
-                {l.label}
-              </button>
+              <option key={l.id} value={l.id} lang={l.id}>
+                {l.name}
+              </option>
             ))}
-          </div>
+          </select>
 
           {onRegionChange && (
             <div className="app-regions" role="group" aria-label={t('app.region')}>
@@ -115,6 +114,19 @@ export default function Header({
               ))}
             </div>
           )}
+
+          {/* "My data" lives in the header row, not the tab bar -- it's a
+              menu of rare, whole-app actions (theme, export/import/clear),
+              not a screen someone navigates to, and doesn't deserve one of
+              the tab strip's slots. Folded into one gear-ish icon rather
+              than its own labeled pill, matching budget_planner's own
+              settings trigger. */}
+          <YourDataMenu
+            wasmModule={wasmModule}
+            onDataChanged={onDataChanged}
+            theme={theme}
+            onThemeChange={onThemeChange}
+          />
         </div>
       </header>
 
@@ -128,7 +140,6 @@ export default function Header({
             {t(tab.key)}
           </button>
         ))}
-        <YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />
       </nav>
     </>
   );

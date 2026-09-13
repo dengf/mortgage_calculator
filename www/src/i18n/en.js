@@ -54,6 +54,10 @@ export default {
   'app.loading': 'Loading calculator...',
   'app.region': 'Region',
   'app.language': 'Language',
+  'app.theme': 'Theme',
+  'app.themeSystem': 'System',
+  'app.themeLight': 'Light',
+  'app.themeDark': 'Dark',
 
   // Tabs
   'nav.payment': 'Payment',
@@ -268,8 +272,8 @@ export default {
   'saved.delete': 'Delete',
   'saved.deleteConfirm': 'Delete "{name}"? This cannot be undone.',
 
-  // Your data
-  'data.title': 'Your data',
+  // My data
+  'data.title': 'My data',
   'data.exportHint':
     'Download every saved scenario as a single JSON file, or restore one from a file you exported before.',
   'data.export': 'Export all data',

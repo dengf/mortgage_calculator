@@ -26,7 +26,7 @@ export default function SavedScenarios({
     setError(null);
     setScenarios(result.scenarios);
     // dataVersion isn't read here -- it's a dependency purely so an
-    // import/clear-all from the nav's "Your data" menu (which bumps it)
+    // import/clear-all from the nav's "My data" menu (which bumps it)
     // triggers this same refetch, instead of the list going stale until
     // the next tab switch remounts this component.
   }, [wasmModule, calculatorKind, dataVersion]);
