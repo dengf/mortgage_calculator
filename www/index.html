@@ -76,6 +76,14 @@
     })();
   </script>
   <style>
+    /* Also read by main.css's own :root -- see that file's opening comment
+       for why color-scheme has to be set, not just background/text color:
+       it's what a browser's native form-control chrome (a <select>'s
+       arrow and popup list, scrollbars) keys off of, and stays wrong
+       without it even once every other color here is right. */
+    html {
+      color-scheme: dark;
+    }
     body {
       margin: 0;
       padding: 0;
@@ -95,9 +103,11 @@
       color: #7ee787;
     }
     @media (prefers-color-scheme: light) {
+      html:not([data-theme='dark']) { color-scheme: light; }
       html:not([data-theme='dark']), html:not([data-theme='dark']) body { background-color: #f7f8fa; }
       html:not([data-theme='dark']) body { color: #16202c; }
     }
+    html[data-theme='light'] { color-scheme: light; }
     html[data-theme='light'], html[data-theme='light'] body { background-color: #f7f8fa; }
     html[data-theme='light'] body { color: #16202c; }
   </style>

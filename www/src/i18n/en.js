@@ -272,7 +272,8 @@ export default {
   'saved.delete': 'Delete',
   'saved.deleteConfirm': 'Delete "{name}"? This cannot be undone.',
 
-  // My data
+  // Settings dialog (theme picker + the "My data" section inside it)
+  'settings.title': 'Settings',
   'data.title': 'My data',
   'data.exportHint':
     'Download every saved scenario as a single JSON file, or restore one from a file you exported before.',
