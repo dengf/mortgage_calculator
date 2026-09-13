@@ -980,11 +980,21 @@ body {
     font-size: 0.68rem;
   }
 
+  /* `align-items: stretch` above only stretches a child with no definite
+     cross-size of its own; .nav-icon sets an explicit width/height, so it
+     never stretches and instead falls back to sitting at the cross axis's
+     start edge -- flush left, not centered, while the label beside it
+     (which does stretch) correctly centers its own text. This is what
+     actually centers the icon over the label under it. */
+  .app-tab .nav-icon {
+    align-self: center;
+  }
+
   /* Swap which of the two spans is visible -- see the base
      .app-tab-label-short rule and Header.jsx's own comment. At an even
      six-way split of a 375px phone there's no room for "Amortization"/
      "Affordability" unabbreviated at a legible size, so the phone bar
-     shows "Amort"/"Afford" (etc. -- see en.js's nav.*.short keys)
+     shows "Amort."/"Afford." (etc. -- see en.js's nav.*.short keys)
      instead of wrapping the full word onto two lines. */
   .app-tab-label-full {
     display: none;
