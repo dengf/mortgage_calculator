@@ -1643,7 +1643,7 @@ body {
   background: #ffa8a8;
 }
 
-/* "Your data" nav dropdown -- same backdrop+dialog pattern as
+/* "My data" nav dropdown -- same backdrop+dialog pattern as
    .confirm-backdrop below, own namespaced classes per this codebase's
    convention of not sharing one generic popup class across unrelated
    components. */
@@ -1831,7 +1831,7 @@ body {
    sit inline ahead of the document, which on a phone meant a screen or more
    of buttons before the report itself (the reason anyone opened this tab)
    ever came into view. Behind a trigger instead, same backdrop+dialog shape
-   as "Your data" in the nav (own namespaced classes per this codebase's
+   as "My data" in the nav (own namespaced classes per this codebase's
    convention -- see .data-menu's own comment).
 
    Fixed, not inline: it has to stay reachable from anywhere on a document

@@ -37,7 +37,7 @@ describe('YourDataMenu', () => {
 
   it('opens on trigger and closes on the dialog close button', async () => {
     render(<YourDataMenu wasmModule={mockWasmModule()} onDataChanged={() => {}} />);
-    const trigger = screen.getByRole('button', { name: 'Your data' });
+    const trigger = screen.getByRole('button', { name: 'My data' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
     await userEvent.click(trigger);
@@ -52,7 +52,7 @@ describe('YourDataMenu', () => {
   it('exports every scenario as a downloadable JSON file', async () => {
     const wasmModule = mockWasmModule();
     render(<YourDataMenu wasmModule={wasmModule} onDataChanged={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
     await userEvent.click(screen.getByRole('button', { name: 'Export all data' }));
 
     await waitFor(() => expect(wasmModule.list_scenarios).toHaveBeenCalledWith(undefined));
@@ -69,7 +69,7 @@ describe('YourDataMenu', () => {
     const wasmModule = mockWasmModule();
     const onDataChanged = vi.fn();
     const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
 
     const file = makeFile({
       format: EXPORT_FORMAT,
@@ -104,7 +104,7 @@ describe('YourDataMenu', () => {
   it('leaves the data cleared alone when the replace is cancelled', async () => {
     const wasmModule = mockWasmModule();
     const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
 
     const file = makeFile({
       format: EXPORT_FORMAT,
@@ -125,7 +125,7 @@ describe('YourDataMenu', () => {
   it('shows an inline error for a file that is not a Mortgage Calculator export, and leaves the dialog open', async () => {
     const wasmModule = mockWasmModule();
     const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
 
     const file = makeFile({ format: 'something.else', scenarios: [] });
     const input = container.querySelector('input[type="file"]');
@@ -142,7 +142,7 @@ describe('YourDataMenu', () => {
     const wasmModule = mockWasmModule();
     const onDataChanged = vi.fn();
     render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
     await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
 
     const confirmDialog = await screen.findByRole('alertdialog');
@@ -157,7 +157,7 @@ describe('YourDataMenu', () => {
   it('clears the in-progress draft alongside saved scenarios, not just on import', async () => {
     const wasmModule = mockWasmModule();
     render(<YourDataMenu wasmModule={wasmModule} onDataChanged={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
     await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
 
     const confirmDialog = await screen.findByRole('alertdialog');
@@ -172,7 +172,7 @@ describe('YourDataMenu', () => {
     });
     const onDataChanged = vi.fn();
     render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
     await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
 
     const confirmDialog = await screen.findByRole('alertdialog');
@@ -191,7 +191,7 @@ describe('YourDataMenu', () => {
     });
     const onDataChanged = vi.fn();
     render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
     await userEvent.click(screen.getByRole('button', { name: 'Clear all data' }));
 
     const confirmDialog = await screen.findByRole('alertdialog');
@@ -208,7 +208,7 @@ describe('YourDataMenu', () => {
     });
     const onDataChanged = vi.fn();
     const { container } = render(<YourDataMenu wasmModule={wasmModule} onDataChanged={onDataChanged} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Your data' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My data' }));
 
     const file = makeFile({
       format: EXPORT_FORMAT,

@@ -255,8 +255,8 @@ export default {
   'saved.delete': '删除',
   'saved.deleteConfirm': '删除“{name}”？此操作无法撤销。',
 
-  // Your data
-  'data.title': '您的数据',
+  // My data
+  'data.title': '我的数据',
   'data.exportHint': '将所有已保存的方案下载为单个 JSON 文件，或从之前导出的文件中恢复。',
   'data.export': '导出所有数据',
   'data.import': '导入数据',

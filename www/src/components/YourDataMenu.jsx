@@ -13,7 +13,7 @@ function describeError(err) {
 }
 
 /**
- * "Your data" as a nav-level dropdown rather than a tab -- it isn't a
+ * "My data" as a nav-level dropdown rather than a tab -- it isn't a
  * page of its own, just three one-shot actions (export/import/clear)
  * that apply to every saved scenario across every calculator, regardless
  * of which tab happens to be open. Living in the nav means it's reachable
