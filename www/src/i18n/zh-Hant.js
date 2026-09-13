@@ -264,7 +264,8 @@ export default {
   'saved.delete': '刪除',
   'saved.deleteConfirm': '刪除「{name}」？此操作無法復原。',
 
-  // My data
+  // Settings dialog (theme picker + the "My data" section inside it)
+  'settings.title': '設定',
   'data.title': '我的資料',
   'data.exportHint': '將所有已儲存的方案下載為單一 JSON 檔案，或從先前匯出的檔案中復原。',
   'data.export': '匯出所有資料',

@@ -14,12 +14,17 @@ function describeError(err) {
 }
 
 /**
- * "My data" as a header-level dropdown rather than a tab -- it isn't a
- * page of its own, just the theme picker plus three one-shot actions
- * (export/import/clear) that apply to every saved scenario across every
- * calculator, regardless of which tab happens to be open. Living in the
- * header's .app-switches row means it's reachable without a tab switch
- * losing whatever the person was looking at.
+ * "Settings" as a header-level dropdown rather than a tab -- it isn't a
+ * page of its own, just the theme picker plus three one-shot "My data"
+ * actions (export/import/clear) that apply to every saved scenario across
+ * every calculator, regardless of which tab happens to be open. Living in
+ * the header's .app-switches row means it's reachable without a tab
+ * switch losing whatever the person was looking at.
+ *
+ * The two are kept visually distinct inside the dialog -- a plain
+ * dropdown up top, a bordered "My data" section (with its own heading)
+ * below -- rather than one flat list, since picking a theme is harmless
+ * and reversible while the section under it ends in Clear all data.
  *
  * Ported from budget_planner's YourDataMenu with its fixes already in
  * place rather than rediscovered: the file input lives outside the
@@ -152,7 +157,7 @@ export default function YourDataMenu({ wasmModule, onDataChanged, theme, onTheme
         className="app-data-trigger data-menu-trigger"
         aria-haspopup="true"
         aria-expanded={open}
-        aria-label={t('data.title')}
+        aria-label={t('settings.title')}
         onClick={openMenu}
       >
         <SettingsIcon />
@@ -178,11 +183,11 @@ export default function YourDataMenu({ wasmModule, onDataChanged, theme, onTheme
             className="data-menu-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label={t('data.title')}
+            aria-label={t('settings.title')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="data-menu-header">
-              <span className="data-menu-title">{t('data.title')}</span>
+              <span className="data-menu-title">{t('settings.title')}</span>
               <button
                 type="button"
                 className="data-menu-close"
@@ -209,40 +214,49 @@ export default function YourDataMenu({ wasmModule, onDataChanged, theme, onTheme
               </label>
             )}
 
-            <p className="data-menu-hint">{t('data.exportHint')}</p>
+            {/* A bordered section of its own, not just another item in the
+                list below the theme picker -- "Settings" now covers two
+                unrelated things (a display preference, and destructive
+                whole-app data actions), and the danger button at the
+                bottom of this group needs a visual line between it and a
+                harmless dropdown above, not just spacing. */}
+            <div className="data-menu-section">
+              <h3 className="data-menu-section-title">{t('data.title')}</h3>
+              <p className="data-menu-hint">{t('data.exportHint')}</p>
 
-            <div className="data-menu-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={async () => {
-                  try {
-                    await exportData();
-                    setOpen(false);
-                  } catch (err) {
-                    setImportResult({ error: t('err.storageUnavailable', { detail: describeError(err) }) });
-                  }
-                }}
-              >
-                {t('data.export')}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {t('data.import')}
-              </button>
-              <button type="button" className="danger-button" onClick={onClearAll}>
-                {t('data.clearAll')}
-              </button>
+              <div className="data-menu-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={async () => {
+                    try {
+                      await exportData();
+                      setOpen(false);
+                    } catch (err) {
+                      setImportResult({ error: t('err.storageUnavailable', { detail: describeError(err) }) });
+                    }
+                  }}
+                >
+                  {t('data.export')}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {t('data.import')}
+                </button>
+                <button type="button" className="danger-button" onClick={onClearAll}>
+                  {t('data.clearAll')}
+                </button>
+              </div>
+
+              {importResult?.error && (
+                <p className="error" role="alert">
+                  {importResult.error}
+                </p>
+              )}
             </div>
-
-            {importResult?.error && (
-              <p className="error" role="alert">
-                {importResult.error}
-              </p>
-            )}
           </div>
         </div>
       )}
