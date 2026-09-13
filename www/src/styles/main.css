@@ -2264,3 +2264,16 @@ body {
 .toast-dismiss:hover {
   color: var(--positive);
 }
+
+/* Placed after the unconditional .toast-region rule above (not inside the
+   earlier phone media query) on purpose: an equal-specificity rule later
+   in the cascade wins over an earlier one even when both match, so a
+   phone override living up near .app-tabs would silently lose to this
+   file's own bottom: 0. On phone the toast's bottom edge is now the fixed
+   tab bar, not the viewport edge, so it needs the same clearance
+   .app-main's padding-bottom gets. */
+@media screen and (max-width: 720px) {
+  .toast-region {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
