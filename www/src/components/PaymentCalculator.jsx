@@ -89,6 +89,7 @@ export default function PaymentCalculator({
       // result with an in-flight principal and render a 100%-interest loan.
       principal,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, principal, rateKey, termYears, frequency]);
 
   const { value: held, stale } = useSticky(liveResult);
@@ -118,6 +119,7 @@ export default function PaymentCalculator({
       rate: rateType,
       term_years: termYears,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, region, sgInputs, result, frequency, principal, rateKey, termYears]);
 
   // PITI, PMI and the deduction estimate are all monthly figures, so like
@@ -134,6 +136,7 @@ export default function PaymentCalculator({
       principal,
       rate: rateType,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, region, usInputs, result, frequency, principal, rateKey]);
 
   return (

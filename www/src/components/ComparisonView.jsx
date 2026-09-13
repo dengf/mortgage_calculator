@@ -153,6 +153,7 @@ export default function ComparisonView({
       frequency,
       entries: entries.map(toWasmEntry),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, principal, frequency, entries]);
 
   const notes = useMemo(() => rateNotes(wasmModule, entries), [wasmModule, entries]);

@@ -50,7 +50,9 @@ describe('readBackup', () => {
 
   it('rejects a scenario entry missing a required field', () => {
     expect(readBackup(valid({ scenarios: [{ ...scenario(), id: undefined }] })).ok).toBe(false);
-    expect(readBackup(valid({ scenarios: [{ ...scenario(), created_at: '2026' }] })).ok).toBe(false);
+    expect(readBackup(valid({ scenarios: [{ ...scenario(), created_at: '2026' }] })).ok).toBe(
+      false,
+    );
   });
 
   it('accepts scenarios spanning more than one calculator kind', () => {
@@ -74,9 +76,7 @@ describe('readBackup', () => {
     // isn't a backup" at import time, before `clear_all_scenarios` has
     // already wiped whatever was really there -- not an uncaught exception
     // on whatever screen loads the poisoned record later.
-    const result = readBackup(
-      valid({ scenarios: [scenario({ inputs_json: '{not valid json' })] }),
-    );
+    const result = readBackup(valid({ scenarios: [scenario({ inputs_json: '{not valid json' })] }));
     expect(result.ok).toBe(false);
   });
 
@@ -86,9 +86,7 @@ describe('readBackup', () => {
   });
 
   it('rejects a scenario with an unreasonably long name or inputs_json', () => {
-    expect(readBackup(valid({ scenarios: [scenario({ name: 'x'.repeat(501) })] })).ok).toBe(
-      false,
-    );
+    expect(readBackup(valid({ scenarios: [scenario({ name: 'x'.repeat(501) })] })).ok).toBe(false);
     expect(
       readBackup(
         valid({ scenarios: [scenario({ inputs_json: JSON.stringify('x'.repeat(100_001)) })] }),

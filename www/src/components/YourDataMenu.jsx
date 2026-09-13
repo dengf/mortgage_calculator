@@ -233,7 +233,9 @@ export default function YourDataMenu({ wasmModule, onDataChanged, theme, onTheme
                       await exportData();
                       setOpen(false);
                     } catch (err) {
-                      setImportResult({ error: t('err.storageUnavailable', { detail: describeError(err) }) });
+                      setImportResult({
+                        error: t('err.storageUnavailable', { detail: describeError(err) }),
+                      });
                     }
                   }}
                 >

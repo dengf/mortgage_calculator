@@ -33,9 +33,7 @@ export function describeDuration(wasmModule, periods, frequency) {
  */
 export function periodsInYears(wasmModule, years, frequency) {
   if (!wasmModule?.periods_in_years) return 0;
-  return (
-    wasmModule.periods_in_years({ years: Number(years) || 0, frequency })?.periods ?? 0
-  );
+  return wasmModule.periods_in_years({ years: Number(years) || 0, frequency })?.periods ?? 0;
 }
 
 /**

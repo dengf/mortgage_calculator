@@ -250,6 +250,7 @@ export default function ReportView({
       loan: { principal, rate: rateType, term_years: termYears, frequency },
       region,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasmModule, region, principal, rateKey, termYears, frequency]);
 
   const sourceUrl = window.location.origin + window.location.pathname;
