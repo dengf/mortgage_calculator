@@ -27,3 +27,71 @@ export function SettingsIcon() {
     </svg>
   );
 }
+
+/**
+ * The six tab-nav icons -- one per calculator, in Header.jsx's TABS order.
+ * Same thin-stroke convention as SettingsIcon above, sized via `.nav-icon`
+ * (bigger than a label-adjacent icon would need) since each one sits alone
+ * in its own tap target: inline beside a label on the desktop pill row,
+ * stacked above one on the phone bottom bar. Ported from budget_planner's
+ * icons.jsx, same NAV_ICON_PROPS convention.
+ */
+const NAV_ICON_PROPS = { ...ICON_PROPS, className: 'nav-icon' };
+
+export function PaymentIcon() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 6.5v11" />
+      <path d="M14.7 9c0-1.1-1.2-2-2.7-2s-2.7.8-2.7 1.8c0 2.4 5.4 1 5.4 3.4 0 1.1-1.2 1.8-2.7 1.8s-2.7-.9-2.7-2" />
+    </svg>
+  );
+}
+
+export function AmortizationIcon() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <rect x="4" y="5" width="16" height="14" rx="1.5" />
+      <path d="M4 10h16M9 10v9" />
+    </svg>
+  );
+}
+
+export function AffordabilityIcon() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <path d="M4 11 12 4l8 7" />
+      <path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" />
+      <path d="M10 20v-5h4v5" />
+    </svg>
+  );
+}
+
+export function RefinanceIcon() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <path d="M4 12a8 8 0 0 1 13.6-5.7" />
+      <path d="M20 12a8 8 0 0 1-13.6 5.7" />
+      <path d="M17 3v4h-4" />
+      <path d="M7 21v-4h4" />
+    </svg>
+  );
+}
+
+export function CompareIcon() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <path d="M6 20V10M12 20V4M18 20v7" />
+    </svg>
+  );
+}
+
+export function ReportIcon() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M14 3v4h4" />
+      <path d="M8.5 12h7M8.5 15.5h7M8.5 8.5h3" />
+    </svg>
+  );
+}

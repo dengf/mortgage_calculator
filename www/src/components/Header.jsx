@@ -1,19 +1,27 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { LOCALES, useI18n } from '../i18n';
 import MeifioMark from './MeifioMark';
 import YourDataMenu from './YourDataMenu';
+import {
+  PaymentIcon,
+  AmortizationIcon,
+  AffordabilityIcon,
+  RefinanceIcon,
+  CompareIcon,
+  ReportIcon,
+} from './icons';
 
 /* The family's home. Moves to https://meifio.app once the domain is live;
    it is a constant so that is a one-line change. */
 const MEIFIO_HOME = 'https://dengf.github.io/meifio-blog/';
 
 const TABS = [
-  { id: 'payment', key: 'nav.payment' },
-  { id: 'amortization', key: 'nav.amortization' },
-  { id: 'affordability', key: 'nav.affordability' },
-  { id: 'refinance', key: 'nav.refinance' },
-  { id: 'compare', key: 'nav.compare' },
-  { id: 'report', key: 'nav.report' },
+  { id: 'payment', key: 'nav.payment', Icon: PaymentIcon },
+  { id: 'amortization', key: 'nav.amortization', Icon: AmortizationIcon },
+  { id: 'affordability', key: 'nav.affordability', Icon: AffordabilityIcon },
+  { id: 'refinance', key: 'nav.refinance', Icon: RefinanceIcon },
+  { id: 'compare', key: 'nav.compare', Icon: CompareIcon },
+  { id: 'report', key: 'nav.report', Icon: ReportIcon },
 ];
 
 const REGIONS = [
@@ -32,36 +40,13 @@ export default function Header({
   onDataChanged,
 }) {
   const { t, locale, setLocale } = useI18n();
-  const tabsRef = useRef(null);
-
-  // Amortization and Report pin their "Loan details" bar just below this nav
-  // on a phone (see .scenario-fields-collapsible), so a reader scrolling a
-  // long schedule never loses sight of which loan it describes. That bar
-  // needs this nav's actual rendered height to stack under rather than
-  // overlap it -- and the nav wraps onto a different number of rows
-  // depending on the viewport width and the locale's tab label lengths, so
-  // no fixed number would stay right. A ResizeObserver keeps the custom
-  // property true across both. jsdom has no ResizeObserver, so this is a
-  // no-op under test.
-  useEffect(() => {
-    const el = tabsRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const rootStyle = document.documentElement.style;
-    const setCustomProperty = rootStyle.setProperty.bind(rootStyle);
-    const observer = new ResizeObserver(() => {
-      setCustomProperty('--app-tabs-height', el.offsetHeight + 'px');
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   return (
-    // A fragment, not one <header>: the tab nav needs to be a direct child
-    // of .app, not nested inside this short header block, so that
-    // `position: sticky` on .app-tabs has the whole page as its containing
-    // block on a phone. Nested inside .app-header it could only stay pinned
-    // for as long as that short block was still on screen, then it would
-    // scroll away along with it.
+    // A fragment, not one <header>: on a phone the tab nav becomes a fixed
+    // bottom bar (see .app-tabs's phone media query in main.css) and needs
+    // to be a direct child of .app, not nested inside this short header
+    // block, so `position: fixed` isn't scoped to some ancestor's stacking
+    // context in a way that clips it.
     <>
       <header className="app-header">
         <div className="app-brand">
@@ -130,14 +115,29 @@ export default function Header({
         </div>
       </header>
 
-      <nav className="app-tabs" ref={tabsRef}>
-        {TABS.map((tab) => (
+      <nav className="app-tabs">
+        {TABS.map(({ id, key, Icon }) => (
+          // aria-label pins the accessible name to the full word regardless
+          // of which of the two spans below main.css shows at the current
+          // width -- without it, the name would silently change between
+          // "Refinance" (desktop) and "Refi" (phone) along with the visual
+          // swap, which a screen-reader user gets no equivalent visual cue
+          // for and a test asserting one fixed name would flake on.
           <button
-            key={tab.id}
-            className={tab.id === activeTab ? 'app-tab active' : 'app-tab'}
-            onClick={() => onTabChange(tab.id)}
+            key={id}
+            className={id === activeTab ? 'app-tab active' : 'app-tab'}
+            aria-label={t(key)}
+            onClick={() => onTabChange(id)}
           >
-            {t(tab.key)}
+            <Icon />
+            {/* Full label at desktop width; a shorter abbreviation on the
+                phone bottom bar, where six tabs sharing one row leaves no
+                room for "Amortization"/"Affordability" unabbreviated (see
+                main.css's own comment on the phone .app-tab-label rules).
+                Both render always; main.css's media query is what decides
+                which one is visible at the current width. */}
+            <span className="app-tab-label app-tab-label-full">{t(key)}</span>
+            <span className="app-tab-label app-tab-label-short">{t(`${key}.short`)}</span>
           </button>
         ))}
       </nav>

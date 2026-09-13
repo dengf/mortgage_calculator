@@ -67,6 +67,26 @@ export default {
   'nav.compare': 'Compare',
   'nav.report': 'Report',
 
+  // Same six tabs, abbreviated for the phone bottom bar -- see Header.jsx's
+  // own comment on why the full words don't fit an even six-way split of a
+  // 375px screen without wrapping. Unabbreviated where the full word
+  // already fits (payment/compare/report); Chinese reuses its existing
+  // nav.* value unchanged since those are already short.
+  //
+  // "Amort." and "Afford." carry the trailing period standard financial
+  // software uses for a truncated word (same convention as "approx.",
+  // "dept."), so they read as an abbreviation of the word above them, not
+  // as an unrelated word of their own. "Refi" has none: it's not a
+  // truncation, it's the actual, widely-used informal industry term for
+  // "refinance" in its own right (real estate/mortgage press, lenders'
+  // own marketing all use it bare).
+  'nav.payment.short': 'Payment',
+  'nav.amortization.short': 'Amort.',
+  'nav.affordability.short': 'Afford.',
+  'nav.refinance.short': 'Refi',
+  'nav.compare.short': 'Compare',
+  'nav.report.short': 'Report',
+
   // Shared field labels
   'field.loanAmount': 'Home loan amount',
   'field.loanDetails': 'Loan details',
