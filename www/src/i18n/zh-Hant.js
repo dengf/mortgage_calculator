@@ -1,4 +1,14 @@
-// Traditional Chinese (zh-Hant) — Taiwan, Hong Kong and Macau.
+// Traditional Chinese (zh-Hant) — Taiwan.
+//
+// The vocabulary here (房貸, 月付金, 攤還明細, 購屋力, 轉貸) is Taiwan
+// mortgage-industry usage throughout, confirmed against Taiwan bank sites
+// (Cathay United, KGI, Sinyi Realty). It is NOT Hong Kong usage: HK and
+// HKMA itself use 按揭 rather than 房貸, and 轉按 rather than 轉貸, for the
+// same concepts. Don't add Hong Kong/Macau to this comment's claimed
+// audience without either swapping in HK vocabulary throughout or adding
+// a separate zh-HK catalog — mixing the two within one file is exactly
+// the bug this same file used to have between Mainland and Taiwan terms
+// (月供/購房力 vs 月付金/購屋力), fixed 2026-09-13.
 //
 // Scheme names are deliberately left in English here. TDSR, MSR, CPF,
 // BSD/ABSD and HDB are Singapore statutory schemes, and PMI, PITI and
@@ -15,13 +25,13 @@ export default {
   'app.byline': '— {logo} 出品',
   'app.updateAvailable': '房貸試算器已有新版本。',
   'app.reload': '重新整理',
-  'meta.title': '房貸試算器 — 月供、還款明細、購房力與再融資 | meifio',
+  'meta.title': '房貸試算器 — 月付金、攤還明細、購屋力與再融資 | meifio',
   'meta.ogTitle': '房貸試算器 — meifio 出品',
   'meta.description':
-    '免費房貸試算器，涵蓋月供、還款明細、購房力與再融資，並內建新加坡 TDSR、公積金與印花稅規則。全部在瀏覽器內計算——您的資料不會離開裝置。',
+    '免費房貸試算器，涵蓋月付金、攤還明細、購屋力與再融資，並內建新加坡 TDSR、公積金與印花稅規則。全部在瀏覽器內計算——您的資料不會離開裝置。',
   'about.title': '這些數字是怎麼算出來的',
 
-  'about.us.payment.q': '月供包含哪些部分？',
+  'about.us.payment.q': '月付金包含哪些部分？',
   'about.us.payment.a':
     '首要顯示的金額僅含本金與利息。下方的美國面板會加上按郵遞區號估算的房產稅，以及首付低於 20% 時的 PMI——合計構成完整的 PITI 金額。',
   'about.us.pmi.q': 'PMI 什麼時候可以停？',
@@ -31,19 +41,19 @@ export default {
   'about.us.jumbo.a':
     '超過聯邦住房金融局合規上限的貸款——2026 年單戶住宅為 832,750 美元——房利美與房地美無法購入，因此按大額貸款定價。高成本縣以及阿拉斯加和夏威夷適用更高上限，本計算器暫未納入。',
 
-  'about.sg.payment.q': '月供包含哪些部分？',
+  'about.sg.payment.q': '月付金包含哪些部分？',
   'about.sg.payment.a':
     '首要顯示的金額僅含本金與利息。下方的新加坡面板會將其拆分為公積金普通帳戶與現金兩部分，並計算您在交屋時所需的印花稅與首付。',
   'about.sg.tdsr.q': 'TDSR 和 MSR 是什麼？',
   'about.sg.tdsr.a':
-    '新加坡限制收入中可用於償債的比例。TDSR 將全部債務還款限制在月總收入的 55%；MSR 僅將房貸還款限制在 30%，且只適用於組屋與執行共管公寓。銀行按 4% 與鎖定期結束後的貸款利率兩者取高來測算——而不是您獲得報價的優惠利率——因此此處比率採用該評估值，而非您的月供報價。',
-  'about.sg.afford.q': '為什麼我的購房力比預期低？',
+    '新加坡限制收入中可用於償債的比例。TDSR 將全部債務還款限制在月總收入的 55%；MSR 僅將房貸還款限制在 30%，且只適用於組屋與執行共管公寓。銀行按 4% 與鎖定期結束後的貸款利率兩者取高來測算——而不是您獲得報價的優惠利率——因此此處比率採用該評估值，而非您的月付金報價。',
+  'about.sg.afford.q': '為什麼我的購屋力比預期低？',
   'about.sg.afford.a':
     '通常有三條規則比收入更早觸頂：首套房貸的 LTV 上限將貸款限制在房價的 75%；首付中的最低現金部分不能用公積金支付；兩項印花稅須在 14 天內以現金繳清。此外，佣金與獎金僅按 70% 計入。',
 
   'about.refi.q': '再融資什麼時候才真正划算？',
   'about.refi.a':
-    '當您在房中住到超過回本點——即累計節省超過手續費用的那個月。除了利率也要看年限：轉成全新的 30 年貸款會降低月供，但可能推高總支出。',
+    '當您在房中住到超過回本點——即累計節省超過手續費用的那個月。除了利率也要看年限：轉成全新的 30 年貸款會降低月付金，但可能推高總支出。',
 
   'about.disclaimer.US':
     '本工具提供的是用於規劃的估算，不構成財務建議或貸款要約。房產稅率為各州平均值，各縣存在差異；貸款上限與相關規則可能變動。',
@@ -177,7 +187,7 @@ export default {
   'rate.spread': '加碼',
   'cmp.tradeoff':
     '{cheaper} 每月比 {lighter} 多付 {paymentDelta}，但在整個貸款期內可少付 {interestDelta} 利息。',
-  'cmp.outright': '{label} 兩項皆優：月供最低，利息總額也最低。',
+  'cmp.outright': '{label} 兩項皆優：月付金最低，利息總額也最低。',
   'refi.termWarning':
     '此再融資為 {newTerm}，而您現有貸款僅剩 {remaining}——您將多還 {extra}。下方的節省額為現金總支出之差，並非同口徑比較。',
   'cmp.scenario': '方案',
