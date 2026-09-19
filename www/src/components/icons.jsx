@@ -11,19 +11,29 @@ const ICON_PROPS = {
 };
 
 /**
- * Header trigger for `YourDataMenu` -- three preference sliders, not a
- * gear: a radiating-spokes gear at header-icon size reads as a sun/
- * brightness toggle instead, and this app now has an actual light/dark
- * toggle to confuse it with. Ported from budget_planner's icons.jsx,
- * same rationale.
+ * Header trigger for `YourDataMenu` -- the spoked circle, identical to
+ * budget_planner's icon of the same name, opening the same menu from the
+ * same place in the same header.
+ *
+ * This used to be three preference sliders, on the argument that a
+ * radiating-spokes gear at header-icon size reads as a sun/brightness
+ * toggle and both apps have a real light/dark control to confuse it
+ * with. That argument is still true and was still overruled: the user
+ * asked for the spoked glyph in budget_planner explicitly (see that
+ * file's own note), and the two tools then sat side by side with
+ * different icons on the same button. One icon per control across the
+ * line beats the better of two icons in one tool. Do not swap this back
+ * on its own -- change both or neither.
+ *
+ * Sized via `nav-icon` rather than the inherited `.field-icon`: like the
+ * bottom nav's icons this one stands alone in its own 44px tap target
+ * instead of sitting beside label text.
  */
 export function SettingsIcon() {
   return (
     <svg {...ICON_PROPS} className="nav-icon">
-      <path d="M4 7h20M4 12h20M4 17h20" />
-      <circle cx="15" cy="7" r="2.4" fill="currentColor" stroke="none" />
-      <circle cx="8" cy="12" r="2.4" fill="currentColor" stroke="none" />
-      <circle cx="17" cy="17" r="2.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" />
     </svg>
   );
 }

@@ -16,8 +16,14 @@
    since plain CSS custom properties have no shared-block/mixin mechanism to
    avoid it.
 
-   The accent stays this app's own blue -- unlike budget_planner, adding a
-   light theme is not also a brand-hue decision here.
+   The accent used to be this app's own blue, on the reasoning that adding
+   a light theme was not also a brand-hue decision. That reasoning has run
+   out: budget_planner and postcard_maker both ship meifio's plum, this is
+   the only tool of the three that doesn't, and the brand book is explicit
+   that the mark does not recolour per tool (meifio-brand/README.md,
+   "Usage"). Three tools sitting under one wordmark in three different
+   accent hues is the inconsistency, not the fix. The blue was fine in
+   isolation and is gone for a reason that only exists across the line.
 
    `.report`/`.report-*` and the printable stylesheet further down are
    deliberately NOT tokenized: the printable document always renders
@@ -37,12 +43,28 @@
      of, not our CSS custom properties. */
   color-scheme: dark;
   --bg: #0f1720;
-  --panel: #161e2b;
-  /* A secondary, more recessed panel tone than --panel -- the Singapore
-     regulatory card and the rate-assumption note. Consolidates two
-     near-identical literals this file had (#131b27 and #131c26) into one
-     value. */
-  --panel-alt: #131c26;
+  /* These two were the other way round here (--panel #161e2b, --panel-alt
+     #131c26) -- the reverse of budget_planner's and postcard_maker's, so
+     the same token name meant the lighter surface in one tool and the
+     darker one in the other two. Nothing broke, which is why it survived,
+     but it made a rule copied between tools land on the wrong tone and
+     gave "which one is recessed?" a different answer per repo.
+
+     The values are swapped, not the use sites. That is deliberate: the
+     point is for `--panel` to be the same card tone in all three tools,
+     and the 15 sites using it here are exactly the equivalents of
+     budget_planner's cards. It does flip the four `--panel-alt` sites
+     (the Singapore regulatory card, the rate-assumption note) from one
+     step darker than the card to one step lighter -- which is the right
+     direction anyway: on a dark theme higher elevation is lighter, and
+     this file was alone in doing it backwards. Both light tiers already
+     agreed with the other two tools (#ffffff / #eef1f5) and are
+     untouched. */
+  --panel: #131c26;
+  /* The secondary panel tone beside --panel -- the Singapore regulatory
+     card and the rate-assumption note. Consolidates two near-identical
+     literals this file had (#131b27 and #131c26) into one value. */
+  --panel-alt: #161e2b;
   --panel-hover: #1b2432;
   --surface: #0f1720;
   --ink: #e6edf3;
@@ -57,8 +79,48 @@
   --line-soft: #1f2937;
   --input-border: #2a3546;
 
-  --accent: #4f8cff;
-  --accent-ink: #0f1720;
+  /* meifio's plum. See meifio-brand/README.md's colour table; the same
+     pair budget_planner and postcard_maker already ship.
+
+     `--accent` is the *fill* (primary buttons), `--accent-text` is the
+     same intent drawn as ink on a page or panel. They have to be
+     different values, because a fill and a label have opposite contrast
+     requirements against the same dark background: at #d1436a -- what
+     the other two tools shipped -- plum-on-panel text measures 3.86:1,
+     under WCAG AA's 4.5:1 floor for normal-size text. The brand's own
+     dark plum (#F2547F) clears it at 5.06-5.46:1, and is the value the
+     brand book already specifies for dark. Light has no such split
+     available or needed: #B01243 is 6.15:1 on the lightest panel.
+
+     The fill is #c93b62 rather than #d1436a for the mirror-image reason
+     -- `--accent-ink` on #d1436a is 4.22:1, so the primary button's own
+     label failed AA. One step darker takes the label to 4.65:1 while the
+     fill still reads 3.68:1 against the page, over 1.4.11's 3:1 floor
+     for a non-text boundary. */
+  --accent: #c93b62;
+  --accent-ink: #fff7f9;
+  --accent-text: #f2547f;
+  /* The blossom in MeifioMark. The letters take currentColor; only this
+     is fixed, and it is the one value the brand book says must not be
+     recoloured per tool. Defined here so the mark can follow the theme
+     between the brand's two plums instead of hardcoding the light one on
+     a dark page. */
+  --brand-plum: #f2547f;
+
+  /* Selection is state, not intent -- lifted from budget_planner's own
+     token, same argument. This file used `--positive` (green) to fill
+     `.app-tab.active` and `--accent` (then blue) to fill
+     `.app-region.active`: two different colours for one meaning, on the
+     same screen. Neither now means "selected"; `--accent` means only
+     "this is the action", and a selected control gets this neutral
+     surface plus an accent edge. The fill alone can only reach ~1.4:1
+     against `--panel`, which is why `--selected-edge` is what carries
+     1.4.11's 3:1 for the indicator, and `aria-current`/`aria-selected`
+     carries it for a screen reader. */
+  --selected: #27354a;
+  --selected-ink: var(--ink);
+  --selected-edge: var(--accent-text);
+
   --positive: #7ee787;
   --positive-ink: #0f1720;
   --positive-hover: #9df0a4;
@@ -85,14 +147,35 @@
     --surface: #ffffff;
     --ink: #16202c;
     --muted: #5a6b7d;
-    --muted-2: #66788c;
-    --byline: #6b7a8a;
+    /* Was #66788c. That measured 4.27:1 on `--bg` -- the earlier fix to
+       this token was checked against white `--panel` and never against
+       the page behind it, which is where `.updated`-style secondary text
+       actually sits. #5f6e80 is 4.91:1 on `--bg` and 5.21:1 on `--panel`,
+       and is now the same value budget_planner uses (the two had drifted
+       to #66788c and #667484 for no reason). */
+    --muted-2: #5f6e80;
+    /* #6b7a8a measured 4.14:1 on `--bg` -- the byline is normal-size text,
+       so it wants 4.5:1, and it failed in both light tiers of both apps
+       (postcard_maker's own light byline was corrected in the same pass).
+       #617180 is 4.73:1 on `--bg` and 5.02:1 on `--panel`, and stays a
+       shade lighter than `--muted-2` so the hierarchy is unchanged. */
+    --byline: #617180;
     --line: #dde3ea;
     --line-soft: #e2e8ef;
     --input-border: #c7d0da;
 
-    --accent: #2f6fe0;
+    --accent: #b01243;
     --accent-ink: #ffffff;
+    --accent-text: #b01243;
+    --brand-plum: #b01243;
+
+    /* See the `:root` block. Light has to move *darker* than both panels
+       rather than lighter -- `--panel` is white and there is nowhere
+       above it to go. */
+    --selected: #dae1ea;
+    --selected-ink: var(--ink);
+    --selected-edge: var(--accent-text);
+
     --positive: #1f7a3d;
     --positive-ink: #ffffff;
     --positive-hover: #2f9650;
@@ -121,14 +204,25 @@
   --surface: #ffffff;
   --ink: #16202c;
   --muted: #5a6b7d;
-  --muted-2: #66788c;
-  --byline: #6b7a8a;
+  /* See the media-query block above. */
+  --muted-2: #5f6e80;
+  --byline: #617180;
   --line: #dde3ea;
   --line-soft: #e2e8ef;
   --input-border: #c7d0da;
 
-  --accent: #2f6fe0;
+  --accent: #b01243;
   --accent-ink: #ffffff;
+  --accent-text: #b01243;
+  --brand-plum: #b01243;
+
+  /* See the `:root` block. Light has to move *darker* than both panels
+     rather than lighter -- `--panel` is white and there is nowhere
+     above it to go. */
+  --selected: #dae1ea;
+  --selected-ink: var(--ink);
+  --selected-edge: var(--accent-text);
+
   --positive: #1f7a3d;
   --positive-ink: #ffffff;
   --positive-hover: #2f9650;
@@ -203,6 +297,15 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* Both sibling tools have had this and this one hadn't: the byline is a
+   link to the family's home, and it was the only one of the three that
+   gave no feedback on hover and -- the part that actually matters -- no
+   visible response to keyboard focus. */
+.app-byline:hover,
+.app-byline:focus-visible {
+  color: var(--ink);
+}
+
 .app-byline:hover,
 .app-byline:focus-visible {
   color: var(--ink);
@@ -230,6 +333,8 @@ body {
 }
 
 .app-tab {
+  /* Containing block for .app-tab.active::before's rail. */
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -237,15 +342,42 @@ body {
   background: transparent;
   color: var(--muted);
   padding: 8px 16px;
+  /* The phone rule below already sets this; the desktop row needs it too.
+     At 8px padding and a 0.9rem label this measured 35px, which is a
+     touch target on a tablet-width pointer-and-touch device just as much
+     as it is on a phone. */
+  min-height: 44px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
 }
 
+/* Was `background: var(--positive)` -- a green fill for "selected" while
+   `.app-region.active` used an accent fill for the same meaning, two
+   colours for one idea on the same screen. Both now use `--selected`; see
+   that token's comment. Deliberately the same treatment as
+   budget_planner's own `.app-tab.active`, so the two apps' navs read as
+   one control. */
 .app-tab.active {
-  background: var(--positive);
-  color: var(--positive-ink);
+  background: var(--selected);
+  color: var(--selected-ink);
+  font-weight: 700;
+}
+
+/* A rail on the tab's top edge rather than an underline: this bar is
+   bottom-`fixed` on phone (see the `.app-tabs` rule in the phone media
+   query below), so the top edge is the content-facing one in the layout
+   this nav is primarily for. */
+.app-tab.active::before {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background: var(--selected-edge);
 }
 
 /* Two label spans always render (see Header.jsx); this default picks the
@@ -303,9 +435,16 @@ body {
   font-weight: 700;
 }
 
+/* Same change as `.app-tab.active` above, for the same reason -- this is
+   the other half of the pair that used two different colours for one
+   meaning. A region pill is square-ish and sits in a horizontal trough,
+   so the indicator is an inset ring rather than a top rail; the rail
+   geometry above is tuned to a tab's proportions and reads as a stray
+   dash at this width. */
 .app-region.active {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--selected);
+  color: var(--selected-ink);
+  box-shadow: inset 0 0 0 1.5px var(--selected-edge);
 }
 
 .app-main {
@@ -446,8 +585,13 @@ body {
   border-top: 1px solid var(--line);
 }
 
+/* `--accent-text`, not `--positive`: a link is not a saving. The two
+   static pages these point at settled on the brand plum for their own
+   links in the same pass (`--pg-link`), postcard_maker's `.btn.link
+   .primary` already used it, and following "Privacy" out of the app
+   should not change the colour of the thing you just tapped. */
 .app-footer a {
-  color: var(--positive);
+  color: var(--accent-text);
 }
 
 .panel {
@@ -504,7 +648,7 @@ body {
 }
 
 .scenario-fields-toggle:hover {
-  border-color: var(--positive);
+  border-color: var(--accent);
 }
 
 .scenario-fields-toggle-label {
@@ -578,16 +722,31 @@ body {
   line-height: 1.5;
 }
 
+/* This file already sets `min-height: 44px` on seven other tappable
+   things (the region pills, the language select, the tab buttons, the
+   dialog controls) but never on the two controls someone actually spends
+   a session in. Measured at 375px, a `.field-input` came out 38px and a
+   `.field-select` 41px -- both under the ~44px floor in the root
+   CLAUDE.md, and both sized purely by their padding, which is exactly the
+   "looks fine but still measures small" case that rule calls out. The
+   padding is unchanged; this is a floor, not a resize. */
 .field-input {
   display: flex;
   align-items: center;
+  min-height: 44px;
   background: var(--surface);
   border: 1px solid var(--input-border);
   border-radius: 8px;
   padding: 0 10px;
 }
 
+/* `align-self: stretch` is what makes the 44px above a real tap target and
+   not just a taller box. The wrapper is a plain `<div>`, so the ~3px strip
+   the centred 38px input leaves above and below it is dead: a tap there
+   hits the div and focuses nothing. Stretching the input to the wrapper's
+   own height hands it the whole 44px. Measured at 375px, before and after. */
 .field-input input {
+  align-self: stretch;
   background: transparent;
   border: none;
   color: var(--ink);
@@ -617,11 +776,13 @@ body {
   white-space: nowrap;
 }
 
+/* See `.field-input` above for the measurement -- this one came out 41px. */
 .field-select {
   background: var(--surface);
   border: 1px solid var(--input-border);
   border-radius: 8px;
   color: var(--ink);
+  min-height: 44px;
   padding: 10px;
   font-size: 0.95rem;
 }
@@ -683,13 +844,14 @@ body {
   font-size: 1rem;
 }
 
+/* Reads as a link, so it takes the link colour -- see `.app-footer a`. */
 .link-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  color: var(--positive);
+  color: var(--accent-text);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
@@ -719,13 +881,19 @@ body {
   background: var(--panel-hover);
 }
 
+/* index.html carries its own hand-duplicated copy of this rule for the
+   pre-mount loading screen, and it is now the brand plum (#f2547f dark /
+   #b01243 light -- the green it used to be measured 1.45:1 on the light
+   background). This copy takes over the moment main.css lands, so if it
+   stays green the text changes colour mid-load. `--brand-plum` is those
+   two values. */
 .loading {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
   font-size: 1.2rem;
-  color: var(--positive);
+  color: var(--brand-plum);
 }
 
 .link-button.danger {
@@ -869,9 +1037,17 @@ body {
   font-weight: 600;
 }
 
+/* The same defect `.app-tab.active` above already records, in the place
+   it is hardest to defend: this segmented toggle sits ~40px below
+   `.field-unit.active`, which is an accent fill for exactly the same
+   "this is the chosen segment" meaning. Green also *says* something here
+   that isn't true -- `--positive` is the surplus/saving colour
+   everywhere else in this file, so a green "Fixed" reads as the
+   recommended rate type rather than the selected one. Fixed, Steps up
+   and Floating are three neutral products. */
 .kind-toggle.active {
-  background: var(--positive);
-  color: var(--positive-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .comparison-entry-field {
@@ -1813,9 +1989,14 @@ body {
   color: var(--muted);
 }
 
+/* This is the app's primary action, and it was the one primary action in
+   the three tools that wasn't the brand plum -- budget_planner's `.btn`
+   and postcard_maker's `.btn` are both `--accent`/`--accent-ink`. Green
+   is `--positive`, which in this file means a surplus or a saving; the
+   button people press most shouldn't borrow a semantic colour. */
 .primary-button {
-  background: var(--positive);
-  color: var(--positive-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
   border: none;
   border-radius: 8px;
   padding: 10px 18px;
@@ -1855,7 +2036,7 @@ body {
 }
 
 .secondary-button:hover:not(:disabled) {
-  border-color: var(--positive);
+  border-color: var(--accent);
 }
 
 .secondary-button:disabled {
@@ -2136,8 +2317,9 @@ body {
   padding: 12px 20px;
   border: none;
   border-radius: 999px;
-  background: var(--positive);
-  color: var(--positive-ink);
+  /* Same action as `.primary-button`, so the same fill -- see there. */
+  background: var(--accent);
+  color: var(--accent-ink);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
@@ -2262,7 +2444,7 @@ body {
 }
 
 .toast-dismiss:hover {
-  color: var(--positive);
+  color: var(--accent-text);
 }
 
 /* Placed after the unconditional .toast-region rule above (not inside the
