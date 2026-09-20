@@ -226,16 +226,13 @@ export default function ComparisonView({
         {presets.map((preset) => (
           <button
             key={preset.label}
-            className="link-button"
+            className="btn link"
             onClick={() => setEntries((prev) => [...prev, presetToEntry(preset, t)])}
           >
             + {presetName(preset, t)}
           </button>
         ))}
-        <button
-          className="link-button"
-          onClick={() => setEntries((prev) => [...prev, blankEntry(t)])}
-        >
+        <button className="btn link" onClick={() => setEntries((prev) => [...prev, blankEntry(t)])}>
           + {t('cmp.custom')}
         </button>
       </div>

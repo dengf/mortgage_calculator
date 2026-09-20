@@ -933,19 +933,17 @@ body {
   font-size: 1rem;
 }
 
-/* Reads as a link, so it takes the link colour -- see `.app-footer a`. */
-.link-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* Reads as a link, so it takes the link colour -- see `.app-footer a`.
+   It sits above `.btn` in this file and still wins, because `.btn.link`
+   is the more specific selector; only what it names is overridden, and
+   the flex centring, the 44px floor and the press feedback all come
+   from the base. */
+.btn.link {
   background: none;
-  border: none;
   color: var(--accent-text);
-  cursor: pointer;
   font-size: 0.85rem;
-  font-weight: 600;
   padding: 4px 8px;
-  min-height: 44px;
+  border-radius: 8px;
 }
 
 .schedule-table {
@@ -985,8 +983,18 @@ body {
   color: var(--brand-plum);
 }
 
-.link-button.danger {
+/* Compare's "Remove" is a link that happens to be destructive, so this
+   recolours and otherwise stays a link. The sizing has to be restated:
+   `.btn.danger` is a full variant in the shared vocabulary, not just a
+   colour -- it drops the 44px floor for the inline "Remove"s that sit in
+   dense table rows in the other two tools -- and at equal specificity it
+   is the later rule, so without this the Remove buttons measured 27px.
+   That regression is exactly what the audit of every rendered button was
+   for; the floor stays. */
+.btn.link.danger {
   color: var(--negative);
+  padding: 4px 8px;
+  min-height: 44px;
 }
 
 /* Saved scenarios */
@@ -2108,15 +2116,6 @@ body {
   flex-wrap: wrap;
 }
 
-/* Same 44px floor already applied in `.data-menu-actions`, `.confirm-actions`
-   and `.toast` -- these three (print, CSV, email) are this tab's actual
-   reason for existing, and were sized like everything else on the page
-   instead of like something meant to be tapped. */
-.report-action-row .primary-button,
-.report-action-row .secondary-button {
-  min-height: 44px;
-}
-
 .report-actions-note {
   margin: 0;
   min-width: 0;
@@ -2125,24 +2124,58 @@ body {
   color: var(--muted);
 }
 
-/* This is the app's primary action, and it was the one primary action in
-   the three tools that wasn't the brand plum -- budget_planner's `.btn`
-   and postcard_maker's `.btn` are both `--accent`/`--accent-ink`. Green
-   is `--positive`, which in this file means a surplus or a saving; the
-   button people press most shouldn't borrow a semantic colour. */
-.primary-button {
+/* The button primitive, now the same one budget_planner and
+   postcard_maker use: same base, same variant names, same values.
+   This app had its own family -- `.primary-button`, `.secondary-button`,
+   `.danger-button`, `.link-button` -- which predated the other two and
+   never got folded in. That was four real differences, not four names:
+   an 8px radius against their 14px, no 44px floor except where five
+   separate context rules added one by hand, no press feedback, and a
+   disabled state on `opacity` that both of them had already moved off
+   for a measured reason (see `.btn:disabled`). Those five context rules
+   are gone now; the floor is in the base, which is where it stops being
+   something the next control has to remember. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  /* Echoes the blossom mark's own curvature rather than the generic 8px
+     "SaaS card kit" radius -- budget_planner's reasoning, adopted. */
+  border-radius: 14px;
+  padding: 10px 16px;
+  min-height: 44px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
   background: var(--accent);
   color: var(--accent-ink);
-  border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
+  transition: transform 0.1s ease;
 }
 
-.primary-button:hover {
-  background: var(--positive-hover);
+/* Real tactile feedback on tap -- a focus ring alone tells a keyboard
+   user something is focused, but nothing told a touch user their tap had
+   registered before the resulting screen change arrived.
+
+   This replaces a `:hover` that set `background: var(--positive-hover)`,
+   which was a live rebrand leftover: `--accent` became the brand plum
+   and the hover stayed green, so the app's primary action changed colour
+   family under the cursor. None of the three tools has a hover fill on
+   `.btn` now, which is a gap worth closing across all three at once
+   rather than re-diverging here. */
+.btn:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+
+  .btn:active {
+    transform: none;
+  }
 }
 
 /* Sized to the content, not to the row: growing to fill pushed the send
@@ -2160,39 +2193,41 @@ body {
   color: var(--gold);
 }
 
-.secondary-button {
-  background: transparent;
+/* Was an outlined button here and a filled `--panel-alt` one in the other
+   two. Filled is the version that survived review there, and an outline
+   next to the plum primary reads as the weaker of two actions in a way a
+   1px border does not. */
+.btn.secondary {
+  background: var(--panel-alt);
   color: var(--ink);
-  border: 1px solid var(--input-border);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
 }
 
-.secondary-button:hover:not(:disabled) {
-  border-color: var(--accent);
+/* The inline destructive action -- a "Remove"/"Delete" sitting in a row,
+   not a primary action -- so it keeps its own compact sizing rather than
+   the 44px floor, which would blow out the height of every row it
+   appears in. `.confirm-actions` and `.data-menu-actions` below promote
+   it back to a filled button where it *is* the action being confirmed,
+   which is exactly what both other tools do with the same class. */
+.btn.danger {
+  background: transparent;
+  color: var(--negative);
+  padding: 6px 10px;
+  min-height: auto;
 }
 
-.secondary-button:disabled {
-  opacity: 0.45;
+/* Flat muted colours, not opacity. This was `opacity: 0.45`. Opacity
+   fades a button's own background and text toward whatever sits behind
+   it, and in dark mode that backdrop is near-black, which drags a light
+   `--accent-ink` label and a mid-tone `--accent` background toward each
+   other faster than either moves toward the page -- the result reads as
+   washed-out, low-contrast pink-on-pink rather than "disabled".
+   `--panel-alt`/`--muted` already clear AA against each other in both
+   themes. budget_planner's finding; this is the last of the three to
+   take it. */
+.btn:disabled {
+  background: var(--panel-alt);
+  color: var(--muted);
   cursor: not-allowed;
-}
-
-.danger-button {
-  background: var(--negative);
-  color: var(--negative-ink);
-  border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.danger-button:hover {
-  background: var(--negative-hover);
 }
 
 /* "My data" -- now a settings menu (theme picker plus the three data
@@ -2351,9 +2386,17 @@ body {
   gap: 10px;
 }
 
-.data-menu-actions .secondary-button,
-.data-menu-actions .danger-button {
+.data-menu-actions .btn {
   width: 100%;
+}
+
+/* "Clear all data" is the action being confirmed here, not an inline
+   "Remove" in a row, so the danger variant is promoted to a filled
+   button -- same promotion both other tools apply in the same place. */
+.data-menu-actions .btn.danger {
+  background: var(--negative);
+  color: var(--negative-ink);
+  padding: 10px 16px;
   min-height: 44px;
 }
 
@@ -2393,8 +2436,14 @@ body {
   flex-wrap: wrap;
 }
 
-.confirm-actions .secondary-button,
-.confirm-actions .danger-button {
+/* The destructive choice *is* the action here, so it is filled rather
+   than the inline text treatment `.btn.danger` carries by default --
+   the same promotion budget_planner and postcard_maker both apply to
+   this exact selector. */
+.confirm-actions .btn.danger {
+  background: var(--negative);
+  color: var(--negative-ink);
+  padding: 10px 16px;
   min-height: 44px;
 }
 
@@ -2430,11 +2479,6 @@ body {
   flex-wrap: wrap;
 }
 
-.report-confirm-actions .primary-button,
-.report-confirm-actions .secondary-button {
-  min-height: 44px;
-}
-
 /* Report options -- the schedule-view toggle, print, CSV and email used to
    sit inline ahead of the document, which on a phone meant a screen or more
    of buttons before the report itself (the reason anyone opened this tab)
@@ -2453,17 +2497,13 @@ body {
   padding: 12px 20px;
   border: none;
   border-radius: 999px;
-  /* Same action as `.primary-button`, so the same fill -- see there. */
+  /* Same action as `.btn`, so the same fill -- see there. */
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-}
-
-.report-options-fab:hover {
-  background: var(--positive-hover);
 }
 
 .report-options-backdrop {
@@ -2571,9 +2611,8 @@ body {
   min-width: 0;
 }
 
-.toast .secondary-button {
+.toast .btn {
   flex: none;
-  min-height: 44px;
 }
 
 .toast-dismiss {

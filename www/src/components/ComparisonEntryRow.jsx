@@ -63,7 +63,7 @@ export default function ComparisonEntryRow({ entry, onChange, onRemove }) {
         <span className="unit">{t('rate.yrs')}</span>
       </label>
 
-      <button className="link-button danger" onClick={onRemove}>
+      <button className="btn link danger" onClick={onRemove}>
         {t('cmp.remove')}
       </button>
     </div>

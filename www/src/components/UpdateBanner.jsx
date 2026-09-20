@@ -30,7 +30,7 @@ export default function UpdateBanner() {
     <div className="toast-region" aria-live="polite">
       <div className="toast update-toast" role="status">
         <span className="toast-message">{t('app.updateAvailable')}</span>
-        <button className="secondary-button" onClick={() => reloadOnto(buildId)}>
+        <button className="btn secondary" onClick={() => reloadOnto(buildId)}>
           {t('app.reload')}
         </button>
         <button
