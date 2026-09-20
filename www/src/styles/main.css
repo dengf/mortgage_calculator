@@ -2543,7 +2543,15 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  /* Deliberately no `flex-wrap: wrap`. It was here, and at this toast's own
+     480px it broke the banner: the message (`flex: 1 1 auto` with an auto
+     basis, so it would not shrink below its text) plus the Reload button
+     plus a 44px dismiss target came to more than the 450px of inner width,
+     so the × wrapped onto a second row on its own and the banner stood
+     126px tall with an empty band under the text. Letting the message
+     shrink instead -- `min-width: 0` below -- is the fix; wrapping a
+     three-item row whose last item is a 44px square was never going to
+     produce a layout worth having. */
   max-width: 480px;
   width: 100%;
   background: var(--panel);
@@ -2557,6 +2565,10 @@ body {
 
 .toast-message {
   flex: 1 1 auto;
+  /* A flex item's default `min-width: auto` floors it at its content, which
+     is what made the row overflow rather than compress. With this the
+     sentence wraps inside its own column and the row stays one row. */
+  min-width: 0;
 }
 
 .toast .secondary-button {
