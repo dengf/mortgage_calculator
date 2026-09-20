@@ -170,6 +170,16 @@ jobs:
       - run: npm ci
         working-directory: www
 
+      # Both of these have existed as scripts since PR #88 added ESLint and
+      # nothing has ever run either one -- which is the only reason they
+      # still pass. A gate nobody runs is a gate that goes green the day it
+      # stops being true.
+      - run: npm run lint
+        working-directory: www
+
+      - run: npm run format:check
+        working-directory: www
+
       - run: npm test
         working-directory: www
 
