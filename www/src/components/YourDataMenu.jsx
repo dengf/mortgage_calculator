@@ -227,7 +227,7 @@ export default function YourDataMenu({ wasmModule, onDataChanged, theme, onTheme
               <div className="data-menu-actions">
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="btn secondary"
                   onClick={async () => {
                     try {
                       await exportData();
@@ -243,12 +243,12 @@ export default function YourDataMenu({ wasmModule, onDataChanged, theme, onTheme
                 </button>
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="btn secondary"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {t('data.import')}
                 </button>
-                <button type="button" className="danger-button" onClick={onClearAll}>
+                <button type="button" className="btn danger" onClick={onClearAll}>
                   {t('data.clearAll')}
                 </button>
               </div>

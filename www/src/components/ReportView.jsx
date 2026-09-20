@@ -393,7 +393,7 @@ export default function ReportView({
 
                   <div className="report-action">
                     <div className="report-action-row">
-                      <button className="primary-button" onClick={() => window.print()}>
+                      <button className="btn" onClick={() => window.print()}>
                         {t('report.print')}
                       </button>
                     </div>
@@ -402,7 +402,7 @@ export default function ReportView({
 
                   <div className="report-action">
                     <div className="report-action-row">
-                      <button className="secondary-button" onClick={downloadReportCsv}>
+                      <button className="btn secondary" onClick={downloadReportCsv}>
                         {t('report.downloadCsv')}
                       </button>
                     </div>
@@ -423,7 +423,7 @@ export default function ReportView({
                         </div>
                       </label>
                       <button
-                        className="secondary-button"
+                        className="btn secondary"
                         onClick={() => setConfirming(true)}
                         disabled={addresses.length === 0 || rejected.length > 0}
                       >
@@ -455,10 +455,10 @@ export default function ReportView({
                       </ul>
                       <p>{t('report.confirmBody')}</p>
                       <div className="report-confirm-actions">
-                        <button className="primary-button" onClick={email}>
+                        <button className="btn" onClick={email}>
                           {t('report.confirmSend')}
                         </button>
-                        <button className="secondary-button" onClick={() => setConfirming(false)}>
+                        <button className="btn secondary" onClick={() => setConfirming(false)}>
                           {t('report.confirmCancel')}
                         </button>
                       </div>

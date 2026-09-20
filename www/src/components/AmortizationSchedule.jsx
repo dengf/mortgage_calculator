@@ -142,7 +142,7 @@ export default function AmortizationSchedule({
           <div className="schedule-table-wrap">
             <div className="schedule-table-header">
               <h2>{showFullSchedule ? t('amort.fullSchedule') : t('amort.yearlySummary')}</h2>
-              <button className="link-button" onClick={() => setShowFullSchedule((v) => !v)}>
+              <button className="btn link" onClick={() => setShowFullSchedule((v) => !v)}>
                 {showFullSchedule ? t('amort.showYearly') : t('amort.showEvery')}
               </button>
             </div>

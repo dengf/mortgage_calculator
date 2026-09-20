@@ -91,15 +91,15 @@ export default function SavedScenarios({
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             />
-            <button className="link-button" onClick={handleSave}>
+            <button className="btn link" onClick={handleSave}>
               {t('saved.save')}
             </button>
-            <button className="link-button" onClick={() => setIsSaving(false)}>
+            <button className="btn link" onClick={() => setIsSaving(false)}>
               {t('saved.cancel')}
             </button>
           </div>
         ) : (
-          <button className="link-button" onClick={() => setIsSaving(true)}>
+          <button className="btn link" onClick={() => setIsSaving(true)}>
             {t('saved.saveAs')}
           </button>
         )}
@@ -115,10 +115,10 @@ export default function SavedScenarios({
             <li key={s.id}>
               <span className="scenario-name">{s.name}</span>
               <span className="scenario-date">{new Date(s.created_at).toLocaleDateString()}</span>
-              <button className="link-button" onClick={() => handleLoad(s.id)}>
+              <button className="btn link" onClick={() => handleLoad(s.id)}>
                 {t('saved.load')}
               </button>
-              <button className="link-button danger" onClick={() => handleDelete(s.id, s.name)}>
+              <button className="btn link danger" onClick={() => handleDelete(s.id, s.name)}>
                 {t('saved.delete')}
               </button>
             </li>

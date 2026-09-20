@@ -58,10 +58,10 @@ function ConfirmDialogView({ message, confirmLabel, onAnswer }) {
           {message}
         </p>
         <div className="confirm-actions">
-          <button className="secondary-button" onClick={() => onAnswer(false)}>
+          <button className="btn secondary" onClick={() => onAnswer(false)}>
             {t('confirm.cancel')}
           </button>
-          <button className="danger-button" onClick={() => onAnswer(true)} autoFocus>
+          <button className="btn danger" onClick={() => onAnswer(true)} autoFocus>
             {confirmLabel}
           </button>
         </div>
