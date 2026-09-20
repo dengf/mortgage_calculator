@@ -176,6 +176,8 @@ Each of these produces a wrong result that looks like a correct one.
 ## Landing changes
 
 One branch per round of work, focused commits, then a PR with a Summary and
-Test plan. **Do not self-merge** -- branch protection requires approval. Wait
+Test plan. **Pushing the branch and opening the PR is routine: do it when a
+round is ready, without asking first.** What still needs the user is the
+*merge* -- **do not self-merge**, branch protection requires approval. Wait
 for the merge, then verify `state == "MERGED"` in its own step before deleting
 any branch; deleting the head branch of an open PR closes it.
