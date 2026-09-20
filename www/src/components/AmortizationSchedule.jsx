@@ -141,7 +141,7 @@ export default function AmortizationSchedule({
         {yearlyRows.length > 0 && (
           <div className="schedule-table-wrap">
             <div className="schedule-table-header">
-              <h3>{showFullSchedule ? t('amort.fullSchedule') : t('amort.yearlySummary')}</h3>
+              <h2>{showFullSchedule ? t('amort.fullSchedule') : t('amort.yearlySummary')}</h2>
               <button className="link-button" onClick={() => setShowFullSchedule((v) => !v)}>
                 {showFullSchedule ? t('amort.showYearly') : t('amort.showEvery')}
               </button>

@@ -22,7 +22,7 @@ export default function UnitedStatesPanel({ inputs, onChange, result, homePrice,
 
   return (
     <div className="sg-panel">
-      <h3 className="sg-panel-title">{t('us.title')}</h3>
+      <h2 className="sg-panel-title">{t('us.title')}</h2>
 
       <div className="panel-form sg-panel-form">
         <label className="field">

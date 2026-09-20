@@ -57,7 +57,7 @@ export default function ReportDocument({
 
       <header className="report-head">
         <div>
-          <h1>{t('report.title')}</h1>
+          <h2>{t('report.title')}</h2>
           <p className="report-subtitle">{t('report.subtitle')}</p>
         </div>
         <dl className="report-meta">
@@ -84,7 +84,7 @@ export default function ReportDocument({
           instalment, and it is the question a borrower does not know to
           ask. */}
       <section className="report-section">
-        <h2>{t('report.terms')}</h2>
+        <h3>{t('report.terms')}</h3>
         <div className="report-table-wrap">
           <table className="report-table report-terms">
             <thead>
@@ -161,7 +161,7 @@ export default function ReportDocument({
       {/* The CFPB's year bands. A loan whose payment moves is described
           over time or not at all. */}
       <section className="report-section">
-        <h2>{t('report.overTime')}</h2>
+        <h3>{t('report.overTime')}</h3>
         <div className="report-table-wrap">
           <table className="report-table">
             <thead>
@@ -204,7 +204,7 @@ export default function ReportDocument({
       {/* Required of a Singapore fact sheet, and the most useful thing on
           the page in either market: what a rise actually costs per month. */}
       <section className="report-section">
-        <h2>{t('report.ifRatesRise')}</h2>
+        <h3>{t('report.ifRatesRise')}</h3>
         <p className="report-note">{t('report.ifRatesRiseNote')}</p>
         <div className="report-table-wrap">
           <table className="report-table">
@@ -237,7 +237,7 @@ export default function ReportDocument({
           payment-by-payment schedule and a twenty-five line summary answer
           different questions, and neither is wrong. */}
       <section className="report-section report-schedule">
-        <h2>{t(byPayment ? 'report.schedule' : 'report.scheduleYearly')}</h2>
+        <h3>{t(byPayment ? 'report.schedule' : 'report.scheduleYearly')}</h3>
         <div className="report-table-wrap">
           <table className="report-table">
             <thead>
@@ -283,7 +283,7 @@ export default function ReportDocument({
         <p className="report-disclaimer">{t('report.referenceOnly')}</p>
         <p className="report-disclaimer">{t(`about.disclaimer.${region}`)}</p>
 
-        <h3>{t('report.sources')}</h3>
+        <h4>{t('report.sources')}</h4>
         <ul className="report-sources">
           {report.references.map((reference) => (
             <li key={reference.code}>

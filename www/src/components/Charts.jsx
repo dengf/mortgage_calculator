@@ -5,9 +5,16 @@ import { useI18n } from '../i18n';
 // shapes, and pulling in Recharts/Chart.js would cost more gzipped than the
 // whole wasm module the app is built around.
 
-const BLUE = '#4f8cff';
-const AMBER = '#f59e0b';
-const GRID = '#243044';
+// No colour constants here on purpose. These used to be `#4f8cff`/`#f59e0b`
+// (the pre-rebrand blue/amber) and `#243044` for the gridlines, hardcoded
+// past the token system, which produced three separate faults: the split
+// bar below draws in `--accent`/`--gold` while its own legend drew in
+// blue/amber, so the key disagreed with the chart it labelled; the grid was
+// a dark-theme value painted on a white card in light theme; and no chart
+// in the app carried the brand at all. Every colour now lives in main.css
+// against the same tokens the bar uses -- `--accent` for what you owe,
+// `--gold` for what the borrowing costs, `--line` for the grid -- so a
+// theme switch moves the charts with everything else.
 
 /** Viewbox units. The SVG scales to its container via viewBox + width 100%. */
 const W = 300;
@@ -62,11 +69,11 @@ export function BalanceChart({ rows, principal, yearsPlotted, formatMoney }) {
     <figure className="chart">
       <figcaption className="chart-title">{t('chart.balanceVsInterest')}</figcaption>
       <div className="chart-legend">
-        <span className="chart-key">
-          <i style={{ background: BLUE }} /> {t('chart.remainingBalance')}
+        <span className="chart-key chart-key-balance">
+          <i /> {t('chart.remainingBalance')}
         </span>
-        <span className="chart-key">
-          <i style={{ background: AMBER }} /> {t('chart.interestToDate')}
+        <span className="chart-key chart-key-interest">
+          <i /> {t('chart.interestToDate')}
         </span>
       </div>
       <svg
@@ -80,35 +87,35 @@ export function BalanceChart({ rows, principal, yearsPlotted, formatMoney }) {
         })}
       >
         <defs>
+          {/* `stop-color` is set from CSS rather than the `stopColor`
+              attribute: an SVG presentation *attribute* cannot take a
+              `var()`, but the corresponding CSS property can, which is what
+              lets the fade under the balance line follow `--accent` through
+              a theme change. */}
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={BLUE} stopOpacity="0.28" />
-            <stop offset="100%" stopColor={BLUE} stopOpacity="0.02" />
+            <stop className="chart-area-from" offset="0%" />
+            <stop className="chart-area-to" offset="100%" />
           </linearGradient>
         </defs>
         {[0.25, 0.5, 0.75].map((f) => (
           <line
             key={f}
+            className="chart-grid-line"
             x1={PAD_L}
             x2={W - PAD_R}
             y1={PAD_T + (H - PAD_T - PAD_B) * f}
             y2={PAD_T + (H - PAD_T - PAD_B) * f}
-            stroke={GRID}
-            strokeWidth="0.5"
           />
         ))}
         <path d={pathFrom(balances, max, { close: true })} fill={`url(#${gradientId})`} />
         <path
+          className="chart-line chart-line-balance"
           d={pathFrom(balances, max)}
-          fill="none"
-          stroke={BLUE}
-          strokeWidth="2"
           vectorEffect="non-scaling-stroke"
         />
         <path
+          className="chart-line chart-line-interest"
           d={pathFrom(cumulativeInterest, max)}
-          fill="none"
-          stroke={AMBER}
-          strokeWidth="2"
           vectorEffect="non-scaling-stroke"
         />
       </svg>
@@ -163,14 +170,16 @@ export function PrincipalInterestSplit({
         <span className="split-bar-principal" style={{ width: `${100 - interestShare}%` }} />
         <span className="split-bar-interest" style={{ width: `${interestShare}%` }} />
       </div>
+      {/* These two keys label the bar directly above them, so they take the
+          bar's own colours (`.split-bar-principal`/`.split-bar-interest`)
+          rather than a second palette. They did not, which is how a plum
+          bar ended up with a blue key. */}
       <div className="chart-legend">
-        <span className="chart-key">
-          <i style={{ background: BLUE }} />{' '}
-          {t('chart.principalLegend', { amount: formatMoney(principal) })}
+        <span className="chart-key chart-key-balance">
+          <i /> {t('chart.principalLegend', { amount: formatMoney(principal) })}
         </span>
-        <span className="chart-key">
-          <i style={{ background: AMBER }} />{' '}
-          {t('chart.interestLegend', { amount: formatMoney(totalInterest) })}
+        <span className="chart-key chart-key-interest">
+          <i /> {t('chart.interestLegend', { amount: formatMoney(totalInterest) })}
         </span>
       </div>
       <p className="chart-note">

@@ -81,7 +81,7 @@ export default function SavedScenarios({
   return (
     <div className="saved-scenarios">
       <div className="saved-scenarios-header">
-        <h3>{t('saved.title')}</h3>
+        <h2>{t('saved.title')}</h2>
         {isSaving ? (
           <div className="save-form">
             <input
