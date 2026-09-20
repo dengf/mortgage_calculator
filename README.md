@@ -186,3 +186,22 @@ figure here is an estimate; check it against your bank's own paperwork.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+### Third-party licenses
+
+The full license text for every crate compiled into the wasm is generated
+by [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) into
+`www/static/third-party-licenses.html`, a shipped page linked from the
+privacy policy — that is where an MIT/Apache-2.0/BSD notice actually
+reaches a user, since a `.wasm` is a binary distribution of every crate
+inside it and those licenses all condition binary redistribution on the
+notice travelling along. Regenerate with:
+
+```
+cargo about generate about.hbs -o www/static/third-party-licenses.html
+```
+
+CI's `licenses` job regenerates and fails on any diff, so a new
+dependency cannot ship without its notice. The template is `about.hbs`
+and the accepted-license list is `about.toml`; adding a license to that
+list is a deliberate decision, not a way to quiet the tool.
