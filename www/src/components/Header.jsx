@@ -1,6 +1,7 @@
 import React from 'react';
 import { LOCALES, useI18n } from '../i18n';
 import MeifioMark from './MeifioMark';
+import { meifioHome } from '../meifioHome';
 import YourDataMenu from './YourDataMenu';
 import {
   PaymentIcon,
@@ -10,10 +11,6 @@ import {
   CompareIcon,
   ReportIcon,
 } from './icons';
-
-/* The family's home. Moves to https://meifio.app once the domain is live;
-   it is a constant so that is a one-line change. */
-const MEIFIO_HOME = 'https://dengf.github.io/meifio-blog/';
 
 const TABS = [
   { id: 'payment', key: 'nav.payment', Icon: PaymentIcon },
@@ -61,7 +58,7 @@ export default function Header({
               element, not a string -- and the word order around it differs by
               locale ("a meifio app" vs "meifio 出品"), so the mark cannot simply be
               pinned to one end. */}
-          <a className="app-byline" href={MEIFIO_HOME}>
+          <a className="app-byline" href={meifioHome(locale)}>
             {t('app.byline')
               .split('{logo}')
               .flatMap((part, i) => (i === 0 ? [part] : [<MeifioMark key="mark" />, part]))}
