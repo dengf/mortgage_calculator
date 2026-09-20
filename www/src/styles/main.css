@@ -31,6 +31,20 @@
    paper always has, so those rules keep their own hardcoded light colors
    untouched by this system. */
 :root {
+  /* One page width across the three tools. This file and postcard_maker
+     both capped at 960px while budget_planner ran to 1240px, so opening
+     the family on a 1920px screen gave three different column widths and
+     two of them left ~480px of dead margin on each side. Declared as a
+     token rather than a literal so the number is changed in one place per
+     app and is greppable across all three.
+
+     Widening the shell alone would only stretch things, so the
+     `@media (min-width: 960px)` block further down puts the extra space
+     somewhere -- this app had no `min-width` query at all before, only
+     `max-width` ones, meaning it had no desktop layout, just a capped
+     phone one. Prose keeps its own measure cap there; a 1240px line of
+     body text is unreadable regardless of how much room there is. */
+  --content-max: 1240px;
   /* Tells the browser which palette to draw its own native chrome in --
      scrollbars, checkbox/radio ticks, and critically a <select>'s built-in
      dropdown arrow and (on platforms that support it) the popup option
@@ -76,7 +90,9 @@
   --muted-2: #7a8ca0;
   --byline: #9aa7b4;
   --line: #223;
-  --line-soft: #1f2937;
+  /* Was #1f2937, against #1a2433 in both other tools -- see the note by
+     `--negative-bg` below. */
+  --line-soft: #1a2433;
   --input-border: #2a3546;
 
   /* meifio's plum. See meifio-brand/README.md's colour table; the same
@@ -129,12 +145,24 @@
   --negative: #ff8a8a;
   --negative-ink: #3a1d1d;
   --negative-hover: #ffa8a8;
-  --negative-bg: #3a1d1d;
-  --negative-border: #7a3535;
+  /* These two, and `--line-soft` above, were this file's own values where
+     budget_planner and postcard_maker already agreed on another: #3a1d1d/
+     #7a3535 against #331a1a/#6b3030. Nothing looked wrong in isolation --
+     that is what let them drift -- but an error panel copied between the
+     three tools landed on a different red surround in each. Aligned on
+     the pair the other two share. `--negative-ink` keeps #3a1d1d: it is
+     ink *on* a `--negative` fill, a different job that happens to have
+     had the same value. */
+  --negative-bg: #331a1a;
+  --negative-border: #6b3030;
   --negative-text: #ffb4b4;
   /* Consolidates four near-identical ambers this file had for warning/
-     attention accents (#f59e0b, #eab308, #e8b45c, #ffb454) into one. */
-  --gold: #e8b45c;
+     attention accents (#f59e0b, #eab308, #e8b45c, #ffb454) into one.
+     Now #d9b46a rather than #e8b45c, which is the value the other two
+     tools carry -- this is the second series in every chart (see
+     `.chart-line-interest`), so a per-app amber meant the family's charts
+     were a visibly different yellow app to app. */
+  --gold: #d9b46a;
 }
 
 @media (prefers-color-scheme: light) {
@@ -145,7 +173,12 @@
     --panel-alt: #eef1f5;
     --panel-hover: #f0f3f7;
     --surface: #ffffff;
-    --ink: #16202c;
+    /* #16202b, not #16202c: budget_planner's light ink is the former and
+       this file's was the latter, one step apart for no reason anybody
+       can point at. Invisible on its own; it is the kind of difference
+       that makes "are these the same colour?" unanswerable without a
+       colour picker, which is the whole cost of drift. */
+    --ink: #16202b;
     --muted: #5a6b7d;
     /* Was #66788c. That measured 4.27:1 on `--bg` -- the earlier fix to
        this token was checked against white `--panel` and never against
@@ -161,7 +194,9 @@
        shade lighter than `--muted-2` so the hierarchy is unchanged. */
     --byline: #617180;
     --line: #dde3ea;
-    --line-soft: #e2e8ef;
+    /* Was #e2e8ef against budget_planner's #e7ebf0; same drift as `--ink`
+       just above. */
+    --line-soft: #e7ebf0;
     --input-border: #c7d0da;
 
     --accent: #b01243;
@@ -202,13 +237,13 @@
   --panel-alt: #eef1f5;
   --panel-hover: #f0f3f7;
   --surface: #ffffff;
-  --ink: #16202c;
-  --muted: #5a6b7d;
   /* See the media-query block above. */
+  --ink: #16202b;
+  --muted: #5a6b7d;
   --muted-2: #5f6e80;
   --byline: #617180;
   --line: #dde3ea;
-  --line-soft: #e2e8ef;
+  --line-soft: #e7ebf0;
   --input-border: #c7d0da;
 
   --accent: #b01243;
@@ -251,7 +286,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 960px;
+  max-width: var(--content-max);
   margin: 0 auto;
   padding: 0 24px;
 }
@@ -263,6 +298,11 @@ body {
   flex-wrap: wrap;
   gap: 16px;
   padding: 24px 0 16px;
+  /* No `border-bottom` here, unlike budget_planner's and postcard_maker's
+     headers, and that is deliberate rather than drift: this app's tab nav
+     sits *between* the header and the content, so the rule that closes
+     the chrome belongs under the nav -- it is on `.app-main`'s
+     `border-top` below. Putting one here too would draw two. */
 }
 
 .app-title {
@@ -393,7 +433,10 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  /* 4px, matching budget_planner and postcard_maker. This row holds the
+     same kind of thing in all three -- small chrome controls that belong
+     to each other -- and was the only one of the three at 8px. */
+  gap: 4px;
 }
 
 /* Shared by the header's language picker and the in-dialog theme picker
@@ -494,6 +537,52 @@ body {
   height: 10px;
   border-radius: 5px;
   flex: none;
+}
+
+/* The two series this app plots, everywhere it plots them: what you still
+   owe, and what the borrowing has cost so far. One pair of tokens for the
+   key swatch, the line and the split bar, so a legend can no longer
+   disagree with the chart beside it (`--accent`/`--gold` were already the
+   bar's; the keys and lines used a second, hardcoded blue/amber pair).
+   Balance takes the accent here rather than a neutral because it is the
+   figure the tab exists to show; interest is the cost beside it. */
+.chart-key-balance i {
+  background: var(--accent);
+}
+
+.chart-key-interest i {
+  background: var(--gold);
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 2;
+}
+
+.chart-line-balance {
+  stroke: var(--accent);
+}
+
+.chart-line-interest {
+  stroke: var(--gold);
+}
+
+/* Was a fixed #243044 -- a dark-theme value, so in light theme these read
+   as navy rules across a white card. `--line` is the same divider weight
+   the rest of the page uses and moves with the theme. */
+.chart-grid-line {
+  stroke: var(--line);
+  stroke-width: 0.5;
+}
+
+.chart-area-from {
+  stop-color: var(--accent);
+  stop-opacity: 0.28;
+}
+
+.chart-area-to {
+  stop-color: var(--accent);
+  stop-opacity: 0.02;
 }
 
 /* preserveAspectRatio="none" on the SVG lets the plot stretch to whatever
@@ -839,7 +928,7 @@ body {
   margin-bottom: 12px;
 }
 
-.schedule-table-header h3 {
+.schedule-table-header h2 {
   margin: 0;
   font-size: 1rem;
 }
@@ -916,7 +1005,7 @@ body {
   gap: 8px;
 }
 
-.saved-scenarios-header h3 {
+.saved-scenarios-header h2 {
   margin: 0;
   font-size: 1rem;
 }
@@ -1039,15 +1128,25 @@ body {
 
 /* The same defect `.app-tab.active` above already records, in the place
    it is hardest to defend: this segmented toggle sits ~40px below
-   `.field-unit.active`, which is an accent fill for exactly the same
-   "this is the chosen segment" meaning. Green also *says* something here
-   that isn't true -- `--positive` is the surplus/saving colour
-   everywhere else in this file, so a green "Fixed" reads as the
-   recommended rate type rather than the selected one. Fixed, Steps up
-   and Floating are three neutral products. */
+   `.field-unit.active`, which meant the same "this is the chosen segment"
+   idea twice on one screen. Green also *said* something here that isn't
+   true -- `--positive` is the surplus/saving colour everywhere else in
+   this file, so a green "Fixed" read as the recommended rate type rather
+   than the selected one. Fixed, Steps up and Floating are three neutral
+   products.
+
+   That comment used to sit above an `--accent` fill, which swapped one
+   wrong colour for another: it left the Payment screen saying "selected"
+   in two languages at once -- `--selected` plus an edge on the tabs and
+   region pills, a solid accent fill on these two segmented controls,
+   about 40px apart. This now follows the rule stated at the top of the
+   file, which is the same one budget_planner's nav uses, so the family's
+   segmented controls all read alike. The ring rather than a top rail
+   because a segment is short and square-ish; see `.app-region.active`. */
 .kind-toggle.active {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--selected);
+  color: var(--selected-ink);
+  box-shadow: inset 0 0 0 1.5px var(--selected-edge);
 }
 
 .comparison-entry-field {
@@ -1077,6 +1176,37 @@ body {
   width: 15px;
   height: 15px;
   margin: 0;
+}
+
+/* --- Desktop ------------------------------------------------------------
+   The first `min-width` query this file has ever had. Everything above is
+   written mobile-first and was previously only ever narrowed; the page
+   simply stopped growing at 960px, so a 1920px screen got the phone
+   layout in a narrow column with ~480px of dead space either side.
+
+   `--content-max` takes the shell to 1240px to match budget_planner. The
+   rules here decide what the extra ~280px is *for*, which is the part
+   that makes it an improvement rather than a stretch:
+
+   - The field grid keeps four columns instead of letting `auto-fit` add a
+     fifth and sixth. Seven fields across six cramped tracks reads worse
+     than seven across four roomy ones, and the widest control in it (the
+     three-segment Fixed/Steps up/Floating toggle) was wrapping "Steps up"
+     onto two lines at the old ~215px track width. At 1240 a quarter-track
+     is ~285px and it fits on one.
+   - Prose gets a measure cap. `.about` is the one long-form block on the
+     page, and a 1240px line of body text is roughly 160 characters --
+     well past readable no matter how much room the window has. The
+     figures, tables and charts are what actually benefit from width. */
+
+@media (min-width: 960px) {
+  .panel-form {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .about {
+    max-width: 78ch;
+  }
 }
 
 /* --- Responsive ---------------------------------------------------------
@@ -1391,10 +1521,16 @@ body {
   cursor: pointer;
 }
 
+/* The other half of the pair `.kind-toggle.active` records: an accent fill
+   for "this segment is chosen", ~40px from tabs and region pills already
+   saying it with `--selected`. Same treatment as those, scaled to a chip
+   this small -- the border it already has carries the indicator, so it
+   takes `--selected-edge` rather than adding an inset ring inside a 4px
+   radius. */
 .field-unit.active {
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: var(--selected-ink);
+  background: var(--selected);
+  border-color: var(--selected-edge);
 }
 
 .field-hint {
@@ -1548,7 +1684,7 @@ body {
   margin-bottom: 22px;
 }
 
-.report-head h1 {
+.report-head h2 {
   margin: 0;
   font-size: 1.5rem;
   letter-spacing: -0.01em;
@@ -1585,7 +1721,7 @@ body {
   break-inside: avoid;
 }
 
-.report-section h2 {
+.report-section h3 {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -1714,7 +1850,7 @@ body {
   color: #46556a;
 }
 
-.report-foot h3 {
+.report-foot h4 {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;

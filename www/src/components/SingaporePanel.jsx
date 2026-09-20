@@ -31,7 +31,7 @@ export default function SingaporePanel({ inputs, onChange, result }) {
 
   return (
     <div className="sg-panel">
-      <h3 className="sg-panel-title">{t('sg.title')}</h3>
+      <h2 className="sg-panel-title">{t('sg.title')}</h2>
 
       <div className="panel-form sg-panel-form">
         <NumberField
