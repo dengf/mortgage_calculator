@@ -205,3 +205,14 @@ CI's `licenses` job regenerates and fails on any diff, so a new
 dependency cannot ship without its notice. The template is `about.hbs`
 and the accepted-license list is `about.toml`; adding a license to that
 list is a deliberate decision, not a way to quiet the tool.
+
+React is **not** a Cargo dependency either, and its code ships in the
+bundle your browser downloads — which makes that file a binary
+distribution of it in exactly the same way the `.wasm` is of the crates.
+The bundler does extract React's own banners into a `.js.LICENSE.txt`
+beside the bundle, but those banners only *point at* a LICENSE file in
+React's source tree that is never shipped, so the licence text itself
+lives in `about.hbs`'s "JavaScript in the page" section, maintained by
+hand. `scripts/check-runtime-deps.mjs` — a CI step — fails if any non-dev
+package in `www/package-lock.json` is missing from that section, which is
+the one thing the regenerate-and-diff above cannot catch.
