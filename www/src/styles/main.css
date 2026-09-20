@@ -331,10 +331,22 @@ body {
   text-decoration: none;
   align-items: center;
   gap: 0.32em;
-  margin: 0.25rem 0 0;
   font-size: 0.82rem;
   color: var(--byline);
   letter-spacing: 0.01em;
+
+  /* This is the only route from the tool back to meifio itself, and it
+     measured 104x18 on a phone -- the text's own line box, against the 44px
+     floor the top-level CLAUDE.md sets. Measure the box, not the glyphs.
+
+     The height is bought with padding rather than a taller line, so the
+     words sit exactly where they did; the negative margins spend the same
+     26px back on the two sides that would otherwise push the title's row
+     apart. */
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0.8125rem 0;
+  margin: -0.5625rem 0 -0.8125rem;
 }
 
 /* Both sibling tools have had this and this one hadn't: the byline is a
@@ -681,6 +693,19 @@ body {
    should not change the colour of the thing you just tapped. */
 .app-footer a {
   color: var(--accent-text);
+
+  /* Privacy and Source measured 44x15 and 42x15 -- wide enough by accident,
+     never tall enough. `inline-flex` is what lets a link inside a sentence
+     take a height at all; the side padding also puts real space between two
+     targets that sat a single "·" apart. The negative block margin keeps the
+     footer the height it was. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.5rem;
+  margin-block: -0.75rem;
 }
 
 .panel {
