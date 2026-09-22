@@ -66,6 +66,48 @@ describe('DownPaymentField', () => {
     expect(screen.getByDisplayValue('75,000')).toBeInTheDocument();
   });
 
+  // The percentage is derived from the amount, and an empty amount divides to
+  // a perfectly good 0% -- so the box refilled itself with "0" the instant it
+  // was cleared, with no keystroke that could remove it. Reported from a
+  // phone, where it is worse: the numeric keypad has no way around it either.
+  it('stays empty when the percentage is cleared', async () => {
+    const user = userEvent.setup();
+    renderControlled(PaymentCalculator, { wasmModule: mockWasmModule() });
+
+    await user.click(percentToggle());
+    const input = screen.getByDisplayValue('20');
+    await user.clear(input);
+
+    expect(input).toHaveValue(null);
+  });
+
+  // Clearing writes an empty deposit, not a zero one, and the unit showing at
+  // the time cannot be what decides that: switching units is a change of lens.
+  it('clearing in percent empties the amount too', async () => {
+    const user = userEvent.setup();
+    renderControlled(PaymentCalculator, { wasmModule: mockWasmModule() });
+
+    await user.click(percentToggle());
+    await user.clear(screen.getByDisplayValue('20'));
+    await user.click(amountToggle());
+
+    expect(screen.getByLabelText(/Down payment/)).toHaveValue('');
+  });
+
+  // A deposit of zero is a real answer, and it is not the same state as an
+  // empty field: the guard above must not swallow it.
+  it('still shows a deposit of zero as 0%', async () => {
+    const user = userEvent.setup();
+    renderControlled(PaymentCalculator, { wasmModule: mockWasmModule() });
+
+    const amount = await screen.findByDisplayValue('100,000');
+    await user.clear(amount);
+    await user.type(amount, '0');
+    await user.click(percentToggle());
+
+    expect(screen.getByDisplayValue('0')).toBeInTheDocument();
+  });
+
   it('says nothing about a percentage when there is no price', async () => {
     const user = userEvent.setup();
     renderControlled(PaymentCalculator, { wasmModule: mockWasmModule() });
