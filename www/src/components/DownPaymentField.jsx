@@ -29,8 +29,20 @@ export default function DownPaymentField({
       ? v
       : Number(v).toLocaleString('en-US', { maximumFractionDigits: 10 });
 
+  // An empty deposit has to read as empty in both units. The percentage is
+  // derived from the amount, and 0 of a price is a perfectly good 0% -- so
+  // deriving alone puts a "0" back in the box the moment it is cleared, and
+  // there is no keystroke that removes it. Which unit is showing cannot
+  // change whether the field has a value in it, so the emptiness is read
+  // from the stored amount rather than from the number it divides to.
+  const empty = scenario.downPayment === '' || scenario.downPayment == null;
+
   const shown =
-    mode === 'percent' ? (percent == null ? '' : Number(percent.toFixed(4))) : scenario.downPayment;
+    mode === 'percent'
+      ? empty || percent == null
+        ? ''
+        : Number(percent.toFixed(4))
+      : scenario.downPayment;
 
   const handle = (value) => {
     if (value === '') return onChange('');
