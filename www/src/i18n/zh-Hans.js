@@ -14,7 +14,7 @@ export default {
   'meta.title': '房贷计算器 — 月供、还款明细、购房力与再融资 | meifio',
   'meta.ogTitle': '房贷计算器 — meifio 出品',
   'meta.description':
-    '免费房贷计算器，涵盖月供、还款明细、购房力与再融资，并内置新加坡 TDSR、公积金与印花税规则。全部在浏览器内计算——您的数据不会离开设备。',
+    '免费房贷计算器，涵盖月供、还款明细、购房力与再融资，并内置新加坡 TDSR、公积金与印花税规则。全部在浏览器内计算——你的数据不会离开设备。',
   'about.title': '这些数字是怎么算出来的',
 
   'about.us.payment.q': '月供包含哪些部分？',
@@ -22,31 +22,31 @@ export default {
     '首要显示的金额仅含本金与利息。下方的美国面板会加上按邮编估算的房产税，以及首付低于 20% 时的 PMI——合计构成完整的 PITI 金额。',
   'about.us.pmi.q': 'PMI 什么时候可以停？',
   'about.us.pmi.a':
-    '当首付低于房价的 20% 时需缴纳私人房贷保险。当您的房屋净值达到 20% 时可申请取消；根据《房主保护法》，贷款价值比降至 78% 时贷方必须自动终止。',
+    '当首付低于房价的 20% 时需缴纳私人房贷保险。当你的房屋净值达到 20% 时可申请取消；根据《房主保护法》，贷款价值比降至 78% 时贷方必须自动终止。',
   'about.us.jumbo.q': '什么样的贷款属于大额贷款？',
   'about.us.jumbo.a':
     '超过联邦住房金融局合规上限的贷款——2026 年单户住宅为 832,750 美元——房利美与房地美无法购入，因此按大额贷款定价。高成本县以及阿拉斯加和夏威夷适用更高上限，本计算器暂未纳入。',
 
   'about.sg.payment.q': '月供包含哪些部分？',
   'about.sg.payment.a':
-    '首要显示的金额仅含本金与利息。下方的新加坡面板会将其拆分为公积金普通账户与现金两部分，并计算您在交房时所需的印花税与首付。',
+    '首要显示的金额仅含本金与利息。下方的新加坡面板会将其拆分为公积金普通户头与现金两部分，并计算你在交房时所需的印花税与首付。',
   'about.sg.tdsr.q': 'TDSR 和 MSR 是什么？',
   'about.sg.tdsr.a':
-    '新加坡限制收入中可用于偿债的比例。TDSR 将全部债务还款限制在月总收入的 55%；MSR 仅将房贷还款限制在 30%，且只适用于组屋与执行共管公寓。银行按 4% 与锁定期结束后的贷款利率两者取高来测算——而不是您获得报价的优惠利率——因此此处比率采用该评估值，而非您的月供报价。',
+    '新加坡限制收入中可用于偿债的比例。TDSR 将全部债务还款限制在月总收入的 55%；MSR 仅将房贷还款限制在 30%，且只适用于组屋与执行共管公寓。银行按 4% 与锁定期结束后的贷款利率两者取高来测算——而不是你获得报价的优惠利率——因此此处比率采用该评估值，而非你的月供报价。',
   'about.sg.afford.q': '为什么我的购房力比预期低？',
   'about.sg.afford.a':
     '通常有三条规则比收入更早触顶：首套房贷的 LTV 上限将贷款限制在房价的 75%；首付中的最低现金部分不能用公积金支付；两项印花税须在 14 天内以现金缴清。此外，佣金与奖金仅按 70% 计入。',
 
   'about.refi.q': '再融资什么时候才真正划算？',
   'about.refi.a':
-    '当您在房中住到超过回本点——即累计节省超过手续费用的那个月。除了利率也要看年限：转成全新的 30 年贷款会降低月供，但可能推高总支出。',
+    '当你在房中住到超过回本点——即累计节省超过手续费用的那个月。除了利率也要看年限：转成全新的 30 年贷款会降低月供，但可能推高总支出。',
 
   'about.disclaimer.US':
     '本工具提供的是用于规划的估算，不构成财务建议或贷款要约。房产税率为各州平均值，各县存在差异；贷款上限与相关规则可能变动。',
   'about.disclaimer.SG':
     '本工具提供的是用于规划的估算，不构成财务建议或贷款要约。新加坡金管局与税务局的规则依据已公布数据，可能变动；在做决定前请向税务局确认印花税及任何减免。',
   'app.footer':
-    '所有计算均在本地浏览器中完成，由 Rust 编译为 WebAssembly。您输入的数字不会离开您的设备。',
+    '所有计算均在本地浏览器中完成，由 Rust 编译为 WebAssembly。你输入的数字不会离开你的设备。',
   'app.privacy': '隐私政策',
   'app.source': '源代码',
   'app.loading': '正在加载计算器…',
@@ -175,7 +175,7 @@ export default {
     '{cheaper} 每月比 {lighter} 多付 {paymentDelta}，但在整个贷款期内可少付 {interestDelta} 利息。',
   'cmp.outright': '{label} 两项皆优：月供最低，利息总额也最低。',
   'refi.termWarning':
-    '此再融资为 {newTerm}，而您现有贷款仅剩 {remaining}——您将多还 {extra}。下方的节省额为现金总支出之差，并非同口径比较。',
+    '此再融资为 {newTerm}，而你现有贷款仅剩 {remaining}——你将多还 {extra}。下方的节省额为现金总支出之差，并非同口径比较。',
   'cmp.scenario': '方案',
   'cmp.effectiveRate': '实际利率',
   'cmp.payment': '月供',
@@ -189,19 +189,19 @@ export default {
   'report.options': '报告选项',
   'report.print': '打印或另存为 PDF',
   'report.printNote':
-    'PDF 由浏览器的打印对话框生成 —— 请在目标位置选择“另存为 PDF”。生成过程不会上传任何内容。',
+    'PDF 由浏览器的打印对话框生成——请在目标位置选择“另存为 PDF”。生成过程不会上传任何内容。',
   'report.downloadCsv': '下载为 CSV',
   'report.downloadCsvNote':
-    '本页的每张表格 —— 条款、还款计划、利率上升压力测试 —— 合并为一个文件，方便在表格软件中使用。生成过程不会上传任何内容。',
+    '本页的每张表格——条款、还款计划、利率上升压力测试——合并为一个文件，方便在表格软件中使用。生成过程不会上传任何内容。',
   'report.recipients': '发送给',
   'report.recipientsPlaceholder': 'name@example.com, another@example.com',
   'report.recipientsBad': '以下地址似乎有误，请检查：{addresses}',
   'report.email': '在邮件应用中打开（{count}）',
   'report.emailNote':
-    '将在您自己的邮件应用中打开，并预填收件人与摘要 —— 本页不会发送任何内容，您在此输入的信息也不会离开您的设备。邮件链接无法携带附件，请先保存上方的 PDF 再自行添加。',
+    '将在你自己的邮件应用中打开，并预填收件人与摘要——本页不会发送任何内容，你在此输入的信息也不会离开你的设备。邮件链接无法携带附件，请先保存上方的 PDF 再自行添加。',
   'report.confirmTitle': '确认向以下收件人打开邮件应用？',
   'report.confirmBody':
-    '邮件应用将打开并已填好摘要。在您亲自点击发送之前不会寄出，本页面自始至终也不会发送任何内容。请记得添加 PDF 附件。',
+    '邮件应用将打开并已填好摘要。在你亲自点击发送之前不会寄出，本页面自始至终也不会发送任何内容。请记得添加 PDF 附件。',
   'report.confirmSend': '确认，打开邮件应用',
   'report.confirmCancel': '暂不',
   'report.mailSubject': '房贷测算报告',
@@ -220,9 +220,9 @@ export default {
   'report.value': '数值',
   'report.canChange': '是否会变动？',
   'report.no': '否',
-  'report.ratePlan': '会 —— {years} 年后升至 {rate}',
+  'report.ratePlan': '会——{years} 年后升至 {rate}',
   'report.andWithBenchmark': '并会随基准利率变动',
-  'report.paymentPlan': '会 —— {years} 年后升至 {payment}',
+  'report.paymentPlan': '会——{years} 年后升至 {payment}',
   'report.overTime': '各阶段还款',
   'report.period': '期间',
   'report.instalment': '{cadence}供款',
@@ -245,17 +245,17 @@ export default {
     '仅供参考。本文件为计算器生成的测算结果，并非贷款要约、报价，也不是任何银行出具的法定披露文件。没有任何银行审阅或认可过以上数字。',
   'report.sources': '规则依据',
   'report.workedAt': '以上每项数字均可自行复算，计算过程可在此查阅：',
-  'ref.MasNotice632': '新加坡金管局第 632 号通知 —— 贷款成数上限与首付中的现金部分',
+  'ref.MasNotice632': '新加坡金管局第 632 号通知——贷款成数上限与首付中的现金部分',
   'ref.MasNotice632a':
-    '新加坡金管局第 632A 号通知 —— 银行须出具的住宅房产贷款情况说明书。本文件参照其结构编排，但并非该说明书。',
-  'ref.MasNotice645': '新加坡金管局第 645 号通知 —— 总偿债比率、房贷偿还比率，以及偿债能力评估利率',
-  'ref.MasSora': '新加坡金管局 —— SORA，新加坡房贷报价所参照的基准利率',
-  'ref.Iras': '新加坡税务局 —— 买方印花税与额外买方印花税',
-  'ref.CpfBoard': '公积金局 —— 普通账户利率及与之挂钩的建屋局优惠利率',
+    '新加坡金管局第 632A 号通知——银行须出具的住宅房产贷款情况说明书。本文件参照其结构编排，但并非该说明书。',
+  'ref.MasNotice645': '新加坡金管局第 645 号通知——总偿债比率、房贷偿还比率，以及偿债能力评估利率',
+  'ref.MasSora': '新加坡金管局——SORA，新加坡房贷报价所参照的基准利率',
+  'ref.Iras': '新加坡税务局——买方印花税与额外买方印花税',
+  'ref.CpfBoard': '公积金局——普通账户利率及与之挂钩的建屋局优惠利率',
   'ref.Cfpb':
-    '美国消费者金融保护局 —— 贷款机构须出具的贷款估算书。本文件参照其结构编排，但并非该估算书。',
-  'ref.Fhfa': '美国联邦住房金融局 —— 合规贷款上限',
-  'ref.FederalReserveH15': '美联储 H.15 —— 公布的最优惠利率与 SOFR',
+    '美国消费者金融保护局——贷款机构须出具的贷款估算书。本文件参照其结构编排，但并非该估算书。',
+  'ref.Fhfa': '美国联邦住房金融局——合规贷款上限',
+  'ref.FederalReserveH15': '美联储 H.15——公布的最优惠利率与 SOFR',
 
   'saved.title': '已保存方案',
   'saved.empty': '暂无已保存的方案。',
@@ -280,18 +280,18 @@ export default {
   'data.close': '关闭',
   'confirm.cancel': '取消',
   'confirm.replace': '替换',
-  'err.badImportFile': '该文件不是抵押贷款计算器导出的备份——未做任何更改。',
+  'err.badImportFile': '该文件不是房贷计算器导出的备份——未做任何更改。',
   'err.corruptScenario': '该已保存方案已损坏，无法加载。',
   'err.storageUnavailable': '无法访问已保存的数据（{detail}）。未做任何更改——请重试。',
   'errors.dismiss': '关闭',
 
-  'chart.moneyGoes': '您的钱花在哪里',
+  'chart.moneyGoes': '你的钱花在哪里',
   'chart.balanceVsInterest': '剩余本金与已付利息',
   'chart.remainingBalance': '剩余本金',
   'chart.interestToDate': '累计已付利息',
   'chart.principalLegend': '本金 {amount}',
   'chart.interestLegend': '利息 {amount}',
-  'chart.interestShare': '利息占您全部支出的 {percent}%。',
+  'chart.interestShare': '利息占你全部支出的 {percent}%。',
   'chart.yearN': '第 {n} 年',
   'chart.sharedScale':
     '两条曲线使用相同的纵轴刻度：{min} – {max}。交点即为累计已付利息超过剩余本金之时。',
@@ -329,7 +329,7 @@ export default {
   'sgaff.funds': '可用现金 + 公积金',
   'sgaff.initialRate': '锁定期利率',
   'sgaff.thereafterRate': '之后利率',
-  'sgaff.age': '您的年龄',
+  'sgaff.age': '你的年龄',
   'sgaff.yearsOld': '岁',
   'sgaff.outstandingLoans': '尚未结清的房贷',
   'sgaff.loansNone': '无',
@@ -348,13 +348,13 @@ export default {
   'sgaff.fixedIncome': '固定月薪',
   'sgaff.variableIncome': '佣金 / 奖金（月均）',
   'sgaff.cash': '可用现金',
-  'sgaff.cpf': '可用公积金普通账户',
+  'sgaff.cpf': '可用公积金普通户头',
   'sgaff.cpfUsed': '公积金支付',
   'sgaff.cashRequired': '完成交易所需现金',
   'sgaff.cashNote':
     '公积金不可用于最低现金首付或印花税——两项印花税须在 14 天内缴清，早于公积金可报销的时间。',
   'sgaff.ftaNote':
-    '根据相关自由贸易协定，您的额外买方印花税按公民税率计算。该减免须向新加坡税务局申请，并非自动适用——在获批前请按外国人税率预留资金。仅限美国公民（不含绿卡持有者）；冰岛、列支敦士登、挪威和瑞士则包含公民与永久居民。',
+    '根据相关自由贸易协定，你的额外买方印花税按公民税率计算。该减免须向新加坡税务局申请，并非自动适用——在获批前请按外国人税率预留资金。仅限美国公民（不含绿卡持有者）；冰岛、列支敦士登、挪威和瑞士则包含公民与永久居民。',
   'sgaff.assessedIncome': '评估收入 {amount}/月——佣金按 70% 计入',
 
   'us.title': '美国费用与 PMI',
@@ -366,8 +366,8 @@ export default {
   'us.yes': '是',
   'us.no': '否',
   'us.loanType': '贷款类别',
-  'us.conforming': 'Conforming',
-  'us.jumbo': 'Jumbo',
+  'us.conforming': '合规贷款（Conforming）',
+  'us.jumbo': '大额贷款（Jumbo）',
   'us.downPayment': '首付',
   'us.propertyTax': '房产税',
   'us.propertyTaxWithRate': '房产税（{rate}%）',
@@ -390,7 +390,7 @@ export default {
   'err.invalidExtraPayment': '额外还款不能为负数（当前为 {value}）。',
   'err.parse': '无法识别该输入：{value}',
   'err.engineUnavailable':
-    '计算引擎未能启动。请刷新页面；若仍然如此，您的浏览器可能不支持 WebAssembly。',
+    '计算引擎未能启动。请刷新页面；若仍然如此，你的浏览器可能不支持 WebAssembly。',
   'err.badRequest': '有数值缺失或不是有效数字，请检查上方输入项。',
   'err.unknown': '计算时出现问题。',
 
