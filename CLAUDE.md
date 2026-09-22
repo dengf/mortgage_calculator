@@ -172,6 +172,14 @@ Each of these produces a wrong result that looks like a correct one.
   decodes UTF-8 as Latin-1 and turns every CJK character into mojibake. A test
   guards this (no catalog may contain U+0080-U+00FF); write files with
   `encoding='utf-8'` instead.
+- **Chinese second person is 你, never 您, in both scripts.** The whole meifio
+  line agrees on this since the 2026-09-22 copy pass; 您 reads as a bank
+  letter, and this is a consumer tool. From the same pass: prose must call the
+  app by the name its own catalog uses in `app.title` -- 房贷计算器 /
+  房貸試算器, not 抵押贷款计算器, and never 計算機, which in Taiwan reads as the
+  handheld device. An em dash between two CJK runs is set unspaced (`——`);
+  the spaced ` — ` survives only in `meta.title`, where it is a separator
+  shared with the other two tools.
 
 ## Landing changes
 
