@@ -181,6 +181,33 @@ Each of these produces a wrong result that looks like a correct one.
   the spaced ` — ` survives only in `meta.title`, where it is a separator
   shared with the other two tools.
 
+- **A `<select>` at `appearance: auto` ignores `min-height` and `padding`
+  in WebKit.** Not "renders differently" -- ignores. `.field-select` and
+  `.app-language-select` both carried `min-height: 44px` for rounds, and
+  both measured 23px and 19px in Safari while Chromium showed the 44px
+  that made them look finished. Measured on one build at iPhone 13 size:
+
+  | declaration | WebKit | Chromium |
+  | --- | --- | --- |
+  | `min-height: 44px` | 23px | 44px |
+  | `padding: 10px` | 23px | 44px |
+  | `appearance: none` + `min-height` | 44px | 44px |
+
+  `height` is honoured too, and is still the wrong fix -- it stops the
+  control growing with its text. `appearance: none` is the one that makes
+  the declared floor real, and it costs the native arrow, which is what
+  `--select-arrow` draws back in each of the three palette tiers.
+  **Measure tap targets in WebKit, not only Chromium**: this is the second
+  WebKit-silently-drops-it defect in the meifio line (see postcard_maker's
+  `ctx.filter`), and a rule that does nothing looks exactly like a rule
+  that works.
+- **Measure the box a finger hits, not the control.** A `<label>`-wrapped
+  input is tapped through the label, so the label's box is the target and
+  the input's own 42px inside a 44px `.field-input` is fine. Measuring bare
+  controls reports the four `.field` inputs as failures they are not, and
+  hides the real ones -- the checkbox rows, whose labels really were 15px
+  tall.
+
 ## Landing changes
 
 One branch per round of work, focused commits, then a PR with a Summary and
