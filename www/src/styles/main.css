@@ -46,15 +46,15 @@
      body text is unreadable regardless of how much room there is. */
   --content-max: 1240px;
   /* Tells the browser which palette to draw its own native chrome in --
-     scrollbars, checkbox/radio ticks, and critically a <select>'s built-in
-     dropdown arrow and (on platforms that support it) the popup option
-     list it opens. Without this, that native UI stays light-styled
-     regardless of our own dark colors above, which is exactly why the
-     header language <select>'s arrow read as barely visible against a
-     dark background before this was added -- the browser was drawing a
-     light-chrome arrow glyph on our dark bar, not applying --muted to it,
-     because color-scheme is what native form-control rendering keys off
-     of, not our CSS custom properties. */
+     scrollbars, checkbox/radio ticks, and the popup option list a <select>
+     opens. Without this, that native UI stays light-styled regardless of
+     our own dark colors above, because color-scheme is what native
+     form-control rendering keys off of, not our CSS custom properties.
+     (The <select>'s own dropdown arrow used to be on that list, and was
+     the reason this was added -- a light-chrome arrow glyph on our dark
+     bar. The two selects now draw their arrow themselves, so that part is
+     ours; the popup they open is still the browser's, and still needs
+     this.) */
   color-scheme: dark;
   --bg: #0f1720;
   /* These two were the other way round here (--panel #161e2b, --panel-alt
@@ -83,6 +83,11 @@
   --surface: #0f1720;
   --ink: #e6edf3;
   --muted: #9fb0c3;
+  /* The two <select>s draw their own arrow now -- see `.field-select` for
+     why. It is a token per palette tier rather than one `currentColor`
+     glyph because a data URI cannot read a custom property, so the ink is
+     baked into each copy. Keep it in step with --muted above: same grey. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%239fb0c3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   /* Was #5c6b7d -- ~3.16:1 on --panel, under WCAG AA's 4.5:1 floor for the
      normal-size text this token is actually used on. #7a8ca0 clears
      4.5:1 -- the same fix budget_planner made to its own equivalent
@@ -180,6 +185,7 @@
        colour picker, which is the whole cost of drift. */
     --ink: #16202b;
     --muted: #5a6b7d;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%235a6b7d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     /* Was #66788c. That measured 4.27:1 on `--bg` -- the earlier fix to
        this token was checked against white `--panel` and never against
        the page behind it, which is where `.updated`-style secondary text
@@ -240,6 +246,7 @@
   /* See the media-query block above. */
   --ink: #16202b;
   --muted: #5a6b7d;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%235a6b7d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --muted-2: #5f6e80;
   --byline: #617180;
   --line: #dde3ea;
@@ -452,13 +459,23 @@ body {
 }
 
 /* Shared by the header's language picker and the in-dialog theme picker
-   below -- one native <select> styling rule for both, matching
-   budget_planner's own reuse of this class in the same two places. */
+   below -- one <select> styling rule for both, matching budget_planner's
+   own reuse of this class in the same two places.
+
+   `appearance: none` for the reason spelled out at `.field-select`. This
+   one mattered more: it sits directly in the header, not inside a <label>,
+   so there was no larger box behind it to catch the tap -- in Safari it
+   measured 84x19 against Chromium's 91x44. */
 .app-language-select {
-  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 6px center;
   color: var(--muted);
   border: none;
-  padding: 6px 8px;
+  padding: 6px 24px 6px 8px;
   min-height: 44px;
   border-radius: 8px;
   cursor: pointer;
@@ -807,11 +824,18 @@ body {
 }
 
 /* A yes/no answer, not a value: the control sits beside its label rather
-   than under it, the way the stacked `.field` rows do. */
+   than under it, the way the stacked `.field` rows do.
+
+   The tick itself stays 15px -- a 44px checkbox glyph would look absurd --
+   but the <label> is what a finger actually hits, and it was only as tall
+   as the tick: 334x15. The floor goes on the label, which is the tappable
+   box, not on the input, which is the visible one. Exactly the case the
+   root CLAUDE.md calls out. */
 .field-check {
   flex-direction: row;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   cursor: pointer;
 }
 
@@ -890,14 +914,41 @@ body {
   white-space: nowrap;
 }
 
-/* See `.field-input` above for the measurement -- this one came out 41px. */
+/* See `.field-input` above for the measurement -- this one came out 41px.
+
+   `appearance: none` is load-bearing, not tidying. A <select> left at
+   `appearance: auto` renders as a native menulist, and WebKit sizes a
+   menulist from its own metrics: it ignores author `min-height` and
+   `padding` outright. Measured on this page at iPhone 13 size, same build,
+   same stylesheet:
+
+     declaration                       WebKit   Chromium
+     min-height: 44px (what we had)      23px     44px
+     padding: 10px                       23px     44px
+     appearance: none + min-height       44px     44px
+
+   So the floor below had been silently dead in Safari since it was
+   written, on the browser this was reported from, while Chrome showed the
+   44px that made it look done. `height: 44px` is the other thing WebKit
+   honours, and it is not the fix: a fixed height stops the control growing
+   with its text, which is the whole reason this file uses `min-height`
+   everywhere else. Turning the native control off is what makes the
+   declared intent real in both engines -- and it costs us the native
+   arrow, which is what `--select-arrow` draws back. */
 .field-select {
-  background: var(--surface);
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--surface);
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
   border: 1px solid var(--input-border);
   border-radius: 8px;
   color: var(--ink);
   min-height: 44px;
-  padding: 10px;
+  /* Right padding clears the arrow we now draw; the other three are the
+     10px this rule always had. */
+  padding: 10px 34px 10px 10px;
   font-size: 0.95rem;
 }
 
@@ -1121,12 +1172,15 @@ body {
   border-radius: 12px;
 }
 
+/* A bare <input>, not wrapped in a label like the `.field` rows, so its own
+   box is the whole tap target; it measured 334x36. */
 .comparison-entry-label {
   background: var(--surface);
   border: 1px solid var(--input-border);
   border-radius: 8px;
   color: var(--ink);
   padding: 8px 10px;
+  min-height: 44px;
   font-size: 0.9rem;
   font-weight: 600;
   min-width: 160px;
@@ -1202,6 +1256,12 @@ body {
 
 .comparison-entry-field .unit {
   color: var(--muted-2);
+}
+
+/* Same 15px tick in a row-styled label; same floor, same reason as
+   `.field-check`. */
+.comparison-entry-check {
+  min-height: 44px;
 }
 
 .comparison-entry-check input {
